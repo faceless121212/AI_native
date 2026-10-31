@@ -18,6 +18,12 @@ final class KeyboardViewController: UIInputViewController {
     private static let rowHeight: CGFloat = 56
     private static let globeKeyWidth: CGFloat = 44
 
+    /// UI language for now: the device's preferred language. Prompt 5 switches this to
+    /// v1.uiLang from the App Group when Full Access is on.
+    private let strings = KeyboardStrings.forLanguage(
+        Locale.preferredLanguages.lazy.compactMap(SupportedLanguage.from(languageTag:)).first ?? .fallback
+    )
+
     private var hostingController: UIHostingController<KeyboardRootView>?
     private let nextKeyboardButton = UIButton(type: .system)
 
@@ -26,7 +32,7 @@ final class KeyboardViewController: UIInputViewController {
 
         configureNextKeyboardButton()
 
-        let hosting = UIHostingController(rootView: KeyboardRootView())
+        let hosting = UIHostingController(rootView: KeyboardRootView(strings: strings))
         hosting.view.backgroundColor = .clear
         addChild(hosting)
 
@@ -69,7 +75,7 @@ final class KeyboardViewController: UIInputViewController {
         let symbol = UIImage.SymbolConfiguration(textStyle: .title3)
         nextKeyboardButton.setImage(UIImage(systemName: "globe", withConfiguration: symbol), for: .normal)
         nextKeyboardButton.tintColor = .label
-        nextKeyboardButton.accessibilityLabel = Strings.nextKeyboard
+        nextKeyboardButton.accessibilityLabel = strings.nextKeyboard
         nextKeyboardButton.accessibilityTraits = [.button, .keyboardKey]
         // Tap switches to the next keyboard; long-press shows the system keyboard list.
         nextKeyboardButton.addTarget(

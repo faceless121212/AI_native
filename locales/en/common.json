@@ -1,0 +1,24 @@
+{
+  "appName": "Replywise",
+  "promise": "The right reply, in any chat",
+  "aiDisclosure": "Replies are written by AI. You choose what to send.",
+  "aiSuggestion": "AI suggestion",
+  "actions": {
+    "continue": "Continue",
+    "skip": "Skip",
+    "close": "Close",
+    "reply": "Reply",
+    "polish": "Polish",
+    "more": "↻ More"
+  },
+  "status": {
+    "loading": "Loading",
+    "stepOf": "Step {{current}} of {{total}}",
+    "info": "Info",
+    "success": "Done",
+    "warning": "Warning",
+    "error": "Error",
+    "stepDone": "done",
+    "stepCurrent": "current step"
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "appName": "Replywise",
+  "nextKeyboard": "Next keyboard",
+  "aiSuggestion": "AI suggestion",
+  "actions": {
+    "reply": "Reply",
+    "polish": "Polish",
+    "more": "↻ More"
+  },
+  "counter": {
+    "leftToday_one": "{{count}} left today",
+    "leftToday_other": "{{count}} left today"
+  },
+  "bar": {
+    "noFullAccess": "Turn on Full Access in Settings for AI replies. Typing works without it.",
+    "noFullAccessPath": "Settings → General → Keyboard → Keyboards → Replywise → Allow Full Access",
+    "aiOff": "AI replies are off. Turn them on in the Replywise app.",
+    "notSetUp": "Open the Replywise app once to set up AI replies.",
+    "offline": "No connection. AI replies need the internet.",
+    "quotaEmpty": "Out of free replies. More tomorrow, or go unlimited in the Replywise app.",
+    "fairUse": "Daily limit reached. Back tomorrow.",
+    "providerDown": "AI replies are having trouble. Try again in a minute.",
+    "lastTrialDay": "Your free trial ends tomorrow: {{price}}/week after that. Manage in the Replywise app."
+  },
+  "chipRows": {
+    "who": "Who",
+    "closeness": "Closeness",
+    "tone": "Tone",
+    "flirt": "Flirt level",
+    "formality": "Formality"
+  },
+  "relationship": {
+    "match": "Match",
+    "partner": "Partner",
+    "friend": "Friend",
+    "family": "Family",
+    "colleague": "Colleague"
+  },
+  "closeness": {
+    "justMet": "Just met",
+    "gettingToKnow": "Getting to know",
+    "friendly": "Friendly",
+    "close": "Close",
+    "veryClose": "Very close"
+  },
+  "tone": {
+    "warm": "Warm",
+    "funny": "Funny",
+    "flirty": "Flirty",
+    "confident": "Confident",
+    "calm": "Calm",
+    "apologise": "Apologise",
+    "sayNoKindly": "Say no kindly",
+    "professional": "Professional"
+  },
+  "flirt": {
+    "off": "Off",
+    "light": "Light",
+    "playful": "Playful"
+  },
+  "formality": {
+    "casual": "Casual",
+    "formal": "Formal"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "trialEndsTomorrow": "Your free trial ends tomorrow. Then {{price}}/week. Cancel anytime in Settings.",
+  "annualRenewal": "Your Replywise year renews on {{date}} for {{price}}.",
+  "freeRepliesBack_one": "Your {{count}} free reply is back.",
+  "freeRepliesBack_other": "Your {{count}} free replies are back."
+}

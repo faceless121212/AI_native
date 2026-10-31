@@ -1,0 +1,12 @@
+{
+  "whatWeSee": {
+    "title": "Lo que Replywise puede ver",
+    "line1": "Nada de lo que escribes sale de tu móvil, salvo si tocas «Responder» o «Pulir».",
+    "line2": "Cuando tocas, solo el mensaje copiado y tu borrador van a nuestro proveedor de IA, que los procesa en la UE.",
+    "line3": "No guardamos tus chats."
+  },
+  "actions": {
+    "allowAi": "Permitir respuestas IA",
+    "notNow": "Ahora no"
+  }
+}

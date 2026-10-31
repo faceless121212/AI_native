@@ -167,7 +167,7 @@ RLS on every table: users read only their own rows in `profiles`, `consents`, `e
 
 ## 9. Strings in the keyboards
 
-`scripts/gen-keyboard-strings.ts` reads `locales/<lang>/keyboard.json` and writes `targets/keyboard/Core/Strings.generated.swift` and `modules/replywise-ime/android/src/main/res/values-<lang>/strings.xml`. `npm run i18n:check` fails if generated files are stale.
+`scripts/gen-keyboard-strings.ts` reads `locales/<lang>/keyboard.json` and writes `targets/keyboard/Core/Strings.generated.swift` (a `KeyboardStrings` struct, one instance per language, typed functions for placeholders and plurals) and `modules/replywise-ime/android/src/main/res/values/keyboard_strings.xml` (English) plus `values-<lang>/keyboard_strings.xml` (`<string>` and `<plurals>`, placeholders as `%n$s`, `count` always `%1$d`). The hand-written `res/values/strings.xml` keeps only the non-translatable IME label. `scripts/export-tokens.ts` writes the colour tokens to `targets/keyboard/UI/Theme.generated.swift` and `res/values(-night)/colors.xml`. `npm run gen` runs both; `npm run i18n:check` fails if any generated file is stale.
 
 ## 10. Memory and performance budget (iOS extension)
 

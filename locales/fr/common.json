@@ -1,0 +1,24 @@
+{
+  "appName": "Replywise",
+  "promise": "La bonne réponse, dans chaque conversation",
+  "aiDisclosure": "Les réponses sont rédigées par l’IA. C’est toi qui choisis ce que tu envoies.",
+  "aiSuggestion": "Suggestion de l’IA",
+  "actions": {
+    "continue": "Continuer",
+    "skip": "Passer",
+    "close": "Fermer",
+    "reply": "Répondre",
+    "polish": "Peaufiner",
+    "more": "↻ Autres"
+  },
+  "status": {
+    "loading": "Chargement",
+    "stepOf": "Étape {{current}} sur {{total}}",
+    "info": "Info",
+    "success": "Terminé",
+    "warning": "Avertissement",
+    "error": "Erreur",
+    "stepDone": "terminée",
+    "stepCurrent": "étape en cours"
+  }
+}

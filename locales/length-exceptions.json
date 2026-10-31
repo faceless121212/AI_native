@@ -1,0 +1,22 @@
+{
+  "keyboard:bar.noFullAccess": {
+    "max": 95,
+    "reason": "Spec §3.5 copy (en 72); longest is it at 88. Bar wraps to two lines"
+  },
+  "keyboard:bar.noFullAccessPath": {
+    "max": 95,
+    "reason": "Real iOS Settings menu names, cannot be shortened (en 73); longest is de at 87. Shown as a second line under noFullAccess"
+  },
+  "keyboard:bar.quotaEmpty": {
+    "max": 95,
+    "reason": "Spec §3.5 copy (en 73); longest are de and fr at 87. Bar wraps to two lines"
+  },
+  "keyboard:bar.lastTrialDay": {
+    "max": 95,
+    "reason": "Spec §3.5 copy (en 86 with {{price}}); must state price and period. Longest is fr at 90. Bar wraps to two lines"
+  },
+  "keyboard:closeness.gettingToKnow": {
+    "max": 16,
+    "reason": "Spec §3.2 chip label 'Getting to know' is 15 in en; all translations are 14 or fewer"
+  }
+}

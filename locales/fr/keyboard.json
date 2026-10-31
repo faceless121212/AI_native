@@ -1,0 +1,65 @@
+{
+  "appName": "Replywise",
+  "nextKeyboard": "Clavier suivant",
+  "aiSuggestion": "Suggestion de l’IA",
+  "actions": {
+    "reply": "Répondre",
+    "polish": "Peaufiner",
+    "more": "↻ Autres"
+  },
+  "counter": {
+    "leftToday_one": "{{count}} restante",
+    "leftToday_other": "{{count}} restantes"
+  },
+  "bar": {
+    "noFullAccess": "Autorise l’accès complet dans Réglages pour les réponses IA. La saisie marche sans.",
+    "noFullAccessPath": "Réglages → Général → Clavier → Claviers → Replywise → Autoriser l’accès complet",
+    "aiOff": "Les réponses IA sont désactivées. Active-les dans l’app Replywise.",
+    "notSetUp": "Ouvre l’app Replywise une fois pour configurer les réponses IA.",
+    "offline": "Pas de connexion. Les réponses IA ont besoin d’Internet.",
+    "quotaEmpty": "Plus de réponses gratuites. D’autres demain, ou passe en illimité dans l’app Replywise.",
+    "fairUse": "Limite du jour atteinte. Reviens demain.",
+    "providerDown": "Les réponses IA ont un souci. Réessaie dans une minute.",
+    "lastTrialDay": "Ton essai gratuit se termine demain, puis {{price}}/semaine. Gère-le dans l’app Replywise."
+  },
+  "chipRows": {
+    "who": "Qui",
+    "closeness": "Proximité",
+    "tone": "Ton",
+    "flirt": "Dose de flirt",
+    "formality": "Registre"
+  },
+  "relationship": {
+    "match": "Match",
+    "partner": "Partenaire",
+    "friend": "Amitié",
+    "family": "Famille",
+    "colleague": "Collègue"
+  },
+  "closeness": {
+    "justMet": "Tout début",
+    "gettingToKnow": "On se découvre",
+    "friendly": "Amical",
+    "close": "Proche",
+    "veryClose": "Très proche"
+  },
+  "tone": {
+    "warm": "Chaleureux",
+    "funny": "Drôle",
+    "flirty": "Flirt",
+    "confident": "Assuré",
+    "calm": "Calme",
+    "apologise": "S’excuser",
+    "sayNoKindly": "Non, gentiment",
+    "professional": "Professionnel"
+  },
+  "flirt": {
+    "off": "Aucun",
+    "light": "Léger",
+    "playful": "Taquin"
+  },
+  "formality": {
+    "casual": "Décontracté",
+    "formal": "Formel"
+  }
+}

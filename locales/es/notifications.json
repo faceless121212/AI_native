@@ -1,0 +1,6 @@
+{
+  "trialEndsTomorrow": "Tu prueba gratis termina mañana. Después, {{price}}/semana. Cancela cuando quieras en Ajustes.",
+  "annualRenewal": "Tu año de Replywise se renueva el {{date}} por {{price}}.",
+  "freeRepliesBack_one": "Vuelves a tener {{count}} respuesta gratis.",
+  "freeRepliesBack_other": "Vuelves a tener {{count}} respuestas gratis."
+}

@@ -1,6 +1,7 @@
 package app.replywise.ime.ui
 
 import android.content.Context
+import android.text.TextUtils
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
@@ -18,18 +19,22 @@ class PlaceholderRow(context: Context, onSwitchKeyboard: () -> Unit) {
 
   init {
     val title = TextView(context).apply {
-      setText(R.string.replywise_ime_placeholder)
+      setText(R.string.kb_app_name)
       // sp, so it follows the user's font scale.
       setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
       gravity = Gravity.CENTER_VERTICAL
       maxLines = 1
+      // Large font scales truncate with "…" instead of cutting the text off.
+      ellipsize = TextUtils.TruncateAt.END
+      // Colours from the generated tokens (values/ and values-night/colors.xml).
+      setTextColor(context.getColor(R.color.rw_text))
       layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f)
     }
 
     switchKey = ImageButton(context).apply {
       setImageResource(R.drawable.replywise_ime_ic_language)
-      imageTintList = title.textColors
-      contentDescription = context.getString(R.string.replywise_ime_next_keyboard)
+      imageTintList = android.content.res.ColorStateList.valueOf(context.getColor(R.color.rw_text))
+      contentDescription = context.getString(R.string.kb_next_keyboard)
       background = selectableBackground(context)
       // 48dp: Android's minimum touch target.
       val size = context.dp(48)
@@ -41,6 +46,7 @@ class PlaceholderRow(context: Context, onSwitchKeyboard: () -> Unit) {
     view = LinearLayout(context).apply {
       orientation = LinearLayout.HORIZONTAL
       minimumHeight = context.dp(56)
+      setBackgroundColor(context.getColor(R.color.rw_surface))
       val pad = context.dp(8)
       setPadding(pad, pad / 2, pad, pad / 2)
       addView(switchKey)

@@ -1,0 +1,65 @@
+{
+  "appName": "Replywise",
+  "nextKeyboard": "Tastiera successiva",
+  "aiSuggestion": "Suggerimento IA",
+  "actions": {
+    "reply": "Rispondi",
+    "polish": "Migliora",
+    "more": "↻ Altre"
+  },
+  "counter": {
+    "leftToday_one": "Ancora {{count}}",
+    "leftToday_other": "Ancora {{count}}"
+  },
+  "bar": {
+    "noFullAccess": "Attiva l’accesso completo in Impostazioni per le risposte IA. Puoi scrivere anche senza.",
+    "noFullAccessPath": "Impostazioni → Generali → Tastiera → Tastiere → Replywise → Consenti accesso completo",
+    "aiOff": "Le risposte IA sono disattivate. Attivale nell’app Replywise.",
+    "notSetUp": "Apri l’app Replywise una volta per configurare le risposte IA.",
+    "offline": "Nessuna connessione. Le risposte IA richiedono internet.",
+    "quotaEmpty": "Risposte gratis finite. Altre domani, o passa all’illimitato nell’app Replywise.",
+    "fairUse": "Limite giornaliero raggiunto. Torna domani.",
+    "providerDown": "Le risposte IA hanno qualche problema. Riprova tra un minuto.",
+    "lastTrialDay": "La prova gratuita finisce domani, poi {{price}}/settimana. Gestiscila nell’app Replywise."
+  },
+  "chipRows": {
+    "who": "Chi",
+    "closeness": "Vicinanza",
+    "tone": "Tono",
+    "flirt": "Livello flirt",
+    "formality": "Registro"
+  },
+  "relationship": {
+    "match": "Match",
+    "partner": "Partner",
+    "friend": "Amicizia",
+    "family": "Famiglia",
+    "colleague": "Collega"
+  },
+  "closeness": {
+    "justMet": "Primo contatto",
+    "gettingToKnow": "Conoscendoci",
+    "friendly": "Amichevole",
+    "close": "In confidenza",
+    "veryClose": "Legame stretto"
+  },
+  "tone": {
+    "warm": "Caloroso",
+    "funny": "Divertente",
+    "flirty": "Flirt",
+    "confident": "Sicuro",
+    "calm": "Calmo",
+    "apologise": "Scusarsi",
+    "sayNoKindly": "No, con garbo",
+    "professional": "Professionale"
+  },
+  "flirt": {
+    "off": "Spento",
+    "light": "Leggero",
+    "playful": "Giocoso"
+  },
+  "formality": {
+    "casual": "Informale",
+    "formal": "Formale"
+  }
+}
