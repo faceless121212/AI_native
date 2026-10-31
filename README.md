@@ -49,3 +49,7 @@ Open the accounts in `inventory.md` §8 (AWS Bedrock model access and the Apple 
 | Launch | 15 | Store listings, privacy labels, builds ready to submit |
 
 Plan on 8–12 weeks of evenings for one person, most of it in prompts 5, 6, 11 and 12.
+
+## Running it
+
+See `docs/device-setup.md` for building to a real iPhone and Android phone and turning on the keyboard.

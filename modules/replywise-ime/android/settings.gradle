@@ -1,0 +1,5 @@
+// Only used when this folder is the Gradle root (standalone JVM unit tests:
+// `cd modules/replywise-ime/android && ./gradlew testDebugUnitTest`).
+// Inside the app, Gradle ignores this file: the app's android/settings.gradle includes this
+// folder as ':replywise-ime' through Expo autolinking.
+rootProject.name = 'replywise-ime'

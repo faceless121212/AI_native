@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  IME metadata. One keyboard subtype per v1 language (en-GB, de, fr, es, it).
+  Must match core/SupportedLanguages.TAGS (checked by SupportedLanguagesTest).
+  No android:label on subtypes: the system shows the locale's display name.
+-->
+<input-method xmlns:android="http://schemas.android.com/apk/res/android"
+  android:supportsSwitchingToNextInputMethod="true">
+  <subtype
+    android:imeSubtypeMode="keyboard"
+    android:languageTag="en-GB"
+    android:imeSubtypeLocale="en_GB"
+    android:isAsciiCapable="true" />
+  <subtype
+    android:imeSubtypeMode="keyboard"
+    android:languageTag="de"
+    android:imeSubtypeLocale="de"
+    android:isAsciiCapable="true" />
+  <subtype
+    android:imeSubtypeMode="keyboard"
+    android:languageTag="fr"
+    android:imeSubtypeLocale="fr"
+    android:isAsciiCapable="true" />
+  <subtype
+    android:imeSubtypeMode="keyboard"
+    android:languageTag="es"
+    android:imeSubtypeLocale="es"
+    android:isAsciiCapable="true" />
+  <subtype
+    android:imeSubtypeMode="keyboard"
+    android:languageTag="it"
+    android:imeSubtypeLocale="it"
+    android:isAsciiCapable="true" />
+</input-method>
