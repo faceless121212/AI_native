@@ -1,14 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  PLACEHOLDER (Prompt 0). Prompt 1's scripts/gen-keyboard-strings.ts generates the keyboard strings
-  (values/ and values-<lang>/) from locales/<lang>/keyboard.json (docs/architecture.md §9).
-  Don't add strings here by hand once the generator exists.
+  Hand-written, non-translatable resources only. Every translatable keyboard string is generated
+  into values*/keyboard_strings.xml from locales/<lang>/keyboard.json by
+  scripts/gen-keyboard-strings.ts (docs/architecture.md §9). Don't add translatable strings here.
 -->
 <resources>
-  <!-- IME name in system settings and the keyboard picker. -->
+  <!-- IME name in system settings and the keyboard picker (brand name, same in every language). -->
   <string name="replywise_ime_label" translatable="false">Replywise</string>
-  <!-- Placeholder row title. -->
-  <string name="replywise_ime_placeholder" translatable="false">Replywise</string>
-  <!-- TalkBack label for the switch-keyboard key. -->
-  <string name="replywise_ime_next_keyboard">Next keyboard</string>
 </resources>

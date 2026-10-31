@@ -1,13 +1,15 @@
 import SwiftUI
 
 /// Prompt 0 placeholder: the single SwiftUI root hosted by `KeyboardViewController`.
-/// Strings come from Core/Strings.swift (same module in the extension target; no import needed).
+/// Strings come from Core/Strings.generated.swift (same module in the extension; no import needed).
 struct KeyboardRootView: View {
+    let strings: KeyboardStrings
+
     var body: some View {
         HStack(spacing: 0) {
-            Text(Strings.placeholderTitle)
+            Text(strings.appName)
                 .font(.headline)
-                .foregroundStyle(.primary)
+                .foregroundStyle(KeyboardTheme.text)
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
             Spacer(minLength: 0)

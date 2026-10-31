@@ -1,0 +1,65 @@
+{
+  "appName": "Replywise",
+  "nextKeyboard": "Nächste Tastatur",
+  "aiSuggestion": "KI-Vorschlag",
+  "actions": {
+    "reply": "Antworten",
+    "polish": "Verbessern",
+    "more": "↻ Mehr"
+  },
+  "counter": {
+    "leftToday_one": "Heute noch {{count}}",
+    "leftToday_other": "Heute noch {{count}}"
+  },
+  "bar": {
+    "noFullAccess": "Erlaube in den Einstellungen vollen Zugriff für KI-Antworten. Tippen geht auch ohne.",
+    "noFullAccessPath": "Einstellungen → Allgemein → Tastatur → Tastaturen → Replywise → Vollen Zugriff erlauben",
+    "aiOff": "KI-Antworten sind aus. Schalte sie in der Replywise-App ein.",
+    "notSetUp": "Öffne einmal die Replywise-App, um KI-Antworten einzurichten.",
+    "offline": "Keine Verbindung. KI-Antworten brauchen Internet.",
+    "quotaEmpty": "Keine Gratis-Antworten mehr. Morgen gibt’s neue – oder unbegrenzt in der Replywise-App.",
+    "fairUse": "Tageslimit erreicht. Morgen geht’s weiter.",
+    "providerDown": "KI-Antworten haben gerade Probleme. Versuch es gleich noch mal.",
+    "lastTrialDay": "Deine Testphase endet morgen, danach {{price}}/Woche. Verwalten in der Replywise-App."
+  },
+  "chipRows": {
+    "who": "Wer",
+    "closeness": "Nähe",
+    "tone": "Ton",
+    "flirt": "Flirtstufe",
+    "formality": "Förmlichkeit"
+  },
+  "relationship": {
+    "match": "Match",
+    "partner": "Partner:in",
+    "friend": "Freundeskreis",
+    "family": "Familie",
+    "colleague": "Arbeit"
+  },
+  "closeness": {
+    "justMet": "Ganz neu",
+    "gettingToKnow": "Kennenlernen",
+    "friendly": "Freundlich",
+    "close": "Vertraut",
+    "veryClose": "Sehr vertraut"
+  },
+  "tone": {
+    "warm": "Herzlich",
+    "funny": "Witzig",
+    "flirty": "Flirty",
+    "confident": "Selbstbewusst",
+    "calm": "Ruhig",
+    "apologise": "Entschuldigen",
+    "sayNoKindly": "Sanft ablehnen",
+    "professional": "Professionell"
+  },
+  "flirt": {
+    "off": "Aus",
+    "light": "Leicht",
+    "playful": "Verspielt"
+  },
+  "formality": {
+    "casual": "Locker",
+    "formal": "Förmlich"
+  }
+}

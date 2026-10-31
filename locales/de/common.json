@@ -1,0 +1,18 @@
+{
+  "appName": "Replywise",
+  "promise": "Die richtige Antwort, in jedem Chat",
+  "aiDisclosure": "Antworten werden von KI geschrieben. Du entscheidest, was du sendest.",
+  "aiSuggestion": "KI-Vorschlag",
+  "actions": {
+    "continue": "Weiter",
+    "skip": "Überspringen",
+    "close": "Schließen",
+    "reply": "Antworten",
+    "polish": "Verbessern",
+    "more": "↻ Mehr"
+  },
+  "status": {
+    "loading": "Wird geladen",
+    "stepOf": "Schritt {{current}} von {{total}}"
+  }
+}
