@@ -86,6 +86,7 @@ Picking rule: TypeScript for the app and server, Swift and Kotlin only where the
 | Over-the-air fixes | **EAS Update** | JS only. Can't change the keyboards. Never use it to change what data is sent or collected |
 | Store screenshots | Device screenshots + **Figma** | 5 languages; show the keyboard inside a chat |
 | App icon | Figma | |
+| Generated images and icons | **fal.ai**, local design tooling only | Run from your machine with `FAL_KEY` in `.env` (never `EXPO_PUBLIC_`, never committed). Generated files are reviewed and committed as plain assets. Never called from the app, the keyboards or Edge Functions, and never sent user data |
 
 ## 7. Legal and trust
 
