@@ -1,13 +1,13 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 
+import { Gender, Lang } from '@shared/schemas';
+
 // Row of public.profiles as the user may read it (RLS: own row only). Column names follow
 // docs/architecture.md §8 and supabase/migrations.
-const Gender = z.enum(['woman', 'man', 'unspecified']);
-
 export const ProfileRowSchema = z.object({
   id: z.uuid(),
-  ui_lang: z.enum(['en', 'de', 'fr', 'es', 'it']),
+  ui_lang: Lang,
   i_am: Gender.nullable(),
   they_are: Gender.nullable(),
   age_confirmed_at: z.string().nullable(),
