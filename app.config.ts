@@ -37,7 +37,14 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     },
     predictiveBackGestureEnabled: false,
   },
-  plugins: ['expo-router', 'expo-dev-client', '@bacons/apple-targets'],
+  plugins: [
+    'expo-router',
+    'expo-dev-client',
+    // Must stay BEFORE @bacons/apple-targets: Expo runs mods in reverse registration order, and this
+    // plugin patches the Xcode group apple-targets creates (see the plugin's header comment).
+    './plugins/with-keyboard-target-exclusions',
+    '@bacons/apple-targets',
+  ],
   experiments: {
     typedRoutes: true,
   },
