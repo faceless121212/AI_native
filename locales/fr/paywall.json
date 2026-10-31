@@ -2,5 +2,6 @@
   "trialTimeline": "Aujourd’hui : gratuit · Jour 2 : on te le rappelle · Jour 3 : passage à {{price}}/semaine",
   "perWeek": "{{price}} par semaine",
   "lifetimeLine": "Paie une fois. Des réponses illimitées tant que l’app existe.",
-  "fairUse": "Usage raisonnable : jusqu’à 100 réponses par jour."
+  "fairUse": "Usage raisonnable : jusqu’à 100 réponses par jour.",
+  "plansLabel": "Choisis une formule"
 }

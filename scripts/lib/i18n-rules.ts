@@ -33,7 +33,8 @@ export const LENGTH_RULES: LengthRule[] = [
     name: 'chip',
     max: 14,
     applies: (ns, key) =>
-      ns === 'keyboard' && /^(relationship|closeness|tone|flirt|formality|chipRows)\./.test(key),
+      ns === 'keyboard' &&
+      /^(relationship|closeness|tone|flirt|formality|chipRows|counter)\./.test(key),
   },
   {
     name: 'keyboard bar message',
@@ -43,7 +44,7 @@ export const LENGTH_RULES: LengthRule[] = [
 ];
 
 // Prices come from the store via {{price}}; a currency amount in copy is always a bug.
-const PRICE = /[€£$]\s?\d|\d\s?[€£$]|\b\d+[.,]\d{2}\s?(?:EUR|GBP|USD)\b/i;
+const PRICE = /[€£$]\s?\d|\d\s?[€£$]|\d\s?(?:euros?|EUR|GBP|USD|CHF)\b|\b(?:EUR|GBP|USD|CHF)\s?\d/i;
 
 // Pushy, scarcity or sexual framing that CLAUDE.md rule 8 and the store rules forbid.
 const BANNED = [
@@ -67,6 +68,12 @@ const BANNED = [
 
 const segmenter = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
 export const visibleLength = (text: string) => [...segmenter.segment(text)].length;
+
+/** Length as shown to users: a {{count}} is measured as a two-digit number ("10"). */
+export const displayLength = (text: string) => visibleLength(text.replace(/\{\{count\}\}/g, '10'));
+
+// The generated Swift only replaces the exact form {{name}}, so nothing else may appear.
+const MALFORMED_PLACEHOLDER = /\{\{(?!\w+\}\})[^}]*\}\}/;
 
 type Exceptions = Record<string, { max: number; reason: string }>;
 
@@ -116,6 +123,12 @@ export function checkLocales(root: string): { errors: string[]; warnings: string
             errors.push(`${id}: placeholders [${actual}] differ from ${SOURCE_LANG} [${expected}]`);
         }
 
+        const malformed = MALFORMED_PLACEHOLDER.exec(value);
+        if (malformed) {
+          errors.push(
+            `${id}: placeholder "${malformed[0]}" must be written exactly as {{name}} (no spaces or formats)`,
+          );
+        }
         if (PRICE.test(value)) errors.push(`${id}: hard-coded price "${value}"; use {{price}}`);
         for (const pattern of BANNED) {
           if (pattern.test(value)) errors.push(`${id}: banned phrase ${pattern} in "${value}"`);
@@ -127,7 +140,7 @@ export function checkLocales(root: string): { errors: string[]; warnings: string
           const exception = exceptions[exceptionKey];
           const max = exception?.max ?? rule.max;
           if (exception) usedExceptions.add(exceptionKey);
-          const length = visibleLength(value);
+          const length = displayLength(value);
           if (length > max) {
             errors.push(
               `${id}: ${length} characters, over the ${rule.name} limit of ${max}${exception ? ' (length-exceptions.json)' : ''}: "${value}"`,

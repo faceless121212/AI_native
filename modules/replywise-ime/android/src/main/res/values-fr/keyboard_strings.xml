@@ -8,8 +8,8 @@
     <string name="kb_actions_polish">Peaufiner</string>
     <string name="kb_actions_more">↻ Autres</string>
     <plurals name="kb_counter_left_today">
-        <item quantity="one">%1$d restante aujourd’hui</item>
-        <item quantity="other">%1$d restantes aujourd’hui</item>
+        <item quantity="one">%1$d restante</item>
+        <item quantity="other">%1$d restantes</item>
     </plurals>
     <string name="kb_bar_no_full_access">Autorise l’accès complet dans Réglages pour les réponses IA. La saisie marche sans.</string>
     <string name="kb_bar_no_full_access_path">Réglages → Général → Clavier → Claviers → Replywise → Autoriser l’accès complet</string>

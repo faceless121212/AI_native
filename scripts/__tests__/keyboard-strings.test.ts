@@ -48,7 +48,8 @@ describe('escaping', () => {
   });
 
   it('escapes Android text and maps placeholders to positional arguments', () => {
-    expect(androidText("Don't <b> & 50%", [])).toBe("Don\\'t &lt;b&gt; &amp; 50%%");
+    expect(androidText("Don't <b> & 50%", [])).toBe("Don\\'t &lt;b&gt; &amp; 50%");
+    expect(androidText('{{count}} = 50%', ['count'])).toBe('%1$d = 50%%');
     expect(androidText('@home', [])).toBe('\\@home');
     expect(androidText('{{count}} left, {{price}}', ['count', 'price'])).toBe('%1$d left, %2$s');
     expect(() => androidText('{{nope}}', [])).toThrow('Unknown placeholder');
@@ -81,6 +82,27 @@ describe('generated files', () => {
     expect(xml).toContain('<string name="kb_bar_last_trial_day">Ends tomorrow: %1$s/week</string>');
     expect(xml).toContain('<plurals name="kb_counter_left_today">');
     expect(xml).toContain('<item quantity="one">%1$d left today</item>');
+  });
+
+  it('puts count first in plural arguments', () => {
+    const withPrice = Object.fromEntries(
+      LANGUAGES.map((l) => [
+        l,
+        flatten({ x: { y_one: '{{price}} for {{count}}', y_other: '{{price}} for {{count}}' } }),
+      ]),
+    ) as typeof byLang;
+    const [entry] = buildEntries(withPrice);
+    expect(entry).toMatchObject({ kind: 'plural', params: ['count', 'price'] });
+    expect(generateAndroid(buildEntries(withPrice), 'en')).toContain('%2$s for %1$d');
+  });
+
+  it.each([
+    [{ continue: 'x' }, 'reserved Swift name "continue"'],
+    [{ bar: { off: 'x' }, barOff: 'y' }, 'both become "barOff"'],
+    [{ 'bad-key': 'x' }, 'lowerCamelCase'],
+  ])('rejects keys that make invalid or clashing identifiers: %j', (strings, message) => {
+    const bad = Object.fromEntries(LANGUAGES.map((l) => [l, flatten(strings)])) as typeof byLang;
+    expect(() => buildEntries(bad)).toThrow(message);
   });
 
   it('fails loudly when a language is missing a key', () => {

@@ -32,11 +32,17 @@ export function StepGuide({ steps, activeIndex, testID }: StepGuideProps) {
         const entering = reduceMotion ? undefined : FadeInDown.delay(index * 120).duration(260);
         return (
           <Animated.View
-            key={step.title}
+            key={index}
             entering={entering}
             accessible
             accessibilityLabel={`${t('status.stepOf', { current: index + 1, total: steps.length })}. ${step.title}. ${step.body}`}
-            accessibilityState={{ selected: active }}
+            accessibilityValue={
+              done
+                ? { text: t('status.stepDone') }
+                : active
+                  ? { text: t('status.stepCurrent') }
+                  : undefined
+            }
             style={[
               styles.row,
               {
@@ -81,10 +87,12 @@ export function StepGuide({ steps, activeIndex, testID }: StepGuideProps) {
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'flex-start' },
+  // min sizes + padding (not a fixed height) so the number never clips at large text sizes.
   badge: {
     minWidth: 28,
-    height: 28,
-    borderRadius: 14,
+    minHeight: 28,
+    paddingHorizontal: 6,
+    borderRadius: 999,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',

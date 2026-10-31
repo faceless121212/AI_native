@@ -8,8 +8,8 @@
     "more": "↻ Altre"
   },
   "counter": {
-    "leftToday_one": "Ne resta {{count}} oggi",
-    "leftToday_other": "Ne restano {{count}} oggi"
+    "leftToday_one": "Ancora {{count}}",
+    "leftToday_other": "Ancora {{count}}"
   },
   "bar": {
     "noFullAccess": "Attiva l’accesso completo in Impostazioni per le risposte IA. Puoi scrivere anche senza.",

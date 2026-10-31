@@ -1,31 +1,30 @@
 import type { ReactNode } from 'react';
-import { ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
+import { ScrollView, StyleSheet, type ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/theme';
 
+import { Text } from './text';
+
 type ScreenProps = {
   children: ReactNode;
-  /** Scrolls by default so content still fits at 200% text. */
-  scroll?: boolean;
+  /** Screen title, rendered as the first heading so screen readers announce where they are. */
+  title?: string;
   contentStyle?: ViewStyle;
 };
 
-export function Screen({ children, scroll = true, contentStyle }: ScreenProps) {
+/** Every screen scrolls, so content still fits at 200% text and the largest iOS sizes. */
+export function Screen({ children, title, contentStyle }: ScreenProps) {
   const theme = useTheme();
-  const padding = { padding: theme.spacing.lg, gap: theme.spacing.lg };
   return (
     <SafeAreaView style={[styles.fill, { backgroundColor: theme.colors.background }]}>
-      {scroll ? (
-        <ScrollView
-          contentContainerStyle={[padding, contentStyle]}
-          keyboardShouldPersistTaps="handled"
-        >
-          {children}
-        </ScrollView>
-      ) : (
-        <View style={[styles.fill, padding, contentStyle]}>{children}</View>
-      )}
+      <ScrollView
+        contentContainerStyle={[{ padding: theme.spacing.lg, gap: theme.spacing.lg }, contentStyle]}
+        keyboardShouldPersistTaps="handled"
+      >
+        {title ? <Text variant="title">{title}</Text> : null}
+        {children}
+      </ScrollView>
     </SafeAreaView>
   );
 }

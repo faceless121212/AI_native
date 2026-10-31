@@ -1,7 +1,8 @@
+import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { AccessibilityInfo, ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
-import { minTouchTarget, useTheme } from '@/theme';
+import { minTouchTarget, useFocusRing, useTheme } from '@/theme';
 
 import { Text, type TextTone } from './text';
 
@@ -28,7 +29,16 @@ export function Button({
 }: ButtonProps) {
   const theme = useTheme();
   const { t } = useTranslation();
+  const { focused, focusProps } = useFocusRing();
   const inactive = disabled || loading;
+
+  // A focused element's changed label isn't re-read, so say "Loading" when it starts.
+  const wasLoading = useRef(loading);
+  useEffect(() => {
+    if (loading && !wasLoading.current)
+      AccessibilityInfo.announceForAccessibility(t('status.loading'));
+    wasLoading.current = loading;
+  }, [loading, t]);
 
   const looks: Record<ButtonVariant, { bg: string; border: string; tone: TextTone }> = {
     primary: { bg: theme.colors.accent, border: theme.colors.accent, tone: 'onAccent' },
@@ -36,6 +46,7 @@ export function Button({
     ghost: { bg: 'transparent', border: 'transparent', tone: 'accent' },
   };
   const look = looks[variant];
+  const size = minTouchTarget();
 
   return (
     <Pressable
@@ -46,12 +57,15 @@ export function Button({
       accessibilityLabel={loading ? `${label}, ${t('status.loading')}` : label}
       accessibilityHint={accessibilityHint}
       accessibilityState={{ disabled: inactive, busy: loading }}
+      {...focusProps}
       style={({ pressed }) => [
         styles.base,
         {
-          minHeight: minTouchTarget,
+          minHeight: size,
+          minWidth: size,
           backgroundColor: look.bg,
-          borderColor: look.border,
+          borderColor: focused ? theme.colors.focus : look.border,
+          borderWidth: focused ? 2 : 1,
           borderRadius: theme.radius.md,
           paddingHorizontal: theme.spacing.lg,
           paddingVertical: theme.spacing.sm,
@@ -74,7 +88,7 @@ export function Button({
 }
 
 const styles = StyleSheet.create({
-  base: { borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  base: { alignItems: 'center', justifyContent: 'center' },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', flexShrink: 1 },
   label: { textAlign: 'center', flexShrink: 1 },
 });

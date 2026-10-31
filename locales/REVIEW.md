@@ -77,3 +77,14 @@ Notes that apply to more than one language:
 | it | common:status.stepOf | Passaggio {{current}} di {{total}} | Alternative "Fase" |
 | it | paywall:fairUse | Uso corretto: fino a 100 risposte al giorno. | Alternative "Uso equo" |
 | all | keyboard:bar.noFullAccessPath | see note above | Full Access toggle label not confirmed from an Apple source |
+
+## Added after review (main session, needs a native check)
+
+| Language | Key | Translation | Why check |
+|---|---|---|---|
+| fr | keyboard:counter.leftToday_one / _other | {{count}} restante / {{count}} restantes | Shortened to fit the 14-character chip limit with a two-digit count; "aujourd’hui" dropped |
+| es | keyboard:counter.leftToday_one / _other | Queda {{count}} / Quedan {{count}} | Same: "hoy" dropped to fit 14 characters |
+| it | keyboard:counter.leftToday_one / _other | Ancora {{count}} | Same: "oggi" dropped to fit 14 characters |
+| de/fr/es/it | common:status.info, success, warning, error | see common.json | Screen-reader words for banner severity |
+| de/fr/es/it | common:status.stepDone, stepCurrent | see common.json | Screen-reader state of a setup step; fr "terminée" agrees with "étape" |
+| de/fr/es/it | paywall:plansLabel | see paywall.json | Screen-reader name of the plan list (radio group) |

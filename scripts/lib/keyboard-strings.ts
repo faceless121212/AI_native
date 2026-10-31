@@ -67,14 +67,52 @@ export function androidText(text: string, paramOrder: string[]): string {
     .replace(/>/g, '&gt;')
     .replace(/'/g, "\\'")
     .replace(/"/g, '\\"')
-    .replace(/\n/g, '\\n')
-    .replace(/%/g, '%%');
+    .replace(/\n/g, '\\n');
+  // Android only un-escapes %% when the string is formatted with arguments.
+  if (paramOrder.length > 0) out = out.replace(/%/g, '%%');
   if (/^[@?]/.test(out)) out = `\\${out}`;
   return out.replace(/\{\{\s*(\w+)\s*\}\}/g, (_, name: string) => {
     const index = paramOrder.indexOf(name);
     if (index < 0) throw new Error(`Unknown placeholder {{${name}}}`);
     return `%${index + 1}$${name === 'count' ? 'd' : 's'}`;
   });
+}
+
+const SWIFT_KEYWORDS = new Set(
+  (
+    'associatedtype class deinit enum extension fileprivate func import init inout internal let open ' +
+    'operator private protocol public rethrows static struct subscript typealias var break case continue ' +
+    'default defer do else fallthrough for guard if in repeat return switch where while as catch false is ' +
+    'nil super self Self throw throws true try language fill forLanguage'
+  ).split(' '),
+);
+
+/** Throws when key paths can't become valid, unique Swift and Android identifiers. */
+export function validateIdentifiers(keys: string[]): void {
+  const swift = new Map<string, string>();
+  const android = new Map<string, string>();
+  for (const key of keys) {
+    for (const part of key.split('.')) {
+      if (!/^[a-z][A-Za-z0-9]*$/.test(part)) {
+        throw new Error(
+          `keyboard.json key "${key}": each part must be lowerCamelCase letters and digits`,
+        );
+      }
+    }
+    const s = swiftName(key);
+    if (SWIFT_KEYWORDS.has(s))
+      throw new Error(`keyboard.json key "${key}" becomes the reserved Swift name "${s}"`);
+    const a = androidName(key);
+    for (const [map, name] of [
+      [swift, s],
+      [android, a],
+    ] as const) {
+      const other = map.get(name);
+      if (other)
+        throw new Error(`keyboard.json keys "${other}" and "${key}" both become "${name}"`);
+      map.set(name, key);
+    }
+  }
 }
 
 export function buildEntries(byLang: Record<Lang, FlatStrings>): Entry[] {
@@ -97,7 +135,9 @@ export function buildEntries(byLang: Record<Lang, FlatStrings>): Entry[] {
       seenPlural.add(plural.base);
       const one = valuesFor(`${plural.base}_one`);
       const other = valuesFor(`${plural.base}_other`);
-      const params = placeholders(`${one[SOURCE_LANG]} ${other[SOURCE_LANG]}`);
+      // count is always the first argument (%1$d on Android, first label in Swift).
+      const found = placeholders(`${one[SOURCE_LANG]} ${other[SOURCE_LANG]}`);
+      const params = ['count', ...found.filter((p) => p !== 'count')];
       entries.push({ kind: 'plural', key: plural.base, params, one, other });
       continue;
     }
@@ -107,6 +147,7 @@ export function buildEntries(byLang: Record<Lang, FlatStrings>): Entry[] {
       params.length ? { kind: 'template', key, params, values } : { kind: 'plain', key, values },
     );
   }
+  validateIdentifiers(entries.map((e) => e.key));
   return entries;
 }
 
@@ -133,7 +174,7 @@ export function generateSwift(entries: Entry[]): string {
       );
     } else {
       fields.push(`    let ${name}One: String`, `    let ${name}Other: String`);
-      const params = e.params.includes('count') ? e.params : ['count', ...e.params];
+      const params = e.params;
       methods.push(
         `    public func ${name}(${params.map(swiftParam).join(', ')}) -> String {\n        let template = language.isPluralOne(count) ? ${name}One : ${name}Other\n        return ${swiftFillCall('template', e.params)}\n    }`,
       );

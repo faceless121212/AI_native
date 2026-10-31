@@ -8,8 +8,8 @@
     <string name="kb_actions_polish">Migliora</string>
     <string name="kb_actions_more">↻ Altre</string>
     <plurals name="kb_counter_left_today">
-        <item quantity="one">Ne resta %1$d oggi</item>
-        <item quantity="other">Ne restano %1$d oggi</item>
+        <item quantity="one">Ancora %1$d</item>
+        <item quantity="other">Ancora %1$d</item>
     </plurals>
     <string name="kb_bar_no_full_access">Attiva l’accesso completo in Impostazioni per le risposte IA. Puoi scrivere anche senza.</string>
     <string name="kb_bar_no_full_access_path">Impostazioni → Generali → Tastiera → Tastiere → Replywise → Consenti accesso completo</string>

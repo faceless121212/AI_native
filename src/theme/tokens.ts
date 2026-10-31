@@ -79,5 +79,6 @@ export const typeScale = {
 
 export type TypeVariant = keyof typeof typeScale;
 
-// Minimum touch target (Apple HIG 44 pt; Android 48 dp is applied via hitSlop where needed).
-export const minTouchTarget = 44;
+// Minimum touch target in both directions: Apple HIG 44 pt, Android/Material 48 dp.
+// Components use minTouchTarget() from src/theme/touch-target.ts, which picks per platform.
+export const touchTarget = { ios: 44, android: 48 } as const;

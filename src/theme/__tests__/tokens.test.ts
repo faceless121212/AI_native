@@ -27,6 +27,14 @@ const pairs = [
   ['borderStrong', 'background', 3],
   ['borderStrong', 'surface', 3],
   ['focus', 'background', 3],
+  ['focus', 'surface', 3],
+  ['accent', 'accentSoft', 4.5],
+  ['accent', 'successSoft', 4.5],
+  ['accent', 'warningSoft', 4.5],
+  ['accent', 'dangerSoft', 4.5],
+  ['accent', 'surfaceRaised', 4.5],
+  ['borderStrong', 'surfaceRaised', 3],
+  ['borderStrong', 'accentSoft', 3],
 ] as const;
 
 describe.each(['light', 'dark'] as ColorScheme[])('%s colours', (scheme) => {

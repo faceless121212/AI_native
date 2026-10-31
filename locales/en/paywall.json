@@ -2,5 +2,6 @@
   "trialTimeline": "Today: free · Day 2: we remind you · Day 3: {{price}}/week starts",
   "perWeek": "{{price}} a week",
   "lifetimeLine": "Pay once. Unlimited replies for as long as the app exists.",
-  "fairUse": "Fair use: up to 100 replies a day."
+  "fairUse": "Fair use: up to 100 replies a day.",
+  "plansLabel": "Choose a plan"
 }

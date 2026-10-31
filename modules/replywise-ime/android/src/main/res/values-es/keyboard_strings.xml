@@ -8,8 +8,8 @@
     <string name="kb_actions_polish">Pulir</string>
     <string name="kb_actions_more">↻ Más</string>
     <plurals name="kb_counter_left_today">
-        <item quantity="one">Te queda %1$d hoy</item>
-        <item quantity="other">Te quedan %1$d hoy</item>
+        <item quantity="one">Queda %1$d</item>
+        <item quantity="other">Quedan %1$d</item>
     </plurals>
     <string name="kb_bar_no_full_access">Activa el acceso total en Ajustes para respuestas con IA. Puedes escribir sin él.</string>
     <string name="kb_bar_no_full_access_path">Ajustes → General → Teclado → Teclados → Replywise → Permitir acceso total</string>

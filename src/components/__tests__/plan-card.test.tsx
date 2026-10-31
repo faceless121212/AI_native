@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import { PlanCard } from '../plan-card';
+import { RadioGroup } from '../radio-group';
 
 const lifetime = {
   title: 'Lifetime',
@@ -39,6 +40,32 @@ describe('PlanCard', () => {
     expect(
       screen.getByRole('radio', { name: 'Annual, €39.99 per year, €0.77 a week' }),
     ).toBeOnTheScreen();
+  });
+
+  it('sits in a named radio group with one plan checked', async () => {
+    await render(
+      <RadioGroup label="Choose a plan">
+        <PlanCard
+          title="Weekly"
+          price="€4.99"
+          period="per week"
+          selected={false}
+          onPress={() => {}}
+        />
+        <PlanCard title="Annual" price="€39.99" period="per year" selected onPress={() => {}} />
+      </RadioGroup>,
+    );
+    expect(screen.getByLabelText('Choose a plan')).toHaveProp('accessibilityRole', 'radiogroup');
+    expect(
+      screen.getAllByRole('radio').filter((r) => r.props.accessibilityState?.checked),
+    ).toHaveLength(1);
+  });
+
+  it('leaves no stray separator when there is no billing period', async () => {
+    await render(
+      <PlanCard title="Lifetime" price="€59.99" period="" selected={false} onPress={() => {}} />,
+    );
+    expect(screen.getByRole('radio', { name: 'Lifetime, €59.99' })).toBeOnTheScreen();
   });
 
   it('calls onPress', async () => {

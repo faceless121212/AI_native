@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Banner, Button, Card, Chip, PlanCard, StepGuide, Text } from '@/components';
+import { Banner, Button, Card, Chip, PlanCard, RadioGroup, StepGuide, Text } from '@/components';
 import { type ColorScheme, ThemeProvider, useTheme } from '@/theme';
 
 // Development-only screen (app/dev/components.tsx redirects away in release builds), so its
@@ -39,6 +39,7 @@ function Gallery({ heading }: { heading: string }) {
   const theme = useTheme();
   const { t } = useTranslation(['common', 'keyboard', 'onboarding', 'paywall']);
   const [tone, setTone] = useState<'warm' | 'funny' | 'calm'>('warm');
+  const [who, setWho] = useState<string[]>(['friend']);
   const [plan, setPlan] = useState<'weekly' | 'annual' | 'lifetime'>('annual');
   const [loading, setLoading] = useState(false);
 
@@ -50,9 +51,7 @@ function Gallery({ heading }: { heading: string }) {
         gap: theme.spacing.lg,
       }}
     >
-      <Text variant="title" accessibilityRole="header">
-        {heading}
-      </Text>
+      <Text variant="title">{heading}</Text>
 
       <Text variant="display">{t('promise')}</Text>
       <Text tone="secondary">{t('aiDisclosure')}</Text>
@@ -64,15 +63,35 @@ function Gallery({ heading }: { heading: string }) {
       />
       <Button label={t('onboarding:actions.notNow')} onPress={() => {}} variant="secondary" />
       <Button label={t('actions.skip')} onPress={() => {}} variant="ghost" />
-      <Button label={t('actions.close')} onPress={() => {}} disabled />
+      <Button label={t('actions.skip')} onPress={() => {}} variant="secondary" disabled />
 
-      <View style={[styles.wrap, { gap: theme.spacing.sm }]}>
+      <RadioGroup
+        label={t('keyboard:chipRows.tone')}
+        style={{ ...styles.wrap, gap: theme.spacing.sm }}
+      >
         {(['warm', 'funny', 'calm'] as const).map((key) => (
           <Chip
             key={key}
+            mode="single"
             label={t(`keyboard:tone.${key}`)}
             selected={tone === key}
             onPress={() => setTone(key)}
+          />
+        ))}
+      </RadioGroup>
+
+      <View style={[styles.wrap, { gap: theme.spacing.sm }]}>
+        {(['match', 'partner', 'friend', 'colleague'] as const).map((key) => (
+          <Chip
+            key={key}
+            mode="multi"
+            label={t(`keyboard:relationship.${key}`)}
+            selected={who.includes(key)}
+            onPress={() =>
+              setWho((current) =>
+                current.includes(key) ? current.filter((k) => k !== key) : [...current, key],
+              )
+            }
           />
         ))}
       </View>
@@ -93,30 +112,32 @@ function Gallery({ heading }: { heading: string }) {
         action={{ label: t('actions.close'), onPress: () => {} }}
       />
 
-      <PlanCard
-        title="Weekly"
-        price="€4.99"
-        period="/ week"
-        secondaryLine={t('paywall:trialTimeline', { price: '€4.99' })}
-        selected={plan === 'weekly'}
-        onPress={() => setPlan('weekly')}
-      />
-      <PlanCard
-        title="Annual"
-        price="€39.99"
-        period="/ year"
-        secondaryLine={t('paywall:perWeek', { price: '€0.77' })}
-        selected={plan === 'annual'}
-        onPress={() => setPlan('annual')}
-      />
-      <PlanCard
-        title="Lifetime"
-        price="€59.99"
-        period=""
-        details={[t('paywall:lifetimeLine'), t('paywall:fairUse')]}
-        selected={plan === 'lifetime'}
-        onPress={() => setPlan('lifetime')}
-      />
+      <RadioGroup label={t('paywall:plansLabel')} style={{ gap: theme.spacing.md }}>
+        <PlanCard
+          title="Weekly"
+          price="€4.99"
+          period="per week"
+          secondaryLine={t('paywall:trialTimeline', { price: '€4.99' })}
+          selected={plan === 'weekly'}
+          onPress={() => setPlan('weekly')}
+        />
+        <PlanCard
+          title="Annual"
+          price="€39.99"
+          period="per year"
+          secondaryLine={t('paywall:perWeek', { price: '€0.77' })}
+          selected={plan === 'annual'}
+          onPress={() => setPlan('annual')}
+        />
+        <PlanCard
+          title="Lifetime"
+          price="€59.99"
+          period=""
+          details={[t('paywall:lifetimeLine'), t('paywall:fairUse')]}
+          selected={plan === 'lifetime'}
+          onPress={() => setPlan('lifetime')}
+        />
+      </RadioGroup>
 
       <StepGuide
         activeIndex={1}

@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
+import { AccessibilityInfo } from 'react-native';
 
 import { Button } from '../button';
 
@@ -10,9 +11,18 @@ describe('Button', () => {
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 
-  it('meets the 44 pt minimum touch target', async () => {
-    await render(<Button label="Continue" onPress={() => {}} />);
-    expect(screen.getByRole('button')).toHaveStyle({ minHeight: 44 });
+  it('is at least 44 × 44 pt, even with a one-letter label', async () => {
+    await render(<Button label="✕" onPress={() => {}} variant="ghost" />);
+    expect(screen.getByRole('button')).toHaveStyle({ minHeight: 44, minWidth: 44 });
+  });
+
+  it('announces "Loading" when loading starts', async () => {
+    const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility');
+    const { rerender } = await render(<Button label="Continue" onPress={() => {}} />);
+    expect(announce).not.toHaveBeenCalled();
+    await rerender(<Button label="Continue" onPress={() => {}} loading />);
+    expect(announce).toHaveBeenCalledWith('Loading');
+    announce.mockRestore();
   });
 
   it('announces loading as busy and ignores presses while loading', async () => {

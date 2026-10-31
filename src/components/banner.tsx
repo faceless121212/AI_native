@@ -1,4 +1,6 @@
-import { StyleSheet, View } from 'react-native';
+import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import { AccessibilityInfo, StyleSheet, View } from 'react-native';
 
 import { type ColorName, useTheme } from '@/theme';
 
@@ -9,12 +11,36 @@ export type BannerTone = 'info' | 'success' | 'warning' | 'danger';
 
 const toneStyle: Record<
   BannerTone,
-  { bg: ColorName; accent: ColorName; text: TextTone; symbol: string }
+  {
+    bg: ColorName;
+    accent: ColorName;
+    text: TextTone;
+    symbol: string;
+    word: 'status.info' | 'status.success' | 'status.warning' | 'status.error';
+  }
 > = {
-  info: { bg: 'accentSoft', accent: 'accent', text: 'onAccentSoft', symbol: 'ℹ︎' },
-  success: { bg: 'successSoft', accent: 'success', text: 'success', symbol: '✓' },
-  warning: { bg: 'warningSoft', accent: 'warning', text: 'warning', symbol: '!' },
-  danger: { bg: 'dangerSoft', accent: 'danger', text: 'danger', symbol: '✕' },
+  info: {
+    bg: 'accentSoft',
+    accent: 'accent',
+    text: 'onAccentSoft',
+    symbol: 'ℹ︎',
+    word: 'status.info',
+  },
+  success: {
+    bg: 'successSoft',
+    accent: 'success',
+    text: 'success',
+    symbol: '✓',
+    word: 'status.success',
+  },
+  warning: {
+    bg: 'warningSoft',
+    accent: 'warning',
+    text: 'warning',
+    symbol: '!',
+    word: 'status.warning',
+  },
+  danger: { bg: 'dangerSoft', accent: 'danger', text: 'danger', symbol: '✕', word: 'status.error' },
 };
 
 type BannerProps = {
@@ -26,20 +52,26 @@ type BannerProps = {
 };
 
 /**
- * One-line or short status message. Announced by screen readers when it appears
- * (accessibilityRole "alert", polite live region on Android). The symbol repeats the tone
- * so colour is never the only signal.
+ * Short status message. Spoken by VoiceOver and TalkBack as soon as it appears or changes
+ * (WCAG 4.1.3), with the severity as a word, so neither colour nor the symbol is the only signal.
  */
 export function Banner({ message, title, tone = 'info', action, testID }: BannerProps) {
   const theme = useTheme();
+  const { t } = useTranslation();
   const look = toneStyle[tone];
+  const spoken = [t(look.word), title, message].filter(Boolean).join('. ');
+
+  useEffect(() => {
+    AccessibilityInfo.announceForAccessibility(spoken);
+  }, [spoken]);
+
   return (
     <View
       testID={testID}
       accessibilityRole="alert"
-      // One focus stop for title + message; with an action the button must stay reachable.
+      // One focus stop for the text; with an action the button must stay reachable on its own.
       accessible={!action}
-      accessibilityLiveRegion="polite"
+      accessibilityLabel={action ? undefined : spoken}
       style={[
         styles.base,
         {
@@ -65,7 +97,12 @@ export function Banner({ message, title, tone = 'info', action, testID }: Banner
             {title}
           </Text>
         ) : null}
-        <Text variant="body">{message}</Text>
+        <Text
+          variant="body"
+          accessibilityLabel={action ? `${t(look.word)}. ${message}` : undefined}
+        >
+          {message}
+        </Text>
         {action ? <Button label={action.label} onPress={action.onPress} variant="ghost" /> : null}
       </View>
     </View>

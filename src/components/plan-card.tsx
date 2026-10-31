@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { minTouchTarget, useTheme } from '@/theme';
+import { minTouchTarget, useFocusRing, useTheme } from '@/theme';
 
 import { Text } from './text';
 
@@ -20,7 +20,7 @@ type PlanCardProps = {
   testID?: string;
 };
 
-/** A selectable plan in a group of plans; behaves as a radio button. */
+/** A selectable plan; behaves as a radio button. Put the plans inside a <RadioGroup>. */
 export function PlanCard({
   title,
   price,
@@ -32,23 +32,30 @@ export function PlanCard({
   testID,
 }: PlanCardProps) {
   const theme = useTheme();
-  const label = [title, `${price} ${period}`, secondaryLine, ...details].filter(Boolean).join(', ');
+  const { focused, focusProps } = useFocusRing();
+  const priceLine = [price, period].filter(Boolean).join(' ');
+  const label = [title, priceLine, secondaryLine, ...details].filter(Boolean).join(', ');
   return (
     <Pressable
       testID={testID}
       onPress={onPress}
       accessibilityRole="radio"
       accessibilityLabel={label}
-      accessibilityState={{ checked: selected, selected }}
+      accessibilityState={{ checked: selected }}
+      {...focusProps}
       style={({ pressed }) => [
         styles.base,
         {
-          minHeight: minTouchTarget,
+          minHeight: minTouchTarget(),
           gap: theme.spacing.md,
           padding: theme.spacing.lg,
           borderRadius: theme.radius.lg,
-          borderWidth: selected ? 2 : 1,
-          borderColor: selected ? theme.colors.accent : theme.colors.borderStrong,
+          borderWidth: selected || focused ? 2 : 1,
+          borderColor: focused
+            ? theme.colors.focus
+            : selected
+              ? theme.colors.accent
+              : theme.colors.borderStrong,
           backgroundColor: selected ? theme.colors.accentSoft : theme.colors.surfaceRaised,
           opacity: pressed ? 0.85 : 1,
         },

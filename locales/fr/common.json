@@ -13,6 +13,12 @@
   },
   "status": {
     "loading": "Chargement",
-    "stepOf": "Étape {{current}} sur {{total}}"
+    "stepOf": "Étape {{current}} sur {{total}}",
+    "info": "Info",
+    "success": "Terminé",
+    "warning": "Avertissement",
+    "error": "Erreur",
+    "stepDone": "terminée",
+    "stepCurrent": "étape en cours"
   }
 }
