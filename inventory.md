@@ -73,8 +73,8 @@ Picking rule: TypeScript for the app and server, Swift and Kotlin only where the
 | Server tests | **Deno test** (functions, with a fake LLM provider), **pgTAP** (SQL and RLS) | | |
 | Evals | `npm run evals` | Language match, formality, length, banned phrases, safety | |
 | Lint and format | **ESLint** + **Prettier** + `tsc --noEmit`; **SwiftFormat**; **ktlint** | | npm dev packages: `eslint`, `eslint-config-expo`, `eslint-config-prettier`, `prettier`, `typescript` |
-| Test packages | `jest`, `jest-expo`, `@testing-library/react-native`, `@types/jest` | Jest + RNTL above | Added in prompt 0 |
-| Expo Router peers | `expo-linking`, `expo-constants`, `react-native-screens`, `react-native-safe-area-context`, `expo-status-bar`, `expo-dev-client` | Required by Expo Router and the development build | Install with `npx expo install` so versions match the SDK |
+| Test packages | `jest`, `jest-expo`, `@testing-library/react-native`, `test-renderer` (RNTL 14 peer), `@types/jest` | Jest + RNTL above | Added in prompt 0 |
+| Expo Router peers | `react-dom` (Expo Router peer, pinned to the React version), `expo-linking`, `expo-constants`, `react-native-screens`, `react-native-safe-area-context`, `expo-status-bar`, `expo-dev-client` | Required by Expo Router and the development build | Install with `npx expo install` so versions match the SDK |
 | CI | **GitHub Actions**: lint, type-check, Jest, Deno, pgTAP on every push; `swift test` on a macOS runner; Gradle unit tests; **EAS Build** on tags | | |
 
 ## 6. Builds and releases

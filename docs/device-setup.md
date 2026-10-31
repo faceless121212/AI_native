@@ -16,6 +16,8 @@ cd replywise && npm ci
 cp .env.example .env
 ```
 
+In `.env`, set `APPLE_TEAM_ID` to your Apple Developer Team ID (developer.apple.com → Membership details). It signs both the app and the keyboard.
+
 You need Xcode (with your Apple ID added under Settings → Accounts), Android Studio (with an SDK installed and `ANDROID_HOME` set), and the phones connected by USB with developer mode on (iPhone: Settings → Privacy & Security → Developer Mode; Android: Developer options → USB debugging).
 
 ## iPhone
@@ -30,16 +32,16 @@ npx expo run:ios --device
 
 Pick your iPhone from the list. The first build asks Xcode for signing:
 
-- Open `ios/Replywise.xcworkspace` if signing fails, select your team for **both** targets (`Replywise` and `ReplywiseKeyboard`) under Signing & Capabilities, then run the command again.
+- If signing still fails, check `APPLE_TEAM_ID` in `.env`, run `npx expo prebuild --clean -p ios` again, and look at Signing & Capabilities in `ios/Replywise.xcworkspace` for **both** targets (`Replywise` and `ReplywiseKeyboard`).
 - Both targets use the App Group `group.app.replywise.shared` and the keychain group `$(AppIdentifierPrefix)app.replywise.shared`. With automatic signing, Xcode registers the App IDs `app.replywise` and `app.replywise.keyboard` and the App Group for you; otherwise create them in the Apple Developer portal and enable the App Group on both IDs.
-- Run `npx expo prebuild --clean -p ios` again whenever you add a file under `targets/keyboard/Tests/` (the prebuild step keeps test files out of the keyboard build).
+- `targets/keyboard/Tests/`, `Package.swift` and SwiftPM's `.build/` and `.swiftpm/` folders are kept out of the keyboard build by `plugins/with-keyboard-target-exclusions.js`. If an Xcode build ever fails on `import XCTest`, run `npx expo prebuild --clean -p ios` and tell Claude.
 
 Turn the keyboard on:
 
 1. Settings → General → Keyboard → Keyboards → Add New Keyboard…
 2. Under "Third-Party Keyboards", tap **Replywise**. Don't turn on Full Access; it isn't needed yet.
 3. Open Notes (or any text field), tap and hold the globe key under the keyboard (or the 🌐 key on the keyboard), and choose **Replywise**.
-4. You should see a row with a globe key and "Replywise". Tap the globe key to go back to your normal keyboard; tap and hold it to see the keyboard list.
+4. You should see a row with "Replywise". On iPhones with a Home button there's also a globe key in the row; on Face ID iPhones the system globe sits below the keyboard instead. Tap the globe key to go back to your normal keyboard; tap and hold it to see the keyboard list.
 
 ## Android phone
 

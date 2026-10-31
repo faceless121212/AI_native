@@ -20,6 +20,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   userInterfaceStyle: 'automatic',
   ios: {
     bundleIdentifier: BUNDLE_ID,
+    // Signing team for the app AND the keyboard extension (apple-targets reads it for both).
+    // Set APPLE_TEAM_ID in .env; without it `expo prebuild --clean` drops the team every time.
+    appleTeamId: process.env.APPLE_TEAM_ID,
     supportsTablet: false,
     deploymentTarget: '16.0',
     entitlements: {
@@ -49,6 +52,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     typedRoutes: true,
   },
   extra: {
+    // Set EAS_PROJECT_ID after `eas init` (eas.json uses appVersionSource "remote").
+    eas: process.env.EAS_PROJECT_ID ? { projectId: process.env.EAS_PROJECT_ID } : undefined,
     appVariant: variant,
     appGroup: APP_GROUP,
   },

@@ -21,8 +21,12 @@ const { withXcodeProjectBeta } = require('@bacons/apple-targets/build/with-bacon
 const DEFAULTS = {
   // Target folder relative to the project root.
   targetDir: 'targets/keyboard',
-  // Files or folders (relative to targetDir) to exclude. Folders are expanded to every file inside.
+  // Files or folders (relative to targetDir) to exclude. A folder is excluded as a folder entry
+  // (so files added later stay out without a new prebuild) and also file by file (belt and braces).
   exclude: ['Package.swift', 'Tests'],
+  // Always excluded, even if they don't exist yet: SwiftPM build artefacts from
+  // `swift test --package-path targets/keyboard` land inside the synchronized folder.
+  alwaysExclude: ['.build', '.swiftpm'],
 };
 
 function listFiles(absDir, relDir) {
@@ -41,19 +45,21 @@ function resolveExclusions(projectRoot, targetDir, exclude) {
   return exclude.flatMap((relPath) => {
     const abs = path.join(root, relPath);
     if (!fs.existsSync(abs)) return [];
-    return fs.statSync(abs).isDirectory()
-      ? listFiles(abs, relPath.split(path.sep).join('/'))
-      : [relPath];
+    const rel = relPath.split(path.sep).join('/');
+    return fs.statSync(abs).isDirectory() ? [rel, ...listFiles(abs, rel)] : [rel];
   });
 }
 
 const withKeyboardTargetExclusions = (config, props = {}) => {
-  const { targetDir, exclude } = { ...DEFAULTS, ...props };
+  const { targetDir, exclude, alwaysExclude } = { ...DEFAULTS, ...props };
   const groupPath = path.basename(targetDir);
 
   return withXcodeProjectBeta(config, (config) => {
     const project = config.modResults;
-    const exclusions = resolveExclusions(config.modRequest.projectRoot, targetDir, exclude);
+    const exclusions = [
+      ...alwaysExclude,
+      ...resolveExclusions(config.modRequest.projectRoot, targetDir, exclude),
+    ];
 
     let patched = false;
     for (const target of project.rootObject.props.targets) {
