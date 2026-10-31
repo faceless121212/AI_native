@@ -50,3 +50,6 @@ coverage/
 .build/
 .swiftpm/
 local.properties
+
+# Deno treats the root package.json as config and would write a lockfile here
+/deno.lock
