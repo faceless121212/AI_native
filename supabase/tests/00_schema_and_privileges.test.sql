@@ -1,11 +1,11 @@
 -- Schema shape, RLS switched on everywhere, and who may touch what (architecture §8).
 begin;
 \ir _helpers.psql
-select plan(30);
+select plan(33);
 
 select tables_are('public', array[
   'profiles', 'consents', 'device_keys', 'usage_days', 'credit_ledger', 'entitlements',
-  'ai_requests', 'reply_events', 'referrals', 'support_messages', 'provider_status'
+  'ai_requests', 'ai_requests_daily', 'reply_events', 'referrals', 'support_messages', 'provider_status'
 ], 'public has exactly the architecture §8 tables');
 select views_are('public', array['daily_cost'], 'public has exactly the daily_cost view');
 
@@ -61,7 +61,7 @@ select policies_are('public', 'referrals', array['referrals: owner can read own 
 select is_empty($$
   select tablename from pg_policies
   where schemaname = 'public'
-    and tablename in ('ai_requests', 'reply_events', 'device_keys', 'support_messages', 'provider_status')
+    and tablename in ('ai_requests', 'ai_requests_daily', 'reply_events', 'device_keys', 'support_messages', 'provider_status')
 $$, 'server-only tables have no policies');
 select is_empty($$
   select policyname from pg_policies
@@ -80,14 +80,14 @@ select columns_are('public', 'reply_events', array[
 select is_empty($$
   select a.attrelid::regclass || '.' || a.attname
   from pg_attribute a
-  where a.attrelid in ('public.ai_requests'::regclass, 'public.reply_events'::regclass)
+  where a.attrelid in ('public.ai_requests'::regclass, 'public.reply_events'::regclass, 'public.ai_requests_daily'::regclass)
     and a.attnum > 0 and not a.attisdropped
     and a.atttypid in ('text'::regtype, 'varchar'::regtype, 'text[]'::regtype, 'json'::regtype, 'jsonb'::regtype)
     and not exists (
       select 1 from pg_constraint k
       where k.conrelid = a.attrelid and k.contype = 'c' and a.attnum = any(k.conkey)
     )
-$$, 'every text-like column in ai_requests and reply_events is constrained by a check');
+$$, 'every text-like column in ai_requests, ai_requests_daily and reply_events is constrained by a check');
 
 select ok(
   (select 'security_invoker=true' = any(c.reloptions) from pg_class c where c.oid = 'public.daily_cost'::regclass),
@@ -107,6 +107,14 @@ select has_trigger('public', 'usage_days', 'usage_days_set_updated_at', 'usage_d
 select has_trigger('public', 'entitlements', 'entitlements_set_updated_at', 'entitlements keeps updated_at current');
 select has_trigger('public', 'referrals', 'referrals_set_updated_at', 'referrals keeps updated_at current');
 select has_trigger('public', 'provider_status', 'provider_status_set_updated_at', 'provider_status keeps updated_at current');
+select has_trigger('public', 'ai_requests_daily', 'ai_requests_daily_set_updated_at', 'ai_requests_daily keeps updated_at current');
+select columns_are('public', 'ai_requests_daily', array[
+  'date', 'kind', 'source', 'lang', 'provider', 'model', 'prompt_version', 'status',
+  'requests', 'tokens_in', 'tokens_out', 'cost_micro_eur', 'created_at', 'updated_at'
+], 'ai_requests_daily has no user_id and no text');
+select results_eq($$ select schedule, command from cron.job where jobname = 'replywise-retention' $$,
+  $$ values ('15 3 * * *'::text, 'select public.run_retention(now())'::text) $$,
+  'pg_cron runs run_retention daily at 03:15 UTC');
 
 -- updated_at really moves (the trigger overwrites whatever the writer sent).
 select tests.create_user() as u \gset user_u_

@@ -2,32 +2,35 @@
 -- lookup for auth, revocation is final and scoped to the owner.
 begin;
 \ir _helpers.psql
-select plan(24);
+select plan(25);
 
 select tests.create_user() as a \gset user_a_
 select tests.create_user() as b \gset user_b_
 
 -- Gate
 select tests.as_service();
-select is(public.create_device_key(:'user_a_a', tests.fake_hash('a1'), 'ios') ->> 'status', 'age_required',
+select is(public.create_device_key(:'user_a_a', tests.fake_hash('a1'), 'ios', '2026-11-01') ->> 'status', 'age_required',
   'no key without age confirmation');
-select public.patch_profile(:'user_a_a', p_age_confirmed => true) is not null as ok \gset
-select is(public.create_device_key(:'user_a_a', tests.fake_hash('a1'), 'ios') ->> 'status', 'ai_off',
+select public.patch_profile(:'user_a_a', p_min_policy_version => '2026-11-01', p_age_confirmed => true) is not null as ok \gset
+select is(public.create_device_key(:'user_a_a', tests.fake_hash('a1'), 'ios', '2026-11-01') ->> 'status', 'ai_off',
   'no key without AI consent');
-select public.grant_ai_consent(:'user_a_a', 'v1') ->> 'status' as g \gset
-select public.create_device_key(:'user_a_a', tests.fake_hash('a1'), 'ios') as k1 \gset
+select public.grant_ai_consent(:'user_a_a', '2026-11-01', '2026-11-01') ->> 'status' as g \gset
+select public.create_device_key(:'user_a_a', tests.fake_hash('a1'), 'ios', '2026-11-01') as k1 \gset
 select is(:'k1'::jsonb ->> 'status', 'ok', 'key created after age + consent');
 select is((:'k1'::jsonb ->> 'rotated')::int, 0, 'first key rotates nothing');
 select is((select key_hash from public.device_keys where id = (:'k1'::jsonb ->> 'key_id')::uuid), tests.fake_hash('a1'),
   'only the hash is stored');
-select is(public.create_device_key(:'user_b_b', tests.fake_hash('b1'), 'ios') ->> 'status', 'age_required',
+select is(public.create_device_key(:'user_b_b', tests.fake_hash('b1'), 'ios', '2026-11-01') ->> 'status', 'age_required',
   'user B has no consent → no key');
 
+select is(public.create_device_key(:'user_a_a', tests.fake_hash('a0'), 'ios', '2027-01-01') ->> 'status', 'ai_off',
+  'no key when the consent is older than the minimum policy version');
+
 -- Rotation per platform
-select public.create_device_key(:'user_a_a', tests.fake_hash('a2'), 'ios') as k2 \gset
+select public.create_device_key(:'user_a_a', tests.fake_hash('a2'), 'ios', '2026-11-01') as k2 \gset
 select is((:'k2'::jsonb ->> 'rotated')::int, 1, 'a new iOS key revokes the earlier iOS key');
 select isnt((select revoked_at from public.device_keys where key_hash = tests.fake_hash('a1')), null, 'old key revoked');
-select public.create_device_key(:'user_a_a', tests.fake_hash('a3'), 'android') as k3 \gset
+select public.create_device_key(:'user_a_a', tests.fake_hash('a3'), 'android', '2026-11-01') as k3 \gset
 select is((:'k3'::jsonb ->> 'rotated')::int, 0, 'an Android key leaves the iOS key alone');
 
 -- Format and uniqueness

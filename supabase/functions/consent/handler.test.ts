@@ -3,13 +3,23 @@ import { authenticate } from '../_shared/auth.ts';
 import { generateDeviceKey, hashDeviceKey } from '../_shared/device-key.ts';
 import { withErrors } from '../_shared/http.ts';
 import { ConsentResponse, ErrorResponse } from '../_shared/schemas.ts';
+import type { AiPolicy } from '../_shared/policy.ts';
 import { MemoryStore } from '../_shared/testing/memory-store.ts';
 import { bearer, captureConsole, device, jsonRequest } from '../_shared/testing/helpers.ts';
 import { handleConsent } from './handler.ts';
 
-function setup() {
-  const store = new MemoryStore();
-  const handler = withErrors('consent', (req) => handleConsent(req, { auth: store, repo: store }));
+// Two published versions so "new version" paths can be tested; the real list is in policy.ts.
+const POLICY: AiPolicy = {
+  accepted: ['2026-11-01', '2026-12-01'],
+  current: '2026-12-01',
+  minimum: '2026-11-01',
+};
+
+function setup(policy: AiPolicy = POLICY) {
+  const store = new MemoryStore(undefined, policy.minimum);
+  const handler = withErrors('consent', (req) =>
+    handleConsent(req, { auth: store, repo: store, policy }),
+  );
   return { store, handler };
 }
 
@@ -19,7 +29,7 @@ async function adultUser(store: MemoryStore) {
   return user;
 }
 
-const grant = (token: string, policyVersion = 'v1') =>
+const grant = (token: string, policyVersion = '2026-11-01') =>
   jsonRequest('POST', { action: 'grant', policyVersion }, bearer(token));
 const withdraw = (token: string) => jsonRequest('POST', { action: 'withdraw' }, bearer(token));
 
@@ -50,6 +60,38 @@ Deno.test('consent: 400 on an invalid body', async () => {
   assertEquals((await handler(jsonRequest('POST', { action: 'nope' }, bearer(token)))).status, 400);
 });
 
+Deno.test(
+  'consent: only server-known policy versions (400 unknown_policy_version, nothing stored)',
+  async () => {
+    const { store, handler } = setup();
+    const { token } = await adultUser(store);
+    for (const version of ['v1', '2026-11-02', '2099-01-01', 'latest']) {
+      const res = await handler(grant(token, version));
+      assertEquals(res.status, 400, version);
+      assertEquals((await res.json()).error, 'unknown_policy_version', version);
+    }
+    assertEquals(store.consents.length, 0);
+    assertEquals(store.credits.length, 0);
+  },
+);
+
+Deno.test('consent: a known version below the minimum is refused', async () => {
+  const { store, handler } = setup({ ...POLICY, minimum: '2026-12-01' });
+  const { token } = await adultUser(store);
+  const res = await handler(grant(token, '2026-11-01'));
+  assertEquals([res.status, (await res.json()).error], [400, 'unknown_policy_version']);
+  assertEquals((await handler(grant(token, '2026-12-01'))).status, 200);
+});
+
+Deno.test('consent: unknown keys in the body are rejected (strict)', async () => {
+  const { store, handler } = setup();
+  const { token } = await adultUser(store);
+  const res = await handler(
+    jsonRequest('POST', { action: 'withdraw', policyVersion: '2026-11-01' }, bearer(token)),
+  );
+  assertEquals(res.status, 400);
+});
+
 Deno.test('consent: grant needs age confirmation (403 age_required, nothing stored)', async () => {
   const { store, handler } = setup();
   const { token } = store.addUser();
@@ -70,7 +112,12 @@ Deno.test(
     assertEquals(first.action === 'grant' && first.starterCreditsGranted, true);
     assertEquals(first.action === 'grant' && first.aiEnabled, true);
 
-    for (const req of [grant(token), grant(token, 'v2'), withdraw(token), grant(token, 'v2')]) {
+    for (const req of [
+      grant(token),
+      grant(token, '2026-12-01'),
+      withdraw(token),
+      grant(token, '2026-12-01'),
+    ]) {
       const body = ConsentResponse.parse(await (await handler(req)).json());
       if (body.action === 'grant') assertEquals(body.starterCreditsGranted, false);
     }
@@ -122,6 +169,7 @@ Deno.test('consent: logs no request body, token or policy text', async () => {
   const { token } = await adultUser(store);
   const { lines } = await captureConsole(async () => {
     await handler(grant(token, 'policy-2026-secret'));
+    await handler(grant(token));
     await handler(withdraw(token));
     await handler(jsonRequest('POST', '{"oops', bearer(token)));
   });

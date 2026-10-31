@@ -13,6 +13,8 @@ import type {
   ProfileState,
   WithdrawConsentResult,
 } from './repo.ts';
+import { httpError } from './errors.ts';
+import { AI_POLICY } from './policy.ts';
 import { Gender, Lang, type Platform } from './schemas.ts';
 
 /** Error carrying only the Postgres/PostgREST code (never the message, which can echo values). */
@@ -49,7 +51,7 @@ const GrantRow = z.discriminatedUnion('status', [
     starter_granted: z.boolean(),
     ai_enabled: z.boolean(),
   }),
-  z.object({ status: z.enum(['age_required', 'no_profile']) }),
+  z.object({ status: z.enum(['age_required', 'no_profile', 'unknown_policy_version']) }),
 ]);
 
 const WithdrawRow = z.discriminatedUnion('status', [
@@ -121,13 +123,21 @@ export function supabaseAuthDeps(db: SupabaseClient): AuthDeps {
 }
 
 export class SupabaseRepo implements ConsentRepo, ProfileRepo, DeviceKeyRepo {
-  constructor(private readonly db: SupabaseClient) {}
+  /** minPolicyVersion: passed to every SQL gate (ai_allowed); defaults to _shared/policy.ts. */
+  constructor(
+    private readonly db: SupabaseClient,
+    private readonly minPolicyVersion: string = AI_POLICY.minimum,
+  ) {}
 
   async grantAiConsent(userId: string, policyVersion: string): Promise<GrantConsentResult> {
     const row = await rpc(
       this.db,
       'grant_ai_consent',
-      { p_user_id: userId, p_policy_version: policyVersion },
+      {
+        p_user_id: userId,
+        p_policy_version: policyVersion,
+        p_min_policy_version: this.minPolicyVersion,
+      },
       GrantRow,
     );
     if (row.status !== 'ok') return { status: row.status };
@@ -152,7 +162,12 @@ export class SupabaseRepo implements ConsentRepo, ProfileRepo, DeviceKeyRepo {
   }
 
   async getProfile(userId: string): Promise<ProfileState | null> {
-    const row = await rpc(this.db, 'profile_state', { p_user_id: userId }, ProfileRow.nullable());
+    const row = await rpc(
+      this.db,
+      'profile_state',
+      { p_user_id: userId, p_min_policy_version: this.minPolicyVersion },
+      ProfileRow.nullable(),
+    );
     return row ? toProfile(row) : null;
   }
 
@@ -162,6 +177,7 @@ export class SupabaseRepo implements ConsentRepo, ProfileRepo, DeviceKeyRepo {
       'patch_profile',
       {
         p_user_id: userId,
+        p_min_policy_version: this.minPolicyVersion,
         p_age_confirmed: patch.ageConfirmed ?? null,
         p_ui_lang: patch.uiLang ?? null,
         p_i_am: patch.iAm ?? null,
@@ -169,7 +185,13 @@ export class SupabaseRepo implements ConsentRepo, ProfileRepo, DeviceKeyRepo {
         p_timezone: patch.timezone ?? null,
       },
       ProfileRow.nullable(),
-    );
+    ).catch((err: unknown) => {
+      // check_violation: the database refused a value (e.g. a time zone it doesn't know).
+      if (err instanceof DbError && err.code === '23514') {
+        throw httpError('bad_request', 'Invalid request (profile: value rejected).');
+      }
+      throw err;
+    });
     return row ? toProfile(row) : null;
   }
 
@@ -181,7 +203,12 @@ export class SupabaseRepo implements ConsentRepo, ProfileRepo, DeviceKeyRepo {
     const row = await rpc(
       this.db,
       'create_device_key',
-      { p_user_id: userId, p_key_hash: keyHash, p_platform: platform },
+      {
+        p_user_id: userId,
+        p_key_hash: keyHash,
+        p_platform: platform,
+        p_min_policy_version: this.minPolicyVersion,
+      },
       CreateKeyRow,
     );
     if (row.status !== 'ok') return { status: row.status };

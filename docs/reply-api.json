@@ -63,7 +63,8 @@
         "uiLang",
         "source",
         "clientRequestId"
-      ]
+      ],
+      "additionalProperties": false
     },
     "ReplyFeedbackRequest": {
       "type": "object",
@@ -76,7 +77,8 @@
         "cardIndex": { "type": "integer", "minimum": 0, "maximum": 2 },
         "type": { "type": "string", "enum": ["inserted", "up", "down"] }
       },
-      "required": ["requestId", "cardIndex", "type"]
+      "required": ["requestId", "cardIndex", "type"],
+      "additionalProperties": false
     },
     "ConsentRequest": {
       "oneOf": [
@@ -86,12 +88,14 @@
             "action": { "type": "string", "const": "grant" },
             "policyVersion": { "type": "string", "pattern": "^[A-Za-z0-9._-]{1,32}$" }
           },
-          "required": ["action", "policyVersion"]
+          "required": ["action", "policyVersion"],
+          "additionalProperties": false
         },
         {
           "type": "object",
           "properties": { "action": { "type": "string", "const": "withdraw" } },
-          "required": ["action"]
+          "required": ["action"],
+          "additionalProperties": false
         }
       ]
     },
@@ -113,7 +117,8 @@
     "DeviceKeyCreateRequest": {
       "type": "object",
       "properties": { "platform": { "type": "string", "enum": ["ios", "android"] } },
-      "required": ["platform"]
+      "required": ["platform"],
+      "additionalProperties": false
     },
     "DeviceKeyRevokeRequest": {
       "oneOf": [
@@ -127,12 +132,14 @@
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
             }
           },
-          "required": ["scope", "keyId"]
+          "required": ["scope", "keyId"],
+          "additionalProperties": false
         },
         {
           "type": "object",
           "properties": { "scope": { "type": "string", "const": "all" } },
-          "required": ["scope"]
+          "required": ["scope"],
+          "additionalProperties": false
         }
       ]
     }
@@ -145,6 +152,7 @@
           "type": "string",
           "enum": [
             "bad_request",
+            "unknown_policy_version",
             "unauthorized",
             "quota_empty",
             "ai_off",
@@ -383,6 +391,7 @@
           "type": "string",
           "enum": [
             "bad_request",
+            "unknown_policy_version",
             "unauthorized",
             "quota_empty",
             "ai_off",

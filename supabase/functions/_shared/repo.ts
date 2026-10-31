@@ -11,7 +11,7 @@ export type GrantConsentResult =
       starterGranted: boolean;
       aiEnabled: boolean;
     }
-  | { status: 'age_required' | 'no_profile' };
+  | { status: 'age_required' | 'no_profile' | 'unknown_policy_version' };
 
 export type WithdrawConsentResult =
   | { status: 'ok'; withdrawnAt: string; withdrawn: number; revokedDeviceKeys: number }
@@ -42,6 +42,7 @@ export interface ProfilePatch {
 }
 
 export interface ProfileRepo {
+  /** Rejects values the database refuses (e.g. an unknown time zone) with HttpError bad_request. */
   getProfile(userId: string): Promise<ProfileState | null>;
   patchProfile(userId: string, patch: ProfilePatch): Promise<ProfileState | null>;
 }

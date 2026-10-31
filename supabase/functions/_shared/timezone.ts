@@ -1,9 +1,9 @@
-// IANA time zone check using the runtime's tz database (the database checks again).
-export function isIanaTimeZone(name: string): boolean {
+// IANA time zones: validated and canonicalised with the runtime's tz database ('europe/berlin'
+// → 'Europe/Berlin'); the database checks the stored name again.
+export function canonicalTimeZone(name: string): string | null {
   try {
-    new Intl.DateTimeFormat('en', { timeZone: name });
-    return true;
+    return new Intl.DateTimeFormat('en', { timeZone: name }).resolvedOptions().timeZone;
   } catch {
-    return false;
+    return null;
   }
 }

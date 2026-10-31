@@ -12,6 +12,9 @@ import type {
   ProfileState,
   WithdrawConsentResult,
 } from '../repo.ts';
+import { httpError } from '../errors.ts';
+import { AI_POLICY } from '../policy.ts';
+import { canonicalTimeZone } from '../timezone.ts';
 import type { Platform } from '../schemas.ts';
 
 export interface StoredConsent {
@@ -43,7 +46,11 @@ export class MemoryStore implements AuthDeps, ConsentRepo, ProfileRepo, DeviceKe
   /** access token → user ID */
   readonly sessions = new Map<string, string>();
 
-  constructor(private readonly now: () => Date = () => new Date()) {}
+  constructor(
+    private readonly now: () => Date = () => new Date(),
+    /** Mirrors the SQL gate's p_min_policy_version. */
+    public minPolicyVersion: string = AI_POLICY.minimum,
+  ) {}
 
   private ts(): string {
     return this.now().toISOString();
@@ -69,7 +76,12 @@ export class MemoryStore implements AuthDeps, ConsentRepo, ProfileRepo, DeviceKe
     const profile = this.profiles.get(userId);
     if (!profile?.ageConfirmedAt) return false;
     const latest = this.consents.filter((c) => c.userId === userId).at(-1);
-    return latest !== undefined && latest.withdrawnAt === null;
+    return (
+      latest !== undefined &&
+      latest.withdrawnAt === null &&
+      /^\d{4}-\d{2}-\d{2}$/.test(latest.policyVersion) &&
+      latest.policyVersion >= this.minPolicyVersion
+    );
   }
 
   // AuthDeps
@@ -88,6 +100,9 @@ export class MemoryStore implements AuthDeps, ConsentRepo, ProfileRepo, DeviceKe
   // ConsentRepo
   grantAiConsent(userId: string, policyVersion: string): Promise<GrantConsentResult> {
     const profile = this.profiles.get(userId);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(policyVersion) || policyVersion < this.minPolicyVersion) {
+      return Promise.resolve({ status: 'unknown_policy_version' });
+    }
     if (!profile) return Promise.resolve({ status: 'no_profile' });
     if (!profile.ageConfirmedAt) return Promise.resolve({ status: 'age_required' });
     let latest = this.consents.filter((c) => c.userId === userId).at(-1);
@@ -102,7 +117,7 @@ export class MemoryStore implements AuthDeps, ConsentRepo, ProfileRepo, DeviceKe
       policyVersion: latest.policyVersion,
       grantedAt: latest.grantedAt,
       starterGranted: !hasStarter,
-      aiEnabled: true,
+      aiEnabled: this.aiAllowed(userId),
     });
   }
 
@@ -144,7 +159,13 @@ export class MemoryStore implements AuthDeps, ConsentRepo, ProfileRepo, DeviceKe
     if (patch.uiLang) p.uiLang = patch.uiLang;
     if (patch.iAm) p.iAm = patch.iAm;
     if (patch.theyAre) p.theyAre = patch.theyAre;
-    if (patch.timezone) p.timezone = patch.timezone;
+    if (patch.timezone) {
+      // Like the database: only canonical names are stored (the handler canonicalises first).
+      if (patch.timezone !== 'UTC' && canonicalTimeZone(patch.timezone) !== patch.timezone) {
+        throw httpError('bad_request', 'Invalid request (profile: value rejected).');
+      }
+      p.timezone = patch.timezone;
+    }
     return this.getProfile(userId);
   }
 

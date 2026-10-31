@@ -8,6 +8,8 @@ import { authenticate } from './auth.ts';
 import { createServiceClient } from './db.ts';
 import { hashDeviceKey } from './device-key.ts';
 import { withErrors } from './http.ts';
+import { HttpError } from './errors.ts';
+import { CURRENT_AI_POLICY_VERSION } from './policy.ts';
 import { SupabaseRepo, supabaseAuthDeps } from './repo-supabase.ts';
 import {
   ConsentResponse,
@@ -56,14 +58,18 @@ Deno.test({
     res = await deviceKey(jsonRequest('POST', { platform: 'ios' }, bearer(token)));
     assertEquals([res.status, (await res.json()).error], [403, 'age_required']);
     res = await consent(
-      jsonRequest('POST', { action: 'grant', policyVersion: 'v1' }, bearer(token)),
+      jsonRequest(
+        'POST',
+        { action: 'grant', policyVersion: CURRENT_AI_POLICY_VERSION },
+        bearer(token),
+      ),
     );
     assertEquals([res.status, (await res.json()).error], [403, 'age_required']);
 
     res = await profile(
       jsonRequest(
         'PATCH',
-        { ageConfirmed: true, uiLang: 'de', timezone: 'Europe/Berlin' },
+        { ageConfirmed: true, uiLang: 'de', timezone: 'europe/berlin' },
         bearer(token),
       ),
     );
@@ -72,6 +78,15 @@ Deno.test({
     assertEquals([p.uiLang, p.timezone], ['de', 'Europe/Berlin']);
     res = await profile(jsonRequest('PATCH', { timezone: 'Europe/Atlantis' }, bearer(token)));
     assertEquals(res.status, 400);
+    // The database itself refuses a non-canonical name: 23514 → 400, not 500.
+    const dbErr = await repo.patchProfile(userId, { timezone: 'europe/berlin' }).catch((e) => e);
+    assertEquals(dbErr instanceof HttpError && [dbErr.status, dbErr.code], [400, 'bad_request']);
+
+    // Unknown policy version: refused before the database.
+    res = await consent(
+      jsonRequest('POST', { action: 'grant', policyVersion: 'v1' }, bearer(token)),
+    );
+    assertEquals([res.status, (await res.json()).error], [400, 'unknown_policy_version']);
 
     res = await deviceKey(jsonRequest('POST', { platform: 'ios' }, bearer(token)));
     assertEquals([res.status, (await res.json()).error], [403, 'ai_off']);
@@ -82,7 +97,11 @@ Deno.test({
         ConsentResponse.parse(
           await (
             await consent(
-              jsonRequest('POST', { action: 'grant', policyVersion: 'v1' }, bearer(token)),
+              jsonRequest(
+                'POST',
+                { action: 'grant', policyVersion: CURRENT_AI_POLICY_VERSION },
+                bearer(token),
+              ),
             )
           ).json(),
         ),
@@ -94,6 +113,11 @@ Deno.test({
       .select('delta, reason')
       .eq('user_id', userId);
     assertEquals(credits, [{ delta: 10, reason: 'starter' }]);
+
+    // A raised minimum turns AI off for this consent (same SQL gate as device keys and reply).
+    const stricter = new SupabaseRepo(db, '2099-01-01');
+    assertEquals((await stricter.getProfile(userId))?.aiEnabled, false);
+    assertEquals((await stricter.createDeviceKey(userId, 'f'.repeat(64), 'ios')).status, 'ai_off');
 
     // Device key: stored as hash, authenticates, raw key not in the DB.
     res = await deviceKey(jsonRequest('POST', { platform: 'ios' }, bearer(token)));
@@ -124,7 +148,13 @@ Deno.test({
     assertEquals(p.aiEnabled, false);
 
     // Regrant: new key, then revoke all.
-    await consent(jsonRequest('POST', { action: 'grant', policyVersion: 'v1' }, bearer(token)));
+    await consent(
+      jsonRequest(
+        'POST',
+        { action: 'grant', policyVersion: CURRENT_AI_POLICY_VERSION },
+        bearer(token),
+      ),
+    );
     await deviceKey(jsonRequest('POST', { platform: 'android' }, bearer(token)));
     res = await deviceKey(jsonRequest('DELETE', { scope: 'all' }, bearer(token)));
     assertEquals(DeviceKeyRevokeResponse.parse(await res.json()).revoked, 1);

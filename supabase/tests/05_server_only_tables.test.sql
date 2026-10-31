@@ -3,7 +3,7 @@
 -- metadata-only constraints.
 begin;
 \ir _helpers.psql
-select plan(32);
+select plan(35);
 
 select tests.create_user() as a \gset user_a_
 select tests.create_user() as b \gset user_b_
@@ -25,6 +25,7 @@ select throws_ok('select * from public.reply_events', '42501', null, 'user canno
 select throws_ok('select * from public.support_messages', '42501', null, 'user cannot read support_messages');
 select throws_ok('select * from public.provider_status', '42501', null, 'user cannot read provider_status');
 select throws_ok('select * from public.daily_cost', '42501', null, 'user cannot read daily_cost');
+select throws_ok('select * from public.ai_requests_daily', '42501', null, 'user cannot read ai_requests_daily');
 select throws_ok(format($$ insert into public.ai_requests (user_id, kind, source) values (%L, 'reply', 'app') $$, :'user_a_a'), '42501', null, 'user cannot insert ai_requests');
 select throws_ok(format($$ insert into public.reply_events (user_id, card_index, type) values (%L, 0, 'up') $$, :'user_a_a'), '42501', null, 'user cannot insert reply_events');
 select throws_ok(format($$ insert into public.support_messages (user_id, body) values (%L, 'hi') $$, :'user_a_a'), '42501', null, 'user cannot insert support_messages');
@@ -37,17 +38,19 @@ select throws_ok('select * from public.reply_events', '42501', null, 'anon canno
 select throws_ok('select * from public.support_messages', '42501', null, 'anon cannot read support_messages');
 select throws_ok('select * from public.provider_status', '42501', null, 'anon cannot read provider_status');
 select throws_ok('select * from public.daily_cost', '42501', null, 'anon cannot read daily_cost');
+select throws_ok('select * from public.ai_requests_daily', '42501', null, 'anon cannot read ai_requests_daily');
 reset role;
 select tests.clear_claims();
 
 -- Defence in depth: even with a stray SELECT grant, RLS (no policies) returns nothing.
-grant select on public.ai_requests, public.reply_events, public.support_messages, public.provider_status, public.device_keys to authenticated;
+grant select on public.ai_requests, public.ai_requests_daily, public.reply_events, public.support_messages, public.provider_status, public.device_keys to authenticated;
 select tests.as_user(:'user_a_a');
 select is_empty('select 1 from public.ai_requests', 'RLS hides ai_requests even with a grant (A cannot see own or B''s)');
 select is_empty('select 1 from public.reply_events', 'RLS hides reply_events even with a grant');
 select is_empty('select 1 from public.support_messages', 'RLS hides support_messages even with a grant');
 select is_empty('select 1 from public.provider_status', 'RLS hides provider_status even with a grant');
 select is_empty('select 1 from public.device_keys', 'RLS hides device_keys even with a grant');
+select is_empty('select 1 from public.ai_requests_daily', 'RLS hides ai_requests_daily even with a grant');
 reset role;
 select tests.clear_claims();
 

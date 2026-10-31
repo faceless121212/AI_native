@@ -70,6 +70,21 @@ Deno.test('profile: ui_lang, i_am, they_are, timezone', async () => {
   );
 });
 
+Deno.test('profile: time zones are stored under their canonical name', async () => {
+  const { handler, token } = setup();
+  for (const [sent, stored] of [
+    ['europe/berlin', 'Europe/Berlin'],
+    ['utc', 'UTC'],
+    ['Etc/UTC', 'UTC'],
+    ['Europe/Rome', 'Europe/Rome'],
+  ]) {
+    const body = ProfileResponse.parse(
+      await (await handler(patch(token, { timezone: sent }))).json(),
+    );
+    assertEquals(body.timezone, stored, sent);
+  }
+});
+
 Deno.test('profile: unknown IANA time zone → 400', async () => {
   const { handler, token } = setup();
   for (const timezone of ['Mars/Olympus_Mons', 'Europe/Atlantis']) {

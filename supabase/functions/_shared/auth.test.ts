@@ -2,6 +2,7 @@ import { assertEquals, assertRejects } from 'jsr:@std/assert@1';
 import { authenticate, parseAuthorization } from './auth.ts';
 import { generateDeviceKey, hashDeviceKey } from './device-key.ts';
 import { HttpError } from './errors.ts';
+import { CURRENT_AI_POLICY_VERSION } from './policy.ts';
 import { MemoryStore } from './testing/memory-store.ts';
 
 function req(authorization?: string): Request {
@@ -14,7 +15,7 @@ async function storeWithKey() {
   const store = new MemoryStore();
   const { userId, token } = store.addUser();
   await store.patchProfile(userId, { ageConfirmed: true });
-  await store.grantAiConsent(userId, 'v1');
+  await store.grantAiConsent(userId, CURRENT_AI_POLICY_VERSION);
   const key = generateDeviceKey();
   const created = await store.createDeviceKey(userId, await hashDeviceKey(key), 'ios');
   if (created.status !== 'ok') throw new Error('setup failed');

@@ -1,11 +1,12 @@
 // GET /profile, PATCH /profile {ageConfirmed?: true, uiLang?, iAm?, theyAre?, timezone?}
-// (Supabase JWT). age_confirmed_at is set by the server clock, once.
+// (Supabase JWT). age_confirmed_at is set by the server clock, once. The time zone is stored
+// under its canonical IANA name ('europe/berlin' → 'Europe/Berlin').
 import { authenticate, type AuthDeps } from '../_shared/auth.ts';
 import { httpError, jsonResponse, methodNotAllowed } from '../_shared/errors.ts';
 import { readJson } from '../_shared/http.ts';
 import type { ProfileRepo, ProfileState } from '../_shared/repo.ts';
 import { ProfilePatchRequest, type ProfileResponse } from '../_shared/schemas.ts';
-import { isIanaTimeZone } from '../_shared/timezone.ts';
+import { canonicalTimeZone } from '../_shared/timezone.ts';
 
 export interface ProfileDeps {
   auth: AuthDeps;
@@ -36,10 +37,14 @@ export async function handleProfile(req: Request, deps: ProfileDeps): Promise<Re
   }
 
   const patch = await readJson(req, ProfilePatchRequest);
-  if (patch.timezone !== undefined && !isIanaTimeZone(patch.timezone)) {
-    throw httpError('bad_request', 'Invalid request (timezone: unknown time zone).');
+  let timezone: string | undefined;
+  if (patch.timezone !== undefined) {
+    const canonical = canonicalTimeZone(patch.timezone);
+    if (!canonical)
+      throw httpError('bad_request', 'Invalid request (timezone: unknown time zone).');
+    timezone = canonical;
   }
-  const profile = await deps.repo.patchProfile(userId, patch);
+  const profile = await deps.repo.patchProfile(userId, { ...patch, timezone });
   if (!profile) throw httpError('not_found', 'Profile not found.');
   return jsonResponse(toResponse(profile));
 }

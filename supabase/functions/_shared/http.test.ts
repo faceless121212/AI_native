@@ -62,3 +62,52 @@ Deno.test('withErrors: HttpError → its JSON; unknown error → 500 with nothin
     'error messages are not logged',
   );
 });
+
+function streamingRequest(
+  chunkBytes: number,
+  chunks: number,
+  counter: { pulled: number },
+): Request {
+  const chunk = new TextEncoder().encode('x'.repeat(chunkBytes));
+  let sent = 0;
+  const body = new ReadableStream<Uint8Array>({
+    pull(controller) {
+      counter.pulled++;
+      if (sent++ >= chunks) controller.close();
+      else controller.enqueue(chunk);
+    },
+  });
+  return new Request('http://localhost/', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body,
+  });
+}
+
+Deno.test(
+  'readJson: without Content-Length, stops reading as soon as the limit is passed',
+  async () => {
+    const counter = { pulled: 0 };
+    const req = streamingRequest(1024, 1_000_000, counter); // ~1 GB if fully read
+    assertEquals(req.headers.get('content-length'), null);
+    const err = await assertRejects(() => readJson(req, Schema, 16 * 1024), HttpError);
+    assertEquals(err.status, 413);
+    assertEquals(counter.pulled <= 20, true, `pulled ${counter.pulled} chunks`);
+  },
+);
+
+Deno.test('readJson: a streamed body within the limit is read in full', async () => {
+  const body = new TextEncoder().encode(JSON.stringify({ name: 'abc' }));
+  const req = new Request('http://localhost/', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(body.slice(0, 5));
+        controller.enqueue(body.slice(5));
+        controller.close();
+      },
+    }),
+  });
+  assertEquals(await readJson(req, Schema), { name: 'abc' });
+});

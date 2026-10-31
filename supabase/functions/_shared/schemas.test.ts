@@ -69,6 +69,21 @@ Deno.test('ReplyRequest: chip values come from the fixed lists', () => {
   bad(ReplyRequest, missing);
 });
 
+Deno.test('client requests are strict: unknown keys are rejected everywhere', () => {
+  bad(ReplyRequest, { ...reply, extra: true });
+  bad(ReplyFeedbackRequest, {
+    requestId: '0b7f1e4c-2d0a-4c3e-8f5b-6a7d8e9f0a1b',
+    cardIndex: 0,
+    type: 'up',
+    text: 'hi',
+  });
+  bad(ConsentRequest, { action: 'grant', policyVersion: '2026-11-01', grantedAt: 'now' });
+  bad(ConsentRequest, { action: 'withdraw', all: true });
+  bad(ProfilePatchRequest, { uiLang: 'de', admin: true });
+  bad(DeviceKeyCreateRequest, { platform: 'ios', userId: 'x' });
+  bad(DeviceKeyRevokeRequest, { scope: 'all', userId: 'x' });
+});
+
 Deno.test('SSE payloads', () => {
   assertEquals([...SSE_EVENT_NAMES], Object.keys(SseEventPayloads));
   const requestId = '0b7f1e4c-2d0a-4c3e-8f5b-6a7d8e9f0a1b';

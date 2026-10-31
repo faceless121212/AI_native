@@ -3,6 +3,7 @@ import type { ErrorCode, ErrorResponse } from './schemas.ts';
 
 const STATUS: Record<ErrorCode, number> = {
   bad_request: 400,
+  unknown_policy_version: 400,
   unauthorized: 401,
   quota_empty: 402,
   ai_off: 403,

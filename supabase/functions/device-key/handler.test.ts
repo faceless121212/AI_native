@@ -3,6 +3,7 @@ import { authenticate } from '../_shared/auth.ts';
 import { hashDeviceKey } from '../_shared/device-key.ts';
 import { withErrors } from '../_shared/http.ts';
 import { DeviceKeyCreateResponse, DeviceKeyRevokeResponse } from '../_shared/schemas.ts';
+import { CURRENT_AI_POLICY_VERSION } from '../_shared/policy.ts';
 import { MemoryStore } from '../_shared/testing/memory-store.ts';
 import { bearer, captureConsole, device, jsonRequest } from '../_shared/testing/helpers.ts';
 import { handleDeviceKey } from './handler.ts';
@@ -18,7 +19,7 @@ function setup() {
 async function consentedUser(store: MemoryStore) {
   const user = store.addUser();
   await store.patchProfile(user.userId, { ageConfirmed: true });
-  await store.grantAiConsent(user.userId, 'v1');
+  await store.grantAiConsent(user.userId, CURRENT_AI_POLICY_VERSION);
   return user;
 }
 
@@ -52,7 +53,7 @@ Deno.test('device-key: requires age confirmation, then consent', async () => {
   await store.patchProfile(userId, { ageConfirmed: true });
   res = await handler(create(token));
   assertEquals([res.status, (await res.json()).error], [403, 'ai_off']);
-  await store.grantAiConsent(userId, 'v1');
+  await store.grantAiConsent(userId, CURRENT_AI_POLICY_VERSION);
   await store.withdrawAiConsent(userId);
   res = await handler(create(token));
   assertEquals(
@@ -87,6 +88,19 @@ Deno.test(
       { allow: ['device'] },
     );
     assertEquals(ctx.userId, userId);
+  },
+);
+
+Deno.test(
+  'device-key: raising the minimum policy version blocks keys until the user consents again',
+  async () => {
+    const { store, handler } = setup();
+    const { userId, token } = await consentedUser(store);
+    store.minPolicyVersion = '2027-01-01';
+    const res = await handler(create(token));
+    assertEquals([res.status, (await res.json()).error], [403, 'ai_off']);
+    assertEquals(store.deviceKeys.length, 0);
+    assertEquals(store.aiAllowed(userId), false);
   },
 );
 

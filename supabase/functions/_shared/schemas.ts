@@ -60,6 +60,10 @@ export type Platform = z.infer<typeof Platform>;
 export const Plan = z.enum(['free', 'weekly', 'annual', 'lifetime']);
 export type Plan = z.infer<typeof Plan>;
 
+/**
+ * Policy version as sent by the client: the consent text it showed. Shape only here; the server
+ * accepts only versions listed in _shared/policy.ts (else 400 unknown_policy_version).
+ */
 export const PolicyVersion = z.string().regex(/^[A-Za-z0-9._-]{1,32}$/);
 
 /** IANA time zone name, shape only. The server also checks it against the tz database. */
@@ -78,6 +82,7 @@ export const IsoDateTime = z.iso.datetime({ offset: true });
 
 export const ErrorCode = z.enum([
   'bad_request', // 400
+  'unknown_policy_version', // 400: consent for a policy version the server doesn't accept
   'unauthorized', // 401: missing, invalid or revoked credentials
   'quota_empty', // 402: free replies used up
   'ai_off', // 403: no active AI consent (or age not confirmed, for reply)
@@ -97,15 +102,18 @@ export type ErrorCode = z.infer<typeof ErrorCode>;
 export const ErrorResponse = z.object({ error: ErrorCode, message: z.string() });
 export type ErrorResponse = z.infer<typeof ErrorResponse>;
 
+// All client request objects are strict: unknown keys are rejected (400), the same policy
+// everywhere. Clients must not send fields the server doesn't know yet.
+
 // ---------------------------------------------------------------------------------------------
 // consent: POST (Supabase JWT)
 
-export const ConsentGrantRequest = z.object({
+export const ConsentGrantRequest = z.strictObject({
   action: z.literal('grant'),
   policyVersion: PolicyVersion,
 });
 export type ConsentGrantRequest = z.infer<typeof ConsentGrantRequest>;
-export const ConsentWithdrawRequest = z.object({ action: z.literal('withdraw') });
+export const ConsentWithdrawRequest = z.strictObject({ action: z.literal('withdraw') });
 export type ConsentWithdrawRequest = z.infer<typeof ConsentWithdrawRequest>;
 export const ConsentRequest = z.discriminatedUnion('action', [
   ConsentGrantRequest,
@@ -169,7 +177,7 @@ export type ProfileResponse = z.infer<typeof ProfileResponse>;
 // ---------------------------------------------------------------------------------------------
 // device-key: POST create, DELETE revoke (Supabase JWT)
 
-export const DeviceKeyCreateRequest = z.object({ platform: Platform });
+export const DeviceKeyCreateRequest = z.strictObject({ platform: Platform });
 export type DeviceKeyCreateRequest = z.infer<typeof DeviceKeyCreateRequest>;
 
 /** The key is returned once and never again; only its SHA-256 is stored. */
@@ -182,8 +190,8 @@ export const DeviceKeyCreateResponse = z.object({
 export type DeviceKeyCreateResponse = z.infer<typeof DeviceKeyCreateResponse>;
 
 export const DeviceKeyRevokeRequest = z.discriminatedUnion('scope', [
-  z.object({ scope: z.literal('key'), keyId: z.uuid() }),
-  z.object({ scope: z.literal('all') }),
+  z.strictObject({ scope: z.literal('key'), keyId: z.uuid() }),
+  z.strictObject({ scope: z.literal('all') }),
 ]);
 export type DeviceKeyRevokeRequest = z.infer<typeof DeviceKeyRevokeRequest>;
 
@@ -196,7 +204,7 @@ export type DeviceKeyRevokeResponse = z.infer<typeof DeviceKeyRevokeResponse>;
 /** Max input length in Unicode code points (spec §3.3: 1,000 characters; clients cut the rest). */
 export const REPLY_TEXT_MAX_CHARS = 1000;
 
-export const ReplyRequest = z.object({
+export const ReplyRequest = z.strictObject({
   kind: ReplyKind,
   /** The copied message (reply) or the draft before the cursor (polish). Never logged or stored. */
   text: z
@@ -227,7 +235,7 @@ export type ReplyRequest = z.infer<typeof ReplyRequest>;
 /** POST reply/event: feedback on a card. */
 export const ReplyFeedbackType = z.enum(['inserted', 'up', 'down']);
 export type ReplyFeedbackType = z.infer<typeof ReplyFeedbackType>;
-export const ReplyFeedbackRequest = z.object({
+export const ReplyFeedbackRequest = z.strictObject({
   requestId: z.uuid(),
   cardIndex: z.number().int().min(0).max(2),
   type: ReplyFeedbackType,
