@@ -47,7 +47,7 @@ jobs:
         with:
           # The default ("tools platform-tools") fails: the legacy "tools" package no longer exists.
           # Keep in sync with compileSdk / build-tools in modules/replywise-ime/android/build.gradle.
-          packages: 'platform-tools platforms;android-37 build-tools;37.0.0'
+          packages: 'platform-tools platforms;android-37.0 build-tools;37.0.0'
       - name: Gradle unit tests
         working-directory: modules/replywise-ime/android
         run: ./gradlew testDebugUnitTest --no-daemon
