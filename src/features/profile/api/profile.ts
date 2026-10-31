@@ -3,13 +3,15 @@ import { z } from 'zod';
 
 // Row of public.profiles as the user may read it (RLS: own row only). Column names follow
 // docs/architecture.md §8 and supabase/migrations.
+const Gender = z.enum(['woman', 'man', 'unspecified']);
+
 export const ProfileRowSchema = z.object({
   id: z.uuid(),
-  ui_lang: z.string().nullable(),
-  i_am: z.string().nullable(),
-  they_are: z.string().nullable(),
+  ui_lang: z.enum(['en', 'de', 'fr', 'es', 'it']),
+  i_am: Gender.nullable(),
+  they_are: Gender.nullable(),
   age_confirmed_at: z.string().nullable(),
-  timezone: z.string().nullable(),
+  timezone: z.string(),
   created_at: z.string(),
 });
 export type ProfileRow = z.infer<typeof ProfileRowSchema>;

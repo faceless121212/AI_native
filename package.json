@@ -53,7 +53,11 @@
     "evals": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/evals.stub.js",
     "gen:keyboard-strings": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/gen-keyboard-strings.ts",
     "gen:tokens": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/export-tokens.ts",
-    "gen": "npm run gen:tokens && npm run gen:keyboard-strings"
+    "gen": "npm run gen:tokens && npm run gen:keyboard-strings && npm run gen:reply-api",
+    "gen:reply-api": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/export-reply-api.ts",
+    "check:reply-api": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/export-reply-api.ts --check",
+    "test:db": "supabase test db",
+    "test:functions": "deno test --no-lock --allow-env --allow-net=127.0.0.1 supabase/functions"
   },
   "private": true,
   "engines": {

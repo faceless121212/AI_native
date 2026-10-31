@@ -1,0 +1,406 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$comment": "Generated from supabase/functions/_shared/schemas.ts by scripts/export-reply-api.ts. Do not edit by hand.",
+  "title": "Replywise Edge Function API",
+  "constants": {
+    "REPLY_TEXT_MAX_CHARS": 1000,
+    "CARD_TEXT_MAX_CHARS": 300,
+    "SSE_EVENT_NAMES": ["card", "meta", "quota", "done", "error"]
+  },
+  "requests": {
+    "ReplyRequest": {
+      "type": "object",
+      "properties": {
+        "kind": { "type": "string", "enum": ["reply", "polish"] },
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000,
+          "description": "At most REPLY_TEXT_MAX_CHARS Unicode code points (maxLength is the UTF-16 bound). Not only whitespace."
+        },
+        "langHint": { "type": "string", "enum": ["en", "de", "fr", "es", "it", "other"] },
+        "relationship": {
+          "type": "string",
+          "enum": ["match", "partner", "friend", "family", "colleague"]
+        },
+        "closeness": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "tone": {
+          "type": "string",
+          "enum": [
+            "warm",
+            "funny",
+            "flirty",
+            "confident",
+            "calm",
+            "apologise",
+            "sayNoKindly",
+            "professional"
+          ]
+        },
+        "flirt": { "type": "string", "enum": ["off", "light", "playful"] },
+        "formality": { "type": "string", "enum": ["casual", "formal"] },
+        "iAm": { "type": "string", "enum": ["woman", "man", "unspecified"] },
+        "theyAre": { "type": "string", "enum": ["woman", "man", "unspecified"] },
+        "uiLang": { "type": "string", "enum": ["en", "de", "fr", "es", "it"] },
+        "source": { "type": "string", "enum": ["keyboard", "app"] },
+        "clientRequestId": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        }
+      },
+      "required": [
+        "kind",
+        "text",
+        "langHint",
+        "relationship",
+        "closeness",
+        "tone",
+        "flirt",
+        "formality",
+        "iAm",
+        "theyAre",
+        "uiLang",
+        "source",
+        "clientRequestId"
+      ]
+    },
+    "ReplyFeedbackRequest": {
+      "type": "object",
+      "properties": {
+        "requestId": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        },
+        "cardIndex": { "type": "integer", "minimum": 0, "maximum": 2 },
+        "type": { "type": "string", "enum": ["inserted", "up", "down"] }
+      },
+      "required": ["requestId", "cardIndex", "type"]
+    },
+    "ConsentRequest": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "action": { "type": "string", "const": "grant" },
+            "policyVersion": { "type": "string", "pattern": "^[A-Za-z0-9._-]{1,32}$" }
+          },
+          "required": ["action", "policyVersion"]
+        },
+        {
+          "type": "object",
+          "properties": { "action": { "type": "string", "const": "withdraw" } },
+          "required": ["action"]
+        }
+      ]
+    },
+    "ProfilePatchRequest": {
+      "type": "object",
+      "properties": {
+        "ageConfirmed": { "type": "boolean", "const": true },
+        "uiLang": { "type": "string", "enum": ["en", "de", "fr", "es", "it"] },
+        "iAm": { "type": "string", "enum": ["woman", "man", "unspecified"] },
+        "theyAre": { "type": "string", "enum": ["woman", "man", "unspecified"] },
+        "timezone": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[A-Za-z][A-Za-z0-9_+-]*(?:\\/[A-Za-z0-9_+-]+)*$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "DeviceKeyCreateRequest": {
+      "type": "object",
+      "properties": { "platform": { "type": "string", "enum": ["ios", "android"] } },
+      "required": ["platform"]
+    },
+    "DeviceKeyRevokeRequest": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "scope": { "type": "string", "const": "key" },
+            "keyId": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          "required": ["scope", "keyId"]
+        },
+        {
+          "type": "object",
+          "properties": { "scope": { "type": "string", "const": "all" } },
+          "required": ["scope"]
+        }
+      ]
+    }
+  },
+  "responses": {
+    "ErrorResponse": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "enum": [
+            "bad_request",
+            "unauthorized",
+            "quota_empty",
+            "ai_off",
+            "age_required",
+            "not_found",
+            "method_not_allowed",
+            "payload_too_large",
+            "unsupported_media_type",
+            "rate",
+            "fair_use",
+            "internal",
+            "provider_down"
+          ]
+        },
+        "message": { "type": "string" }
+      },
+      "required": ["error", "message"],
+      "additionalProperties": false
+    },
+    "ConsentResponse": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "action": { "type": "string", "const": "grant" },
+            "aiEnabled": { "type": "boolean" },
+            "policyVersion": { "type": "string", "pattern": "^[A-Za-z0-9._-]{1,32}$" },
+            "grantedAt": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+            },
+            "starterCreditsGranted": { "type": "boolean" }
+          },
+          "required": [
+            "action",
+            "aiEnabled",
+            "policyVersion",
+            "grantedAt",
+            "starterCreditsGranted"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "action": { "type": "string", "const": "withdraw" },
+            "aiEnabled": { "type": "boolean", "const": false },
+            "withdrawnAt": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+            },
+            "revokedDeviceKeys": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 }
+          },
+          "required": ["action", "aiEnabled", "withdrawnAt", "revokedDeviceKeys"],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "ProfileResponse": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        },
+        "uiLang": { "type": "string", "enum": ["en", "de", "fr", "es", "it"] },
+        "iAm": {
+          "anyOf": [
+            { "type": "string", "enum": ["woman", "man", "unspecified"] },
+            { "type": "null" }
+          ]
+        },
+        "theyAre": {
+          "anyOf": [
+            { "type": "string", "enum": ["woman", "man", "unspecified"] },
+            { "type": "null" }
+          ]
+        },
+        "ageConfirmedAt": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+            },
+            { "type": "null" }
+          ]
+        },
+        "timezone": { "type": "string" },
+        "aiEnabled": { "type": "boolean" },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+        }
+      },
+      "required": [
+        "id",
+        "uiLang",
+        "iAm",
+        "theyAre",
+        "ageConfirmedAt",
+        "timezone",
+        "aiEnabled",
+        "createdAt"
+      ],
+      "additionalProperties": false
+    },
+    "DeviceKeyCreateResponse": {
+      "type": "object",
+      "properties": {
+        "keyId": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        },
+        "key": { "type": "string", "pattern": "^[A-Za-z0-9_-]{43}$" },
+        "platform": { "type": "string", "enum": ["ios", "android"] },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+        }
+      },
+      "required": ["keyId", "key", "platform", "createdAt"],
+      "additionalProperties": false
+    },
+    "DeviceKeyRevokeResponse": {
+      "type": "object",
+      "properties": { "revoked": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 } },
+      "required": ["revoked"],
+      "additionalProperties": false
+    },
+    "QuotaResponse": {
+      "type": "object",
+      "properties": {
+        "plan": { "type": "string", "enum": ["free", "weekly", "annual", "lifetime"] },
+        "leftToday": {
+          "anyOf": [
+            { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+            { "type": "null" }
+          ]
+        },
+        "resetAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+        },
+        "fairUseLeft": {
+          "anyOf": [
+            { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+            { "type": "null" }
+          ]
+        }
+      },
+      "required": ["plan", "leftToday", "resetAt", "fairUseLeft"],
+      "additionalProperties": false
+    }
+  },
+  "sseEvents": {
+    "card": {
+      "type": "object",
+      "properties": {
+        "index": { "type": "integer", "minimum": 0, "maximum": 2 },
+        "variant": { "type": "string", "enum": ["reply", "light", "rewrite"] },
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 600,
+          "description": "Server post-check keeps cards to CARD_TEXT_MAX_CHARS code points; label it \"AI suggestion\"."
+        }
+      },
+      "required": ["index", "variant", "text"],
+      "additionalProperties": false
+    },
+    "meta": {
+      "type": "object",
+      "properties": {
+        "requestId": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        },
+        "lang": { "type": "string", "enum": ["en", "de", "fr", "es", "it", "other"] },
+        "crisis": { "type": "boolean" },
+        "refused": { "type": "boolean" }
+      },
+      "required": ["requestId", "lang", "crisis", "refused"],
+      "additionalProperties": false
+    },
+    "quota": {
+      "type": "object",
+      "properties": {
+        "plan": { "type": "string", "enum": ["free", "weekly", "annual", "lifetime"] },
+        "leftToday": {
+          "anyOf": [
+            { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+            { "type": "null" }
+          ]
+        },
+        "resetAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+        },
+        "fairUseLeft": {
+          "anyOf": [
+            { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+            { "type": "null" }
+          ]
+        }
+      },
+      "required": ["plan", "leftToday", "resetAt", "fairUseLeft"],
+      "additionalProperties": false
+    },
+    "done": {
+      "type": "object",
+      "properties": {
+        "requestId": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        },
+        "cards": { "type": "integer", "minimum": 0, "maximum": 3 }
+      },
+      "required": ["requestId", "cards"],
+      "additionalProperties": false
+    },
+    "error": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "enum": [
+            "bad_request",
+            "unauthorized",
+            "quota_empty",
+            "ai_off",
+            "age_required",
+            "not_found",
+            "method_not_allowed",
+            "payload_too_large",
+            "unsupported_media_type",
+            "rate",
+            "fair_use",
+            "internal",
+            "provider_down"
+          ]
+        },
+        "message": { "type": "string" }
+      },
+      "required": ["error", "message"],
+      "additionalProperties": false
+    }
+  }
+}

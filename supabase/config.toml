@@ -421,9 +421,12 @@ enabled = true
 # (eu-central-1); see docs/processors.md.
 [functions.consent]
 verify_jwt = true
+import_map = "./functions/deno.json"
 
 [functions.profile]
 verify_jwt = true
+import_map = "./functions/deno.json"
 
 [functions.device-key]
 verify_jwt = true
+import_map = "./functions/deno.json"

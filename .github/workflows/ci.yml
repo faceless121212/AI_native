@@ -24,6 +24,7 @@ jobs:
       - run: npm run typecheck
       - run: npm test -- --ci
       - run: npm run i18n:check
+      - run: npm run check:reply-api
 
   swift:
     name: Swift keyboard core (swift test)
@@ -51,3 +52,29 @@ jobs:
       - name: Gradle unit tests
         working-directory: modules/replywise-ime/android
         run: ./gradlew testDebugUnitTest --no-daemon
+
+  supabase:
+    name: Database (pgTAP) and Edge Functions (Deno)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      # Root deno test runs resolve zod and supabase-js from node_modules.
+      - run: npm ci
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.122.0
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Start local Supabase (database and auth only)
+        run: supabase start -x studio,imgproxy,vector,logflare,realtime,storage-api,edge-runtime,supavisor,mailpit,postgres-meta
+      - run: supabase test db
+      - run: npm run test:functions
+      - name: Integration test against the local stack
+        run: |
+          eval "$(supabase status -o env)"
+          SUPABASE_INTEGRATION=1 SUPABASE_URL="$API_URL" SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY" SUPABASE_ANON_KEY="$ANON_KEY" npm run test:functions

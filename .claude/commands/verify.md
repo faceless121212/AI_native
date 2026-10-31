@@ -11,7 +11,8 @@ Run these in order and keep going even if one fails. Skip a step only if its too
 5. `swift test --package-path targets/keyboard` (macOS only)
 6. `(cd modules/replywise-ime/android && ./gradlew testDebugUnitTest)`
 7. `supabase test db` (needs `supabase start` running)
-8. `deno test --allow-env --allow-net=127.0.0.1 supabase/functions`
-9. `grep -rnE "console\.(log|info|debug)\(.*(text|body|draft|clipboard)" supabase/functions targets modules src` must return nothing (no message text in logs)
+8. `deno test --no-lock --allow-env --allow-net=127.0.0.1 supabase/functions`
+9. `npm run check:reply-api` (docs/reply-api.json matches the zod schemas)
+10. `grep -rnE "console\.(log|info|debug)\(.*(text|body|draft|clipboard)" supabase/functions targets modules src` must return nothing (no message text in logs)
 
 Then report as a table: step · result (pass / fail / skipped) · first failure in one line. If anything failed, propose the smallest fix but don't apply it unless I say so. $ARGUMENTS

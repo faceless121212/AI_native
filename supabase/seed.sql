@@ -1,0 +1,2 @@
+-- Local seed data for `supabase db reset`. Intentionally empty: provider_status rows are created
+-- by their migration, and users come from anonymous sign-in.
