@@ -25,6 +25,7 @@ jobs:
       - run: npm test -- --ci
       - run: npm run i18n:check
       - run: npm run check:reply-api
+      - run: npm run check:prompts
 
   swift:
     name: Swift keyboard core (swift test)
