@@ -7,7 +7,9 @@ select plan(38);
 select tests.create_user() as a \gset user_a_
 select tests.create_user() as b \gset user_b_
 
--- Rows for both users, written as the server would.
+-- Rows for both users, written as the server would (sign-up's starter rows removed so each user
+-- has exactly the rows below).
+delete from public.credit_ledger where user_id in (:'user_a_a', :'user_b_b');
 insert into public.usage_days (user_id, local_date, used) values
   (:'user_a_a', '2026-10-30', 2), (:'user_b_b', '2026-10-30', 1);
 insert into public.credit_ledger (user_id, delta, reason) values
@@ -44,8 +46,12 @@ select is_empty(format('select 1 from public.usage_days where user_id = %L', :'u
 reset role;
 select tests.create_user() as c \gset user_c_
 select tests.as_user(:'user_c_c');
-select is_empty('select 1 from public.usage_days union all select 1 from public.credit_ledger union all select 1 from public.entitlements union all select 1 from public.referrals',
-  'a new user sees no usage, credits, entitlements or referrals');
+select results_eq($$ select 'credit_ledger:' || reason || ':' || delta from public.credit_ledger
+    union all select 'usage_days' from public.usage_days
+    union all select 'entitlements' from public.entitlements
+    union all select 'referrals' from public.referrals $$,
+  $$ values ('credit_ledger:starter:10') $$,
+  'a new user sees only their own starter credits (granted at sign-up): no usage, entitlements or referrals, nothing of others');
 
 select tests.as_anon();
 select throws_ok('select * from public.usage_days', '42501', null, 'anon cannot read usage_days');

@@ -1,5 +1,6 @@
 {
-  "trialEndsTomorrow": "La tua prova gratuita finisce domani. Poi {{price}}/settimana. Puoi annullare quando vuoi in Impostazioni.",
+  "trialEndsTomorrowIos": "La tua prova gratuita finisce domani. Poi {{price}}/settimana. Puoi annullare quando vuoi nei tuoi abbonamenti dell’App Store.",
+  "trialEndsTomorrowAndroid": "La tua prova gratuita finisce domani. Poi {{price}}/settimana. Puoi annullare quando vuoi nei tuoi abbonamenti di Google Play.",
   "annualRenewal": "Il tuo anno di Replywise si rinnova il {{date}} a {{price}}.",
   "freeRepliesBack_one": "Hai di nuovo {{count}} risposta gratuita.",
   "freeRepliesBack_other": "Hai di nuovo {{count}} risposte gratuite."

@@ -43,6 +43,8 @@ const document = {
     DeviceKeyCreateResponse: schema(api.DeviceKeyCreateResponse, 'output'),
     DeviceKeyRevokeResponse: schema(api.DeviceKeyRevokeResponse, 'output'),
     QuotaResponse: schema(api.QuotaResponse, 'output'),
+    ReplyFeedbackResponse: schema(api.ReplyFeedbackResponse, 'output'),
+    HealthResponse: schema(api.HealthResponse, 'output'),
   },
   sseEvents: Object.fromEntries(
     api.SSE_EVENT_NAMES.map((name) => [name, schema(api.SseEventPayloads[name], 'output')]),

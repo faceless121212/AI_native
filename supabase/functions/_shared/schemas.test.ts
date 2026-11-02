@@ -147,7 +147,6 @@ Deno.test('ConsentRequest / ConsentResponse', () => {
     aiEnabled: true,
     policyVersion: 'v1',
     grantedAt: '2026-10-31T21:00:00.000Z',
-    starterCreditsGranted: true,
   });
   ok(ConsentResponse, {
     action: 'withdraw',
@@ -165,7 +164,9 @@ Deno.test('ConsentRequest / ConsentResponse', () => {
 
 Deno.test('ProfilePatchRequest: strict, at least one field, client never sends a timestamp', () => {
   ok(ProfilePatchRequest, { ageConfirmed: true });
-  ok(ProfilePatchRequest, { uiLang: 'it', iAm: 'man', theyAre: 'woman', timezone: 'Europe/Rome' });
+  ok(ProfilePatchRequest, { uiLang: 'it', timezone: 'Europe/Rome' });
+  bad(ProfilePatchRequest, { iAm: 'man' });
+  bad(ProfilePatchRequest, { theyAre: 'woman' });
   ok(ProfilePatchRequest, { timezone: 'America/Argentina/Buenos_Aires' });
   ok(ProfilePatchRequest, { timezone: 'Etc/GMT+1' });
   bad(ProfilePatchRequest, {});
@@ -173,7 +174,6 @@ Deno.test('ProfilePatchRequest: strict, at least one field, client never sends a
   bad(ProfilePatchRequest, { ageConfirmedAt: '2020-01-01T00:00:00Z' });
   bad(ProfilePatchRequest, { ageConfirmed: true, extra: 1 });
   bad(ProfilePatchRequest, { uiLang: 'en-GB' });
-  bad(ProfilePatchRequest, { iAm: 'robot' });
   bad(ProfilePatchRequest, { timezone: '../../etc/passwd' });
 });
 

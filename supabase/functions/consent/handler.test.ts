@@ -71,7 +71,11 @@ Deno.test(
       assertEquals((await res.json()).error, 'unknown_policy_version', version);
     }
     assertEquals(store.consents.length, 0);
-    assertEquals(store.credits.length, 0);
+    assertEquals(
+      store.credits.map((c) => c.reason),
+      ['starter'],
+      'only the sign-up starter credits',
+    );
   },
 );
 
@@ -99,18 +103,24 @@ Deno.test('consent: grant needs age confirmation (403 age_required, nothing stor
   assertEquals(res.status, 403);
   assertEquals((await res.json()).error, 'age_required');
   assertEquals(store.consents.length, 0);
-  assertEquals(store.credits.length, 0);
+  assertEquals(
+    store.credits.map((c) => c.reason),
+    ['starter'],
+    'only the sign-up starter credits',
+  );
 });
 
 Deno.test(
-  'consent: starter credits once — first grant, regrant, new version, withdraw + regrant',
+  'consent: never grants credits (starter credits come with sign-up) — grant, regrant, new version, withdraw + regrant',
   async () => {
     const { store, handler } = setup();
     const { userId, token } = await adultUser(store);
+    const atSignUp = store.credits.filter((c) => c.userId === userId);
+    assertEquals(atSignUp, [{ userId, delta: 10, reason: 'starter' }]);
 
     const first = ConsentResponse.parse(await (await handler(grant(token))).json());
-    assertEquals(first.action === 'grant' && first.starterCreditsGranted, true);
     assertEquals(first.action === 'grant' && first.aiEnabled, true);
+    assertEquals('starterCreditsGranted' in first, false);
 
     for (const req of [
       grant(token),
@@ -119,14 +129,14 @@ Deno.test(
       grant(token, '2026-12-01'),
     ]) {
       const body = ConsentResponse.parse(await (await handler(req)).json());
-      if (body.action === 'grant') assertEquals(body.starterCreditsGranted, false);
+      assertEquals('starterCreditsGranted' in body, false);
     }
     const starter = store.credits.filter((c) => c.userId === userId && c.reason === 'starter');
     assertEquals(starter, [{ userId, delta: 10, reason: 'starter' }]);
   },
 );
 
-Deno.test('consent: concurrent first grants add starter credits exactly once', async () => {
+Deno.test('consent: concurrent first grants add no credits', async () => {
   const { store, handler } = setup();
   const { userId, token } = await adultUser(store);
   const bodies = await Promise.all(
@@ -134,7 +144,7 @@ Deno.test('consent: concurrent first grants add starter credits exactly once', a
       ConsentResponse.parse(await (await handler(grant(token))).json()),
     ),
   );
-  assertEquals(bodies.filter((b) => b.action === 'grant' && b.starterCreditsGranted).length, 1);
+  assertEquals(bodies.filter((b) => b.action === 'grant' && b.aiEnabled).length, 10);
   assertEquals(store.credits.filter((c) => c.userId === userId).length, 1);
 });
 

@@ -1,18 +1,17 @@
 import type { ConfigContext, ExpoConfig } from 'expo/config';
 
-const APP_GROUP = 'group.app.replywise.shared';
-// Shared with the keyboard extension: holds ONLY the keyboard's device key (architecture §4).
-const KEYCHAIN_GROUP = '$(AppIdentifierPrefix)app.replywise.shared';
+import { appGroupsFor } from './config/app-groups';
 
 export default ({ config }: ConfigContext): ExpoConfig => {
-  // APP_VARIANT picks the bundle ID: "staging" → app.replywise.staging, else app.replywise.
+  // APP_VARIANT picks the bundle ID, App Group and keychain groups (config/app-groups.js).
   // The keyboard extension follows with ".keyboard" (targets/keyboard/expo-target.config.js).
-  const variant = process.env.APP_VARIANT === 'staging' ? 'staging' : 'production';
+  const groups = appGroupsFor(process.env.APP_VARIANT);
+  const variant = groups.variant;
   const isStaging = variant === 'staging';
-  const BUNDLE_ID = isStaging ? 'app.replywise.staging' : 'app.replywise';
-  // App-only group, listed FIRST: iOS stores keychain items without an explicit access group in
-  // the first group of this list, so the Supabase session stays out of the shared group.
-  const APP_KEYCHAIN_GROUP = `$(AppIdentifierPrefix)${BUNDLE_ID}`;
+  const BUNDLE_ID = groups.bundleId;
+  const APP_GROUP = groups.appGroup;
+  const KEYCHAIN_GROUP = groups.sharedKeychainGroup;
+  const APP_KEYCHAIN_GROUP = groups.appKeychainGroup;
 
   return {
     ...config,

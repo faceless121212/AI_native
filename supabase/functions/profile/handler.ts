@@ -1,4 +1,4 @@
-// GET /profile, PATCH /profile {ageConfirmed?: true, uiLang?, iAm?, theyAre?, timezone?}
+// GET /profile, PATCH /profile {ageConfirmed?: true, uiLang?, timezone?}
 // (Supabase JWT). age_confirmed_at is set by the server clock, once. The time zone is stored
 // under its canonical IANA name ('europe/berlin' → 'Europe/Berlin').
 import { authenticate, type AuthDeps } from '../_shared/auth.ts';
@@ -17,8 +17,6 @@ function toResponse(p: ProfileState): ProfileResponse {
   return {
     id: p.id,
     uiLang: p.uiLang,
-    iAm: p.iAm,
-    theyAre: p.theyAre,
     ageConfirmedAt: p.ageConfirmedAt,
     timezone: p.timezone,
     aiEnabled: p.aiEnabled,

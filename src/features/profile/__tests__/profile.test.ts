@@ -3,8 +3,6 @@ import { fetchProfile, PROFILE_COLUMNS } from '../api/profile';
 const row = {
   id: '6f1c2b8e-7c55-4d7e-9a7e-1f6f3c2d4b10',
   ui_lang: 'de',
-  i_am: null,
-  they_are: null,
   age_confirmed_at: null,
   timezone: 'Europe/Berlin',
   created_at: '2026-10-31T20:00:00Z',

@@ -58,16 +58,21 @@ Deno.test('profile: the client cannot send a timestamp or unknown fields', async
   }
 });
 
-Deno.test('profile: ui_lang, i_am, they_are, timezone', async () => {
+Deno.test('profile: ui_lang and timezone', async () => {
   const { handler, token } = setup();
-  const res = await handler(
-    patch(token, { uiLang: 'fr', iAm: 'woman', theyAre: 'man', timezone: 'Europe/Paris' }),
-  );
+  const res = await handler(patch(token, { uiLang: 'fr', timezone: 'Europe/Paris' }));
   const body = ProfileResponse.parse(await res.json());
-  assertEquals(
-    [body.uiLang, body.iAm, body.theyAre, body.timezone],
-    ['fr', 'woman', 'man', 'Europe/Paris'],
-  );
+  assertEquals([body.uiLang, body.timezone], ['fr', 'Europe/Paris']);
+  assertEquals('iAm' in body || 'theyAre' in body, false, 'gender stays on the phone');
+});
+
+Deno.test('profile: "I am" / "They are" are not accepted (they stay on the phone)', async () => {
+  const { handler, token } = setup();
+  for (const body of [{ iAm: 'woman' }, { theyAre: 'man' }, { uiLang: 'de', iAm: 'man' }]) {
+    const res = await handler(patch(token, body));
+    assertEquals(res.status, 400, JSON.stringify(body));
+    await res.body?.cancel();
+  }
 });
 
 Deno.test('profile: time zones are stored under their canonical name', async () => {
@@ -97,7 +102,7 @@ Deno.test('profile: unknown IANA time zone → 400', async () => {
 Deno.test('profile: logs nothing about the request', async () => {
   const { handler, token } = setup();
   const { lines } = await captureConsole(() =>
-    handler(patch(token, { timezone: 'Europe/Madrid', iAm: 'man' })),
+    handler(patch(token, { timezone: 'Europe/Madrid', uiLang: 'es' })),
   );
   assertEquals(
     lines.filter((l) => l.includes('Europe/Madrid') || l.includes(token)),

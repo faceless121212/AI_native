@@ -2,7 +2,7 @@
 // the real handlers. Opt-in (needs `supabase start`):
 //   eval "$(supabase status -o env)" && SUPABASE_INTEGRATION=1 SUPABASE_URL=$API_URL \
 //     SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY SUPABASE_ANON_KEY=$ANON_KEY \
-//     deno test --allow-env --allow-net=127.0.0.1 supabase/functions
+//     deno test --no-lock --config supabase/functions/deno.json --allow-env --allow-net=127.0.0.1 supabase/functions
 import { assertEquals, assertMatch } from 'jsr:@std/assert@1';
 import { authenticate } from './auth.ts';
 import { createServiceClient } from './db.ts';
@@ -31,6 +31,7 @@ async function anonymousSignIn(): Promise<{ token: string; userId: string }> {
     headers: { apikey: Deno.env.get('SUPABASE_ANON_KEY')!, 'content-type': 'application/json' },
     body: '{}',
   });
+  if (!res.ok) throw new Error(`anonymous sign-up failed: ${res.status}`);
   const body = await res.json();
   return { token: body.access_token, userId: body.user.id };
 }
@@ -91,7 +92,7 @@ Deno.test({
     res = await deviceKey(jsonRequest('POST', { platform: 'ios' }, bearer(token)));
     assertEquals([res.status, (await res.json()).error], [403, 'ai_off']);
 
-    // Grant twice: starter credits once.
+    // Starter credits came with sign-up; granting (three times, concurrently) adds none.
     const grants = await Promise.all(
       [1, 2, 3].map(async () =>
         ConsentResponse.parse(
@@ -107,7 +108,7 @@ Deno.test({
         ),
       ),
     );
-    assertEquals(grants.filter((g) => g.action === 'grant' && g.starterCreditsGranted).length, 1);
+    assertEquals(grants.filter((g) => g.action === 'grant' && g.aiEnabled).length, 3);
     const { data: credits } = await db
       .from('credit_ledger')
       .select('delta, reason')

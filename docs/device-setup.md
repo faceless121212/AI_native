@@ -33,7 +33,7 @@ npx expo run:ios --device
 Pick your iPhone from the list. The first build asks Xcode for signing:
 
 - If signing still fails, check `APPLE_TEAM_ID` in `.env`, run `npx expo prebuild --clean -p ios` again, and look at Signing & Capabilities in `ios/Replywise.xcworkspace` for **both** targets (`Replywise` and `ReplywiseKeyboard`).
-- Both targets use the App Group `group.app.replywise.shared` and the keychain group `$(AppIdentifierPrefix)app.replywise.shared`. With automatic signing, Xcode registers the App IDs `app.replywise` and `app.replywise.keyboard` and the App Group for you; otherwise create them in the Apple Developer portal and enable the App Group on both IDs.
+- Both targets use the App Group `group.app.replywise.shared` and the keychain group `$(AppIdentifierPrefix)app.replywise.shared`. With automatic signing, Xcode registers the App IDs `app.replywise` and `app.replywise.keyboard` and the App Group for you; otherwise create them in the Apple Developer portal and enable the App Group on both IDs. Staging builds (`APP_VARIANT=staging`) use separate IDs and groups (`app.replywise.staging`, `app.replywise.staging.keyboard`, `group.app.replywise.staging.shared`), so staging and production can be installed side by side.
 - `targets/keyboard/Tests/`, `Package.swift` and SwiftPM's `.build/` and `.swiftpm/` folders are kept out of the keyboard build by `plugins/with-keyboard-target-exclusions.js`. If an Xcode build ever fails on `import XCTest`, run `npx expo prebuild --clean -p ios` and tell Claude.
 
 Turn the keyboard on:

@@ -1,7 +1,7 @@
 -- profiles: created by the auth trigger, owner-only reads, no client writes, server patch rules.
 begin;
 \ir _helpers.psql
-select plan(25);
+select plan(26);
 
 select tests.create_user() as a \gset user_a_
 select tests.create_user() as b \gset user_b_
@@ -11,8 +11,8 @@ select tests.create_user(false) as c \gset user_c_
 select is((select count(*)::int from public.profiles where id in (:'user_a_a', :'user_b_b', :'user_c_c')), 3,
   'a profiles row is created for every new auth user (anonymous or not)');
 select results_eq(
-  format($$ select ui_lang, i_am, they_are, age_confirmed_at, timezone from public.profiles where id = %L $$, :'user_a_a'),
-  $$ values ('en'::text, null::text, null::text, null::timestamptz, 'UTC'::text) $$,
+  format($$ select ui_lang, age_confirmed_at, timezone from public.profiles where id = %L $$, :'user_a_a'),
+  $$ values ('en'::text, null::timestamptz, 'UTC'::text) $$,
   'new profile has defaults and no age confirmation');
 
 -- RLS: owner reads own row only
@@ -45,9 +45,9 @@ select tests.clear_claims();
 -- Server-side patch (service role via the profile Edge Function)
 select tests.as_service();
 select is(
-  (public.patch_profile(:'user_a_a', p_min_policy_version => '2026-11-01', p_ui_lang => 'de', p_i_am => 'woman', p_they_are => 'man', p_timezone => 'Europe/Berlin')
+  (public.patch_profile(:'user_a_a', p_min_policy_version => '2026-11-01', p_ui_lang => 'de', p_timezone => 'Europe/Berlin')
     - 'id' - 'created_at' - 'age_confirmed_at'),
-  '{"ui_lang": "de", "i_am": "woman", "they_are": "man", "timezone": "Europe/Berlin", "ai_enabled": false}'::jsonb,
+  '{"ui_lang": "de", "timezone": "Europe/Berlin", "ai_enabled": false}'::jsonb,
   'patch_profile updates the given fields and reports ai_enabled');
 select ok((public.patch_profile(:'user_a_a', p_min_policy_version => '2026-11-01', p_age_confirmed => true) ->> 'age_confirmed_at') is not null,
   'ageConfirmed sets age_confirmed_at from the server clock');
@@ -69,8 +69,9 @@ select throws_ok(format($$ select public.patch_profile(%L, p_min_policy_version 
   '23514', null, 'unknown time zones are rejected');
 select throws_ok(format($$ select public.patch_profile(%L, p_min_policy_version => '2026-11-01', p_ui_lang => 'xx') $$, :'user_b_b'),
   '23514', null, 'unknown ui_lang is rejected');
-select throws_ok(format($$ select public.patch_profile(%L, p_min_policy_version => '2026-11-01', p_i_am => 'robot') $$, :'user_b_b'),
-  '23514', null, 'unknown i_am is rejected');
+-- "I am" / "They are" stay on the phone (user decision): no columns, no parameters.
+select hasnt_column('public', 'profiles', 'i_am', 'profiles has no i_am');
+select hasnt_column('public', 'profiles', 'they_are', 'profiles has no they_are');
 select throws_ok(format($$ select public.patch_profile(%L, p_min_policy_version => '2026-11-01', p_timezone => 'europe/berlin') $$, :'user_b_b'),
   '23514', null, 'the database only accepts canonical names (the Edge Function canonicalises)');
 select is((public.patch_profile(:'user_b_b', p_min_policy_version => '2026-11-01', p_timezone => 'Europe/Madrid') ->> 'timezone'), 'Europe/Madrid',
