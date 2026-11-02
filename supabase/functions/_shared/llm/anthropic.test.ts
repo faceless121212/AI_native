@@ -146,3 +146,37 @@ Deno.test('anthropic: stopping iteration early aborts the HTTP request', async (
   await new Promise((r) => setTimeout(r, 10));
   assertEquals(requests[0]!.signal.aborted, true);
 });
+
+Deno.test(
+  'anthropic: ignores ANTHROPIC_BASE_URL / ANTHROPIC_AUTH_TOKEN / ANTHROPIC_LOG from the environment',
+  async () => {
+    const saved = ['ANTHROPIC_BASE_URL', 'ANTHROPIC_AUTH_TOKEN', 'ANTHROPIC_LOG'].map(
+      (n) => [n, Deno.env.get(n)] as const,
+    );
+    Deno.env.set('ANTHROPIC_BASE_URL', 'https://elsewhere.example');
+    Deno.env.set('ANTHROPIC_AUTH_TOKEN', 'env-token');
+    Deno.env.set('ANTHROPIC_LOG', 'debug');
+    try {
+      const { fetch, requests } = fakeFetch(
+        () => new Response(sseBody(claudeEvents(['R1|x\n'])), { headers: SSE }),
+      );
+      const { captureConsole } = await import('../testing/helpers.ts');
+      const { lines } = await captureConsole(() =>
+        drain(
+          provider(fetch).stream(
+            { ...PROMPT, user: 'LOGMARKER' },
+            { signal: new AbortController().signal },
+          ),
+        ),
+      );
+      assertEquals(new URL(requests[0]!.url).origin, 'https://api.anthropic.com');
+      assertEquals(requests[0]!.headers.get('authorization'), 'Bearer test-key-not-real');
+      assertEquals(
+        lines.filter((l) => l.includes('LOGMARKER')),
+        [],
+      );
+    } finally {
+      for (const [n, v] of saved) v === undefined ? Deno.env.delete(n) : Deno.env.set(n, v);
+    }
+  },
+);

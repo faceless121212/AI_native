@@ -265,9 +265,11 @@ export const CardEvent = z.object({
 export type CardEvent = z.infer<typeof CardEvent>;
 
 /**
- * SSE `meta`: from the model's META line, sent once, as soon as it arrives (before or after the
- * cards). crisis → show the crisis card above the cards. refused → show the neutral note and clear
- * any cards already shown (a provider-side refusal can end the stream after a card).
+ * SSE `meta`: from the model's META line, sent as soon as it arrives (before or after the cards).
+ * crisis → show the crisis card above the cards. refused → show the neutral note and clear any
+ * cards already shown (a provider-side refusal can end the stream after a card). The server may
+ * send `meta` a second time only to raise crisis to true (its own crisis check when the model's
+ * signal is missing or the answer was cut short); never to lower it. Clients keep the latest.
  */
 export const MetaEvent = z.object({
   requestId: z.uuid(),

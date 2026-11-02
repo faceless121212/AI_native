@@ -8,6 +8,7 @@
 import { type Analytics, noAnalytics } from '../_shared/analytics.ts';
 import { authenticate, type AuthDeps } from '../_shared/auth.ts';
 import { validateChips } from '../_shared/chips.ts';
+import { looksLikeCrisis } from '../_shared/crisis.ts';
 import { HttpError, httpError, jsonResponse, methodNotAllowed } from '../_shared/errors.ts';
 import { readJson } from '../_shared/http.ts';
 import type { ConfigErrorCode } from '../_shared/llm/config.ts';
@@ -29,7 +30,12 @@ import { replyStream } from './pipeline.ts';
 const FN = 'reply';
 
 export type LlmSetup =
-  | { ok: true; providers: readonly LlmProvider[] }
+  | {
+      ok: true;
+      providers: readonly LlmProvider[];
+      /** False when production runs outside eu-central-1 (config.ts regionAllowed) → 503. */
+      regionOk?: boolean;
+    }
   | { ok: false; code: ConfigErrorCode; detail: string | null };
 
 export interface ReplyDeps {
@@ -42,6 +48,8 @@ export interface ReplyDeps {
   timing?: RunnerTiming;
   now?: () => number;
   promptTag?: () => string;
+  /** EdgeRuntime.waitUntil when running on Supabase. */
+  waitUntil?: (work: Promise<unknown>) => void;
 }
 
 export function handleReplyRoute(req: Request, deps: ReplyDeps): Promise<Response> {
@@ -64,9 +72,16 @@ export async function handleReply(req: Request, deps: ReplyDeps): Promise<Respon
     throw httpError('internal', 'The AI service is not configured.');
   }
   const providers = deps.llm.providers;
+  if (deps.llm.regionOk === false) {
+    // Production must run in Frankfurt; refuse rather than process elsewhere.
+    logEvent(FN, 'wrong_region');
+    throw new HttpError('provider_down', 'AI replies are having trouble. Try again in a minute.');
+  }
   if (req.method !== 'POST') throw methodNotAllowed(['POST']);
 
-  const { userId, method } = await authenticate(req, deps.auth, { allow: ['jwt', 'device'] });
+  const { userId, method, deviceKeyId } = await authenticate(req, deps.auth, {
+    allow: ['jwt', 'device'],
+  });
   const body = await readJson(req, ReplyRequest);
 
   if (!(await deps.repo.checkAiAllowed(userId))) {
@@ -161,11 +176,13 @@ export async function handleReply(req: Request, deps: ReplyDeps): Promise<Respon
     {
       requestId: consumed.requestId,
       userId,
+      deviceKeyId,
       prompt,
       promptVersion: PROMPT_VERSION,
       expectedLang: targetLang(body.langHint, body.uiLang),
       quota: consumed.quota,
       flags,
+      crisisBackstop: looksLikeCrisis(redacted.text),
       startedAt,
     },
     {
@@ -175,6 +192,7 @@ export async function handleReply(req: Request, deps: ReplyDeps): Promise<Respon
       analytics,
       timing: deps.timing ?? DEFAULT_TIMING,
       now,
+      ...(deps.waitUntil ? { waitUntil: deps.waitUntil } : {}),
     },
     req.signal,
   );

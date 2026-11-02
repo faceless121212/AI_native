@@ -1,15 +1,19 @@
 // The streaming part of `reply` (architecture §7 steps 8–11), after the request was authorised
 // and charged. Produces the SSE body:
 //   card* / meta (as they arrive) → quota → done        on success
-//   quota → error                                       when no card could be sent (refunded)
+//   [meta] → quota → error                              when no card could be sent (refunded),
+//                                                       or AI was turned off mid-request
 // Cards are post-checked and flushed as soon as their line is complete. Fewer than 2 surviving
-// cards → one retry. Client disconnect aborts the provider call. Whatever happens, the request
-// row gets its metadata (tokens, cost, latency, status, flags), never text.
+// cards → one retry. Before a retry or a fallback, consent (and the device key) is checked again.
+// Client disconnect aborts the provider call. Generation is wrapped so that, whatever throws, the
+// refund (no card sent), the closing events and the request metadata still happen; on Supabase
+// the work is registered with EdgeRuntime.waitUntil so it survives the client going away. A
+// pg_cron sweeper refunds rows that still end up 'started'. Never any text in logs or rows.
 import type { Analytics } from '../_shared/analytics.ts';
 import { costMicroEur } from '../_shared/cost.ts';
 import type { ProviderHealth } from '../_shared/llm/health.ts';
 import { LineParser, type ModelMeta, type ParsedItem } from '../_shared/llm/lines.ts';
-import type { LlmPrompt, LlmProvider } from '../_shared/llm/provider.ts';
+import type { LlmPrompt, LlmProvider, StopKind } from '../_shared/llm/provider.ts';
 import {
   type ProviderCall,
   runChain,
@@ -41,11 +45,15 @@ export interface PipelineDeps {
   analytics: Analytics;
   timing: RunnerTiming;
   now: () => number;
+  /** EdgeRuntime.waitUntil on Supabase: keeps the worker alive for the post-stream work. */
+  waitUntil?: (work: Promise<unknown>) => void;
 }
 
 export interface PipelineInput {
   requestId: string;
   userId: string;
+  /** Set for keyboard requests (device key auth): re-checked before a retry or fallback. */
+  deviceKeyId: string | null;
   prompt: LlmPrompt;
   promptVersion: string;
   /** Language the cards should be in until META says otherwise. */
@@ -53,6 +61,12 @@ export interface PipelineInput {
   quota: QuotaSnapshot;
   /** Flags known before the call (redacted, flirt_forced_off). */
   flags: Set<StoredSafetyFlag>;
+  /**
+   * Deterministic crisis check of the redacted input (_shared/crisis.ts). Only used to set
+   * meta.crisis when the model's META is missing, the provider refused, or the stream ended
+   * early. Never stored, logged or sent to analytics.
+   */
+  crisisBackstop: boolean;
   /** Request arrival, for ms_first / ms_total. */
   startedAt: number;
 }
@@ -73,8 +87,8 @@ export function replyStream(
   let closed = false;
 
   return new ReadableStream<Uint8Array>({
-    async start(controller) {
-      const send = <E extends SseEventName>(event: E, data: unknown): boolean => {
+    start(controller) {
+      const send: Send = (event, data) => {
         if (closed || abort.signal.aborted) return false;
         // Contract check: a payload that doesn't match the schema is a bug and is never sent.
         // Never throws, so refund and metadata logging always run.
@@ -90,21 +104,21 @@ export function replyStream(
           return false;
         }
       };
-      try {
-        await run(input, deps, abort.signal, send);
-      } catch (err) {
-        logError(FN, 'pipeline', err);
-      } finally {
-        clientSignal.removeEventListener('abort', onClientAbort);
-        if (!closed) {
-          closed = true;
-          try {
-            controller.close();
-          } catch {
-            // already cancelled by the client
+      const work = run(input, deps, abort.signal, send)
+        .catch((err) => logError(FN, 'pipeline', err))
+        .finally(() => {
+          clientSignal.removeEventListener('abort', onClientAbort);
+          if (!closed) {
+            closed = true;
+            try {
+              controller.close();
+            } catch {
+              // already cancelled by the client
+            }
           }
-        }
-      }
+        });
+      deps.waitUntil?.(work);
+      return work;
     },
     cancel() {
       closed = true;
@@ -124,6 +138,7 @@ async function run(input: PipelineInput, deps: PipelineDeps, signal: AbortSignal
   const delivered = new Map<number, CardEvent>();
   let meta: ModelMeta | null = null;
   let metaSent = false;
+  let crisisSent = false;
   let firstCardAt: number | null = null;
   let deliveredThisProvider = 0;
   let dropped = 0;
@@ -131,21 +146,41 @@ async function run(input: PipelineInput, deps: PipelineDeps, signal: AbortSignal
   let parser = new LineParser(kind);
   const calls: ProviderCall[] = [];
   let lastResult: RunResult | null = null;
+  let lastStop: StopKind | null = null;
   let providerRefused = false;
   let fallbackUsed = false;
+  let stoppedAiOff = false;
+  let internalError = false;
   let currentProvider: LlmProvider['name'] = deps.providers[0]?.name ?? 'fake';
 
-  const expectedLang = (): Lang =>
-    meta?.lang && (LANGS as readonly string[]).includes(meta.lang)
-      ? (meta.lang as Lang)
+  const modelMeta = (): ModelMeta | null => meta;
+  const expectedLang = (): Lang => {
+    const lang = modelMeta()?.lang;
+    return lang && (LANGS as readonly string[]).includes(lang)
+      ? (lang as Lang)
       : input.expectedLang;
+  };
+  const sendMeta = (crisis: boolean, refused: boolean) => {
+    const event: MetaEvent = {
+      requestId,
+      lang: (modelMeta()?.lang ?? expectedLang()) as LangHint,
+      crisis,
+      refused,
+    };
+    if (send('meta', event)) {
+      metaSent = true;
+      crisisSent ||= crisis;
+    }
+  };
 
-  const metaEvent = (m: ModelMeta | null, refused: boolean): MetaEvent => ({
-    requestId,
-    lang: (m?.lang ?? expectedLang()) as LangHint,
-    crisis: m?.crisis ?? false,
-    refused,
-  });
+  const stillAllowed = async (): Promise<boolean> => {
+    try {
+      return await deps.repo.stillAllowed(input.userId, input.deviceKeyId);
+    } catch (err) {
+      logError(FN, 'still_allowed', err);
+      return false; // fail closed
+    }
+  };
 
   const handle = (items: ParsedItem[]) => {
     for (const item of items) {
@@ -156,8 +191,7 @@ async function run(input: PipelineInput, deps: PipelineDeps, signal: AbortSignal
       if (item.type === 'meta') {
         if (metaSent) continue;
         meta = item.meta;
-        metaSent = true;
-        send('meta', metaEvent(item.meta, item.meta.refused));
+        sendMeta(item.meta.crisis, item.meta.refused);
         continue;
       }
       let index: number;
@@ -192,75 +226,101 @@ async function run(input: PipelineInput, deps: PipelineDeps, signal: AbortSignal
     }
   };
 
-  for (let attempt = 0; attempt < 2; attempt++) {
-    parser = new LineParser(kind);
-    deliveredThisProvider = 0;
-    const result = await runChain(deps.providers, prompt, {
-      signal,
-      health: deps.health,
-      timing: deps.timing,
-      consume: (chunk) => handle(parser.push(chunk)),
-      committed: () => deliveredThisProvider > 0,
-      restart: () => {
-        parser = new LineParser(kind);
-      },
-      onFallback: (from, to, reason) => {
-        if (!to) return;
-        fallbackUsed = true;
-        currentProvider = to;
-        deps.analytics.track(input.userId, { name: 'provider_fallback', props: { from, to } });
-        logEvent(FN, 'provider_fallback', { from, to, reason });
-      },
-      onProviderError: (provider, code) => logEvent(FN, 'provider_error', { provider, code }),
-    });
-    calls.push(...result.calls);
-    lastResult = result;
-
-    if (result.status !== 'completed') {
-      if (result.status === 'failed_after_output') {
-        handle(parser.end('truncated'));
+  // ---- generation (anything thrown here still gets the finalisation below)
+  try {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      if (attempt > 0 && !(await stillAllowed())) {
+        stoppedAiOff = true;
+        break;
       }
-      break;
-    }
-    currentProvider = result.provider.name;
-    const stop = result.outcome.stop;
-    handle(parser.end(stop === 'end' ? 'complete' : 'truncated'));
-    if (stop === 'refusal') {
-      providerRefused = true;
-      logEvent(FN, 'provider_refusal', {
-        provider: result.provider.name,
-        category: result.outcome.refusalCategory,
+      parser = new LineParser(kind);
+      deliveredThisProvider = 0;
+      const result = await runChain(deps.providers, prompt, {
+        signal,
+        health: deps.health,
+        timing: deps.timing,
+        consume: (chunk) => handle(parser.push(chunk)),
+        committed: () => deliveredThisProvider > 0,
+        restart: () => {
+          parser = new LineParser(kind);
+        },
+        mayContinue: stillAllowed,
+        onFallback: (from, to, reason) => {
+          if (!to) return;
+          fallbackUsed = true;
+          currentProvider = to;
+          deps.analytics.track(input.userId, { name: 'provider_fallback', props: { from, to } });
+          logEvent(FN, 'provider_fallback', { from, to, reason });
+        },
+        onProviderError: (provider, code) => logEvent(FN, 'provider_error', { provider, code }),
       });
-      break;
+      calls.push(...result.calls);
+      lastResult = result;
+
+      if (result.status === 'stopped') {
+        stoppedAiOff = true;
+        break;
+      }
+      if (result.status === 'consumer_failed') {
+        internalError = true;
+        break;
+      }
+      if (result.status !== 'completed') break;
+
+      currentProvider = result.provider.name;
+      const stop = result.outcome.stop;
+      lastStop = stop;
+      handle(parser.end(stop === 'end' ? 'complete' : 'truncated'));
+      if (stop === 'refusal') {
+        providerRefused = true;
+        logEvent(FN, 'provider_refusal', {
+          provider: result.provider.name,
+          category: result.outcome.refusalCategory,
+        });
+        break;
+      }
+      if (modelMeta()?.refused) break;
+      if (delivered.size >= 2) break;
+      if (attempt === 0) logEvent(FN, 'retry', { cards: delivered.size, dropped, invalid });
     }
-    if ((meta as ModelMeta | null)?.refused) break;
-    if (delivered.size >= 2) break;
-    if (attempt === 0) logEvent(FN, 'retry', { cards: delivered.size, dropped, invalid });
+  } catch (err) {
+    internalError = true;
+    logError(FN, 'generate', err);
   }
 
-  // ---- outcome
-  const refused = providerRefused || ((meta as ModelMeta | null)?.refused ?? false);
+  // ---- finalisation: never throws
+  const refused = providerRefused || (modelMeta()?.refused ?? false);
   let status: RequestStatus;
   let errorCode: ErrorCode | null = null;
   if (signal.aborted) status = 'cancelled';
-  else if (refused) status = 'refused';
+  else if (stoppedAiOff) {
+    status = delivered.size > 0 ? 'partial' : 'error';
+    errorCode = 'ai_off';
+  } else if (refused) status = 'refused';
   else if (delivered.size === 0) {
     status = 'error';
     errorCode =
-      lastResult?.status === 'all_failed' || lastResult?.status === 'failed_after_output'
+      !internalError &&
+      (lastResult?.status === 'all_failed' || lastResult?.status === 'failed_after_output')
         ? 'provider_down'
         : 'internal';
   } else status = delivered.size >= wanted ? 'ok' : 'partial';
 
-  if (refused) {
-    flags.add('refused');
-    if (!metaSent) {
-      send('meta', metaEvent(meta, true));
-      metaSent = true;
-    }
+  if (refused) flags.add('refused');
+
+  // Crisis backstop: only when the model's own signal is missing or the answer was cut short.
+  const endedEarly =
+    internalError ||
+    stoppedAiOff ||
+    lastResult?.status !== 'completed' ||
+    (lastStop !== null && lastStop !== 'end');
+  const backstop = input.crisisBackstop && (!metaSent || providerRefused || endedEarly);
+  if (status !== 'cancelled') {
+    if (!metaSent && (refused || backstop)) sendMeta(backstop, refused);
+    else if (metaSent && backstop && !crisisSent) sendMeta(true, refused); // upgrade only
   }
 
-  // Refund when nothing reached the user (failure or cancel before the first card).
+  // Refund when nothing reached the user (failure, AI turned off, or cancel before the first card).
   let quota = input.quota;
   if (delivered.size === 0 && (status === 'error' || status === 'cancelled')) {
     try {
@@ -272,14 +332,16 @@ async function run(input: PipelineInput, deps: PipelineDeps, signal: AbortSignal
     }
   }
 
-  if (status === 'error') {
+  if (errorCode !== null) {
     send('quota', toQuotaEvent(quota));
     send('error', {
-      error: errorCode ?? 'internal',
+      error: errorCode,
       message:
         errorCode === 'provider_down'
           ? 'AI replies are having trouble. Try again in a minute.'
-          : 'No usable replies this time. Try again.',
+          : errorCode === 'ai_off'
+            ? 'AI replies are off. Turn them on in the Replywise app.'
+            : 'No usable replies this time. Try again.',
     });
   } else if (status !== 'cancelled') {
     send('quota', toQuotaEvent(quota));
@@ -300,9 +362,7 @@ async function run(input: PipelineInput, deps: PipelineDeps, signal: AbortSignal
   const msTotal = deps.now() - input.startedAt;
   const msFirst = firstCardAt === null ? null : firstCardAt - input.startedAt;
   const storedFlags = [...flags];
-  const lang: LangHint | null =
-    (meta as ModelMeta | null)?.lang ?? (delivered.size > 0 ? expectedLang() : null);
-  const slots = delivered.size === 0 ? 0 : Math.max(...delivered.keys()) + 1;
+  const lang: LangHint | null = modelMeta()?.lang ?? (delivered.size > 0 ? expectedLang() : null);
 
   try {
     await deps.repo.finishRequest(requestId, {
@@ -317,14 +377,16 @@ async function run(input: PipelineInput, deps: PipelineDeps, signal: AbortSignal
       msFirst,
       msTotal,
       safetyFlags: storedFlags,
-      cards: slots,
+      cards: delivered.size,
+      deliveredCards: [...delivered.keys()].sort((a, b) => a - b),
     });
   } catch (err) {
     logError(FN, 'finish', err);
   }
 
+  // Anonymous aggregate only: never keyed by the user (privacy review).
   for (const type of storedFlags) {
-    deps.analytics.track(input.userId, { name: 'safety_flag', props: { type } });
+    deps.analytics.trackAnonymous({ name: 'safety_flag', props: { type } });
   }
   logEvent(FN, 'done', {
     status,

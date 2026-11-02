@@ -1,7 +1,8 @@
 // GET /health (no auth): for Better Stack and the app's provider-down banner (v1.providerDown).
 //   200 {status:'ok'}        every configured provider is usable
 //   200 {status:'degraded'}  the primary or fallback is marked down, another one works
-//   503 {status:'down'}      no provider usable, the provider config is refused, or the DB is unreachable
+//   503 {status:'down'}      no provider usable, the provider config is refused, production is not
+//                            running in eu-central-1, or the DB is unreachable
 // Returns codes and timestamps only (no provider names, no config detail).
 import { jsonResponse, methodNotAllowed } from '../_shared/errors.ts';
 import type { ProviderHealth } from '../_shared/llm/health.ts';
@@ -10,7 +11,7 @@ import { logError, logEvent } from '../_shared/log.ts';
 import type { HealthResponse } from '../_shared/schemas.ts';
 
 export interface HealthDeps {
-  /** Configured provider names (primary first), or null when the provider config is refused. */
+  /** Configured provider names (primary first); null when the config is refused or the region is wrong. */
   providers: readonly ProviderName[] | null;
   health: ProviderHealth;
 }

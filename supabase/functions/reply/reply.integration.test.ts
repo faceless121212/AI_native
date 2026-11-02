@@ -35,12 +35,22 @@ async function signInReady(db: ReturnType<typeof createServiceClient>) {
     headers: { apikey: Deno.env.get('SUPABASE_ANON_KEY')!, 'content-type': 'application/json' },
     body: '{}',
   });
+  assert(res.ok, `anonymous sign-up failed: ${res.status}`);
   const body = await res.json();
   const userId: string = body.user.id;
   const repo = new SupabaseRepo(db);
   await repo.patchProfile(userId, { ageConfirmed: true, timezone: 'Europe/Berlin' });
   await repo.grantAiConsent(userId, CURRENT_AI_POLICY_VERSION);
   return { token: body.access_token as string, userId };
+}
+
+/** Every test starts from a clean breaker row for the fake provider (no shared state). */
+async function resetFakeProvider(db: ReturnType<typeof createServiceClient>) {
+  const { error } = await db
+    .from('provider_status')
+    .update({ down_until: null, failure_count: 0, window_started_at: null, last_error_at: null })
+    .eq('provider', 'fake');
+  assert(!error, 'reset provider_status');
 }
 
 const INPUT: ConsumeInput = {
@@ -61,6 +71,7 @@ Deno.test({
   sanitizeOps: false,
   async fn() {
     const db = createServiceClient();
+    await resetFakeProvider(db);
     const repo = new SupabaseReplyRepo(db);
     const health = new CachedProviderHealth(new SupabaseProviderStatusStore(db));
     const fake = new FakeProvider({ script: ['ok', 'error', 'crisis'] });
@@ -102,11 +113,18 @@ Deno.test({
       .eq('user_id', userId)
       .order('created_at');
     assertEquals(
-      rows!.map((r) => [r.id, r.status, r.charge, r.refunded_at !== null, r.cards]),
+      rows!.map((r) => [
+        r.id,
+        r.status,
+        r.charge,
+        r.refunded_at !== null,
+        r.cards,
+        r.delivered_cards,
+      ]),
       [
-        [okId, 'ok', 'starter', false, 3],
-        [errId, 'error', 'starter', true, 0],
-        [crisisId, 'ok', 'starter', false, 3],
+        [okId, 'ok', 'starter', false, 3, [0, 1, 2]],
+        [errId, 'error', 'starter', true, 0, []],
+        [crisisId, 'ok', 'starter', false, 3, [0, 1, 2]],
       ],
     );
     for (const row of rows!) {
@@ -161,6 +179,7 @@ Deno.test({
   sanitizeOps: false,
   async fn() {
     const db = createServiceClient();
+    await resetFakeProvider(db);
     const repo = new SupabaseReplyRepo(db, undefined, 1000);
     const { userId } = await signInReady(db);
 
@@ -210,20 +229,14 @@ Deno.test({
     const db = createServiceClient();
     const store = new SupabaseProviderStatusStore(db);
     try {
-      await db
-        .from('provider_status')
-        .update({ down_until: null, failure_count: 0, window_started_at: null })
-        .eq('provider', 'fake');
+      await resetFakeProvider(db);
       assertEquals(await store.recordFailure('fake'), null);
       assertEquals(await store.recordFailure('fake'), null);
       const until = await store.recordFailure('fake');
       assert(until && until.getTime() > Date.now() + 4 * 60_000);
       assertEquals((await store.readStatus()).get('fake')?.getTime(), until.getTime());
     } finally {
-      await db
-        .from('provider_status')
-        .update({ down_until: null, failure_count: 0, window_started_at: null })
-        .eq('provider', 'fake');
+      await resetFakeProvider(db);
     }
   },
 });

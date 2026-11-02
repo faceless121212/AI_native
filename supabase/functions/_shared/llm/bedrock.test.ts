@@ -1,49 +1,12 @@
 // Bedrock adapter against canned InvokeModelWithResponseStream responses: AWS binary event-stream
 // frames ({"bytes": base64(<Claude stream event>)}), encoded with the same codec AWS SDKs use.
 import { assert, assertEquals, assertFalse, assertMatch, assertRejects } from 'jsr:@std/assert@1';
-import { EventStreamCodec } from 'npm:@smithy/eventstream-codec@2.2.0';
 import { BedrockProvider } from './bedrock.ts';
 import { ProviderError } from './provider.ts';
 import { claudeEvents, drain, fakeFetch, PROMPT } from './testing/claude-fixtures.ts';
+import { eventStream } from './testing/bedrock-fixtures.ts';
 
 const MODEL = 'eu.anthropic.claude-haiku-5-5-v1:0';
-const codec = new EventStreamCodec(
-  (bytes: Uint8Array) => new TextDecoder().decode(bytes),
-  (text: string) => new TextEncoder().encode(text),
-);
-
-function frame(event: Record<string, unknown>): Uint8Array {
-  const bytes = btoa(String.fromCharCode(...new TextEncoder().encode(JSON.stringify(event))));
-  return codec.encode({
-    headers: {
-      ':event-type': { type: 'string', value: 'chunk' },
-      ':message-type': { type: 'string', value: 'event' },
-      ':content-type': { type: 'string', value: 'application/json' },
-    },
-    body: new TextEncoder().encode(JSON.stringify({ bytes })),
-  });
-}
-
-function eventStream(events: Array<Record<string, unknown>>, splitEvery = 0): Response {
-  const all = events.map(frame);
-  const total = new Uint8Array(all.reduce((n, f) => n + f.length, 0));
-  let o = 0;
-  for (const f of all) {
-    total.set(f, o);
-    o += f.length;
-  }
-  const body = new ReadableStream<Uint8Array>({
-    start(c) {
-      if (splitEvery <= 0) c.enqueue(total);
-      else
-        for (let i = 0; i < total.length; i += splitEvery)
-          c.enqueue(total.slice(i, i + splitEvery));
-      c.close();
-    },
-  });
-  return new Response(body, { headers: { 'content-type': 'application/vnd.amazon.eventstream' } });
-}
-
 function provider(f: typeof fetch) {
   return new BedrockProvider({
     region: 'eu-central-1',
@@ -126,3 +89,33 @@ Deno.test('bedrock: HTTP errors → ProviderError (403 auth, 429 throttling, 503
     assert(!err.message.includes('ECHO'));
   }
 });
+
+Deno.test(
+  'bedrock: ignores ANTHROPIC_BEDROCK_BASE_URL and ANTHROPIC_LOG from the environment',
+  async () => {
+    const saved = ['ANTHROPIC_BEDROCK_BASE_URL', 'ANTHROPIC_LOG'].map(
+      (n) => [n, Deno.env.get(n)] as const,
+    );
+    Deno.env.set('ANTHROPIC_BEDROCK_BASE_URL', 'https://elsewhere.example');
+    Deno.env.set('ANTHROPIC_LOG', 'debug');
+    try {
+      const { fetch, requests } = fakeFetch(() => eventStream(claudeEvents(['R1|x\n'])));
+      const { captureConsole } = await import('../testing/helpers.ts');
+      const { lines } = await captureConsole(() =>
+        drain(
+          provider(fetch).stream(
+            { ...PROMPT, user: 'LOGMARKER' },
+            { signal: new AbortController().signal },
+          ),
+        ),
+      );
+      assertEquals(new URL(requests[0]!.url).host, 'bedrock-runtime.eu-central-1.amazonaws.com');
+      assertEquals(
+        lines.filter((l) => l.includes('LOGMARKER')),
+        [],
+      );
+    } finally {
+      for (const [n, v] of saved) v === undefined ? Deno.env.delete(n) : Deno.env.set(n, v);
+    }
+  },
+);

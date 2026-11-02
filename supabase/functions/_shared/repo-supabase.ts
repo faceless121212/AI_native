@@ -263,7 +263,7 @@ const QuotaRow = z.discriminatedUnion('status', [
 ]);
 
 const RefundRow = z.discriminatedUnion('status', [
-  z.object({ status: z.literal('ok'), ...QuotaFields }).loose(),
+  z.object({ status: z.literal('ok'), quota: z.object(QuotaFields).loose().nullable() }).loose(),
   z.object({ status: z.enum(['already_refunded', 'not_charged', 'not_found']) }).loose(),
 ]);
 
@@ -293,6 +293,19 @@ export class SupabaseReplyRepo implements ReplyRepo {
       this.db,
       'ai_allowed',
       { p_user_id: userId, p_min_policy_version: this.minPolicyVersion },
+      z.boolean(),
+    );
+  }
+
+  async stillAllowed(userId: string, deviceKeyId: string | null): Promise<boolean> {
+    return await rpc(
+      this.db,
+      'reply_still_allowed',
+      {
+        p_user_id: userId,
+        p_min_policy_version: this.minPolicyVersion,
+        p_device_key_id: deviceKeyId,
+      },
       z.boolean(),
     );
   }
@@ -332,7 +345,7 @@ export class SupabaseReplyRepo implements ReplyRepo {
 
   async refundReply(requestId: string): Promise<RefundResult> {
     const row = await rpc(this.db, 'refund_reply', { p_request_id: requestId }, RefundRow);
-    if (row.status === 'ok') return { status: 'ok', quota: toQuota(row) };
+    if (row.status === 'ok') return { status: 'ok', quota: row.quota ? toQuota(row.quota) : null };
     return { status: row.status };
   }
 
@@ -353,6 +366,7 @@ export class SupabaseReplyRepo implements ReplyRepo {
         ms_total: input.msTotal,
         safety_flags: input.safetyFlags,
         cards: input.cards,
+        delivered_cards: input.deliveredCards,
       })
       .eq('id', requestId);
     if (error)

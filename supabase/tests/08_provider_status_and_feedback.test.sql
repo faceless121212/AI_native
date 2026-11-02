@@ -1,7 +1,7 @@
 -- record_provider_failure (3 failures in 60 s → down 5 min) and record_reply_event.
 begin;
 \ir _helpers.psql
-select plan(17);
+select plan(21);
 
 -- Circuit breaker, fixed clock.
 select is(public.record_provider_failure('anthropic', '2026-11-02T10:00:00Z'), null, '1st failure: still up');
@@ -24,16 +24,21 @@ select tests.clear_claims();
 -- Feedback: own request, delivered card only, once per (card, type).
 select tests.create_user() as a \gset user_a_
 select tests.create_user() as b \gset user_b_
-insert into public.ai_requests (id, user_id, kind, source, status, cards)
-values ('11111111-1111-4111-8111-111111111111', :'user_a_a', 'reply', 'keyboard', 'ok', 3),
-       ('22222222-2222-4222-8222-222222222222', :'user_a_a', 'reply', 'keyboard', 'error', 0),
-       ('33333333-3333-4333-8333-333333333333', :'user_a_a', 'polish', 'keyboard', 'partial', 1);
+insert into public.ai_requests (id, user_id, kind, source, status, cards, delivered_cards)
+values ('11111111-1111-4111-8111-111111111111', :'user_a_a', 'reply', 'keyboard', 'ok', 3, '{0,1,2}'),
+       ('22222222-2222-4222-8222-222222222222', :'user_a_a', 'reply', 'keyboard', 'error', 0, '{}'),
+       ('33333333-3333-4333-8333-333333333333', :'user_a_a', 'polish', 'keyboard', 'partial', 1, '{1}'),
+       ('44444444-4444-4444-8444-444444444444', :'user_a_a', 'reply', 'keyboard', 'cancelled', 1, '{0}');
 select is(public.record_reply_event(:'user_a_a', '11111111-1111-4111-8111-111111111111', 2, 'inserted'), 'ok', 'own request, delivered card → ok');
 select is(public.record_reply_event(:'user_a_a', '11111111-1111-4111-8111-111111111111', 2, 'inserted'), 'duplicate', 'same card and type again → duplicate');
 select is(public.record_reply_event(:'user_b_b', '11111111-1111-4111-8111-111111111111', 0, 'up'), 'not_found', 'someone else''s request → not_found');
 select is(public.record_reply_event(:'user_a_a', '22222222-2222-4222-8222-222222222222', 0, 'up'), 'not_found', 'failed request → not_found');
-select is(public.record_reply_event(:'user_a_a', '33333333-3333-4333-8333-333333333333', 1, 'down'), 'not_found', 'card index beyond delivered cards → not_found');
-select is((select count(*)::int from public.reply_events), 1, 'only the first event was stored');
+select is(public.record_reply_event(:'user_a_a', '33333333-3333-4333-8333-333333333333', 0, 'down'), 'not_found', 'polish light edit never delivered → not_found');
+select is(public.record_reply_event(:'user_a_a', '33333333-3333-4333-8333-333333333333', 1, 'down'), 'ok', 'polish rewrite delivered (index 1, count 1) → ok');
+select is(public.record_reply_event(:'user_a_a', '44444444-4444-4444-8444-444444444444', 0, 'inserted'), 'ok', 'cancelled request: inserting a delivered card counts');
+select is(public.record_reply_event(:'user_a_a', '44444444-4444-4444-8444-444444444444', 0, 'up'), 'not_found', 'cancelled request: no ratings');
+select is(public.record_reply_event(:'user_a_a', '44444444-4444-4444-8444-444444444444', 1, 'inserted'), 'not_found', 'cancelled request: undelivered card');
+select is((select count(*)::int from public.reply_events), 3, 'only valid, first events were stored');
 
 select * from finish();
 rollback;

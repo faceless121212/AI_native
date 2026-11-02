@@ -73,7 +73,7 @@ select columns_are('public', 'ai_requests', array[
   'id', 'user_id', 'kind', 'source', 'lang', 'tone', 'relationship', 'closeness', 'formality',
   'flirt', 'provider', 'model', 'prompt_version', 'tokens_in', 'tokens_out', 'cost_micro_eur',
   'ms_first', 'ms_total', 'status', 'safety_flags', 'created_at',
-  'charge', 'charge_date', 'refunded_at', 'cards'
+  'charge', 'charge_date', 'refunded_at', 'cards', 'delivered_cards'
 ], 'ai_requests has only metadata columns');
 select columns_are('public', 'reply_events', array[
   'id', 'request_id', 'user_id', 'card_index', 'type', 'created_at'

@@ -44,6 +44,7 @@ export interface StoredCredit {
   delta: number;
   reason: 'starter' | 'referral' | 'refund' | 'admin' | 'spend';
   requestId?: string;
+  bucket?: 'starter' | 'bonus';
 }
 export interface StoredRequest {
   id: string;
@@ -53,7 +54,7 @@ export interface StoredRequest {
   charge: 'starter' | 'daily' | 'bonus' | 'paid';
   chargeDate: string;
   refundedAt: string | null;
-  status: 'started' | FinishInput['status'];
+  status: 'started' | 'abandoned' | FinishInput['status'];
   finish: FinishInput | null;
 }
 export interface StoredEntitlement {
@@ -321,13 +322,18 @@ export class MemoryStore implements AuthDeps, ConsentRepo, ProfileRepo, DeviceKe
 
   private creditsOf(userId: string): { starter: number; bonus: number } {
     const rows = this.credits.filter((c) => c.userId === userId);
-    const total = rows.reduce((a, c) => a + c.delta, 0);
-    const starter = rows.filter((c) => c.reason === 'starter').reduce((a, c) => a + c.delta, 0);
-    const spent = -rows
-      .filter((c) => (c.reason === 'spend' || c.reason === 'refund') && c.requestId !== undefined)
-      .reduce((a, c) => a + c.delta, 0);
-    const starterLeft = Math.max(0, Math.min(total, starter - spent));
-    return { starter: starterLeft, bonus: Math.max(0, total - starterLeft) };
+    const sum = (f: (c: StoredCredit) => boolean) =>
+      rows.filter(f).reduce((a, c) => a + c.delta, 0);
+    const starterGranted = sum((c) => c.reason === 'starter');
+    const bonusGranted = sum((c) => c.reason !== 'starter' && c.requestId === undefined);
+    const starterUsed = -sum(
+      (c) => c.requestId !== undefined && (c.bucket ?? 'starter') === 'starter',
+    );
+    const bonusUsed = -sum((c) => c.requestId !== undefined && c.bucket === 'bonus');
+    return {
+      starter: Math.max(0, starterGranted - starterUsed),
+      bonus: Math.max(0, bonusGranted - bonusUsed),
+    };
   }
 
   private snapshot(userId: string, date: string, tz: string): QuotaSnapshot {
@@ -344,6 +350,16 @@ export class MemoryStore implements AuthDeps, ConsentRepo, ProfileRepo, DeviceKe
 
   checkAiAllowed(userId: string): Promise<boolean> {
     return Promise.resolve(this.aiAllowed(userId));
+  }
+
+  /** Device key IDs revoked mid-request in tests show up here too. */
+  stillAllowed(userId: string, deviceKeyId: string | null): Promise<boolean> {
+    const keyOk =
+      deviceKeyId === null ||
+      this.deviceKeys.some(
+        (k) => k.id === deviceKeyId && k.userId === userId && k.revokedAt === null,
+      );
+    return Promise.resolve(this.aiAllowed(userId) && keyOk);
   }
 
   consumeReply(userId: string, input: ConsumeInput): Promise<ConsumeResult> {
@@ -398,7 +414,7 @@ export class MemoryStore implements AuthDeps, ConsentRepo, ProfileRepo, DeviceKe
       finish: null,
     });
     if (charge === 'daily' || charge === 'paid') this.usage.set(key, used + 1);
-    else this.credits.push({ userId, delta: -1, reason: 'spend', requestId: id });
+    else this.credits.push({ userId, delta: -1, reason: 'spend', requestId: id, bucket: charge });
     return Promise.resolve({
       status: 'ok',
       requestId: id,
@@ -414,7 +430,13 @@ export class MemoryStore implements AuthDeps, ConsentRepo, ProfileRepo, DeviceKe
       const key = `${req.userId}|${req.chargeDate}`;
       this.usage.set(key, Math.max(0, (this.usage.get(key) ?? 0) - 1));
     } else {
-      this.credits.push({ userId: req.userId, delta: 1, reason: 'refund', requestId });
+      this.credits.push({
+        userId: req.userId,
+        delta: 1,
+        reason: 'refund',
+        requestId,
+        bucket: req.charge === 'starter' ? 'starter' : 'bonus',
+      });
     }
     req.refundedAt = this.ts();
     const profile = this.profiles.get(req.userId);
@@ -442,11 +464,16 @@ export class MemoryStore implements AuthDeps, ConsentRepo, ProfileRepo, DeviceKe
     type: ReplyFeedbackType,
   ): Promise<ReplyEventResult> {
     const req = this.requests.get(requestId);
+    const statusOk =
+      req !== undefined &&
+      (req.status === 'ok' ||
+        req.status === 'partial' ||
+        (req.status === 'cancelled' && type === 'inserted'));
     if (
       !req ||
       req.userId !== userId ||
-      (req.status !== 'ok' && req.status !== 'partial') ||
-      cardIndex >= (req.finish?.cards ?? 0)
+      !statusOk ||
+      !(req.finish?.deliveredCards ?? []).includes(cardIndex)
     ) {
       return Promise.resolve('not_found');
     }

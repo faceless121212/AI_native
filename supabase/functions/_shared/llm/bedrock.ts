@@ -7,6 +7,12 @@ import { AnthropicBedrock } from '@anthropic-ai/bedrock-sdk';
 import { claudeParams, type ClaudeMessagesClient, claudeStream } from './claude.ts';
 import type { LlmPrompt, LlmProvider, ProviderStream, StreamOptions } from './provider.ts';
 import { PROVIDER_REQUEST_TIMEOUT_MS } from './settings.ts';
+import { SILENT_LOGGER } from './sdk-logging.ts';
+
+/** Fixed per region: never taken from ANTHROPIC_BEDROCK_BASE_URL. */
+export function bedrockBaseUrl(region: string): string {
+  return `https://bedrock-runtime.${region}.amazonaws.com`;
+}
 
 export interface BedrockProviderOptions {
   region: string;
@@ -26,6 +32,9 @@ export class BedrockProvider implements LlmProvider {
     this.model = opts.model;
     this.client = new AnthropicBedrock({
       awsRegion: opts.region,
+      baseURL: bedrockBaseUrl(opts.region),
+      logLevel: 'off',
+      logger: SILENT_LOGGER,
       awsAccessKey: opts.accessKeyId,
       awsSecretKey: opts.secretAccessKey,
       // Never pick up AWS_BEARER_TOKEN_BEDROCK or a credential chain from the environment.

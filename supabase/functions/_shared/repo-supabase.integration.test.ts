@@ -31,6 +31,7 @@ async function anonymousSignIn(): Promise<{ token: string; userId: string }> {
     headers: { apikey: Deno.env.get('SUPABASE_ANON_KEY')!, 'content-type': 'application/json' },
     body: '{}',
   });
+  if (!res.ok) throw new Error(`anonymous sign-up failed: ${res.status}`);
   const body = await res.json();
   return { token: body.access_token, userId: body.user.id };
 }

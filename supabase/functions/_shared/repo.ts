@@ -124,8 +124,10 @@ export interface FinishInput {
   msFirst: number | null;
   msTotal: number;
   safetyFlags: StoredSafetyFlag[];
-  /** Card slots used (highest delivered index + 1); feedback is accepted for these indices. */
+  /** Number of cards sent to the client. */
   cards: number;
+  /** Indexes of the cards sent (feedback is accepted only for these). */
+  deliveredCards: number[];
 }
 
 export type ReplyEventResult = 'ok' | 'duplicate' | 'not_found';
@@ -133,6 +135,11 @@ export type ReplyEventResult = 'ok' | 'duplicate' | 'not_found';
 export interface ReplyRepo {
   /** Age confirmed and an active AI consent at the minimum policy version. */
   checkAiAllowed(userId: string): Promise<boolean>;
+  /**
+   * Mid-request re-check (before a retry or a fallback): AI still allowed and, for keyboard
+   * requests, the device key still live.
+   */
+  stillAllowed(userId: string, deviceKeyId: string | null): Promise<boolean>;
   /** Atomic gate + rate + quota charge; creates the ai_requests row on 'ok'. */
   consumeReply(userId: string, input: ConsumeInput): Promise<ConsumeResult>;
   refundReply(requestId: string): Promise<RefundResult>;

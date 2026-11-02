@@ -96,11 +96,11 @@ select isnt((select refunded_at from public.ai_requests where id = :'daily_id'),
 update public.usage_days set used = 3 where user_id = :'a_u' and local_date = '2026-11-03';
 select (tests.consume(:'a_u', '2026-11-03T09:00:00Z')) ->> 'request_id' as id \gset bonus_
 select is((select charge from public.ai_requests where id = :'bonus_id'), 'bonus', 'charged a bonus credit');
-select is((public.refund_reply(:'bonus_id') ->> 'left_today')::int, 9, 'refund of a bonus credit returns the new quota');
+select is((public.refund_reply(:'bonus_id') -> 'quota' ->> 'left_today')::int, 9, 'refund of a bonus credit returns the new quota');
 select results_eq(format($$ select delta from public.credit_ledger where request_id = %L order by id $$, :'bonus_id'),
   $$ values (-1), (1) $$, 'bonus refund is a +1 refund row linked to the request');
 select is(public.refund_reply(gen_random_uuid()) ->> 'status', 'not_found', 'unknown request → not_found');
-select throws_ok(format($$ insert into public.credit_ledger (user_id, delta, reason, request_id) values (%L, 1, 'refund', %L) $$, :'a_u', :'bonus_id'),
+select throws_ok(format($$ insert into public.credit_ledger (user_id, delta, reason, request_id, bucket) values (%L, 1, 'refund', %L, 'bonus') $$, :'a_u', :'bonus_id'),
   '23505', null, 'at most one refund row per request');
 select throws_ok(format($$ insert into public.credit_ledger (user_id, delta, reason, request_id) values (%L, -2, 'spend', gen_random_uuid()) $$, :'a_u'),
   '23514', null, 'a spend is exactly -1');
@@ -108,7 +108,7 @@ select throws_ok(format($$ insert into public.credit_ledger (user_id, delta, rea
 -- Starter refund: the starter credit is usable again.
 select tests.ai_user('UTC', true) as u \gset s_
 select (tests.consume(:'s_u', '2026-11-02T10:00:00Z')) ->> 'request_id' as id \gset starter_
-select is((public.refund_reply(:'starter_id') ->> 'left_today')::int, 13, 'starter refund: 10 starter + 3 daily again');
+select is((public.refund_reply(:'starter_id') -> 'quota' ->> 'left_today')::int, 13, 'starter refund: 10 starter + 3 daily again');
 select is((tests.consume(:'s_u', '2026-11-02T10:01:00Z')) ->> 'charge', 'starter', 'refunded starter credit is used first again');
 
 -- ---------------------------------------------------------------------------------------------

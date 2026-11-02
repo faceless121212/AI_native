@@ -49,6 +49,10 @@ export type RunResult =
   | { status: 'failed_after_output'; provider: LlmProvider; calls: ProviderCall[] }
   /** Every provider down, failing or too slow before producing a card. */
   | { status: 'all_failed'; allDown: boolean; calls: ProviderCall[] }
+  /** mayContinue() said no before switching to the next provider (consent withdrawn, key revoked). */
+  | { status: 'stopped'; calls: ProviderCall[] }
+  /** Our own consume() threw: a bug on our side, not a provider failure (not counted). */
+  | { status: 'consumer_failed'; calls: ProviderCall[] }
   | { status: 'aborted'; calls: ProviderCall[] };
 
 export interface RunOptions {
@@ -63,10 +67,20 @@ export interface RunOptions {
   /** Called before switching to the next provider: drop partial parser state. */
   restart(): void;
   onFallback?(from: ProviderName, to: ProviderName | null, reason: 'error' | 'slow' | 'idle'): void;
+  /** Asked before switching to the next provider; false stops the chain. */
+  mayContinue?(): Promise<boolean>;
   onProviderError?(provider: ProviderName, code: string): void;
 }
 
 const TIMEOUT = Symbol('timeout');
+
+/** Wraps an exception thrown by opts.consume so it isn't mistaken for a provider error. */
+class ConsumerError extends Error {
+  constructor() {
+    super('consume failed');
+    this.name = 'ConsumerError';
+  }
+}
 
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | typeof TIMEOUT> {
   let id: ReturnType<typeof setTimeout> | undefined;
@@ -92,6 +106,8 @@ export async function runChain(
     const provider = available[i]!;
     const next = available[i + 1] ?? null;
     if (opts.signal.aborted) return { status: 'aborted', calls };
+    if (i > 0 && opts.mayContinue && !(await opts.mayContinue()))
+      return { status: 'stopped', calls };
 
     const local = new AbortController();
     const signal = AbortSignal.any([opts.signal, local.signal]);
@@ -136,9 +152,19 @@ export async function runChain(
         }
         if (result.done) return { status: 'completed', provider, outcome: stream.outcome, calls };
         first = false;
-        opts.consume(result.value);
+        try {
+          opts.consume(result.value);
+        } catch {
+          throw new ConsumerError();
+        }
       }
     } catch (err) {
+      if (err instanceof ConsumerError) {
+        local.abort();
+        call.failure = 'aborted';
+        call.errorCode = 'consumer_failed';
+        return { status: 'consumer_failed', calls };
+      }
       if (opts.signal.aborted) {
         call.failure = 'aborted';
         return { status: 'aborted', calls };

@@ -1,5 +1,5 @@
 // Server analytics events (spec §12), typed so only listed events with code-valued properties can
-// be sent: no personal data, no text. Sending to PostHog EU arrives with Prompt 13 (and its
+// be sent: no personal data, no text. safety_flag is anonymous only (no user ID). Sending to PostHog EU arrives with Prompt 13 (and its
 // privacy review); until then the default sink drops events.
 //
 // Deliberately absent: a `crisis` safety_flag event. Whether a crisis signal may be recorded per
@@ -18,7 +18,8 @@ import type {
 } from './schemas.ts';
 import type { ProviderName } from './llm/provider.ts';
 
-export type ServerEvent =
+/** Events keyed by the anonymous user ID (spec §12). */
+export type UserEvent =
   | {
       name: 'reply_requested';
       props: {
@@ -35,22 +36,33 @@ export type ServerEvent =
   | { name: 'reply_inserted'; props: { card_index: number } }
   | { name: 'reply_feedback'; props: { rating: Exclude<ReplyFeedbackType, 'inserted'> } }
   | { name: 'quota_hit'; props: { plan: Plan } }
-  | { name: 'provider_fallback'; props: { from: ProviderName; to: ProviderName | null } }
-  | {
-      name: 'safety_flag';
-      props: { type: 'refused' | 'redacted' | 'card_dropped' | 'flirt_forced_off' };
-    };
+  | { name: 'provider_fallback'; props: { from: ProviderName; to: ProviderName | null } };
+
+/**
+ * Events sent WITHOUT any user or device identifier (anonymous aggregate counts). safety_flag is
+ * only allowed here (privacy review): a per-user refusal or redaction record isn't needed.
+ */
+export type AnonymousEvent = {
+  name: 'safety_flag';
+  props: { type: 'refused' | 'redacted' | 'card_dropped' | 'flirt_forced_off' };
+};
 
 export interface Analytics {
-  track(userId: string, event: ServerEvent): void;
+  track(userId: string, event: UserEvent): void;
+  /** No distinct ID is attached, so these can't be linked to a user. */
+  trackAnonymous(event: AnonymousEvent): void;
 }
 
-export const noAnalytics: Analytics = { track: () => {} };
+export const noAnalytics: Analytics = { track: () => {}, trackAnonymous: () => {} };
 
 /** Test sink. */
 export class MemoryAnalytics implements Analytics {
-  readonly events: Array<{ userId: string } & ServerEvent> = [];
-  track(userId: string, event: ServerEvent): void {
+  readonly events: Array<{ userId: string } & UserEvent> = [];
+  readonly anonymous: AnonymousEvent[] = [];
+  track(userId: string, event: UserEvent): void {
     this.events.push({ userId, ...event });
+  }
+  trackAnonymous(event: AnonymousEvent): void {
+    this.anonymous.push(event);
   }
 }

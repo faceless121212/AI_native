@@ -2,7 +2,8 @@
 //
 //   node scripts/try-reply.ts [--text "Hey, wie war dein Wochenende?"] [--lang de] [--kind reply|polish]
 //        [--relationship friend] [--tone warm] [--flirt off] [--formality casual] [--closeness 3]
-//        [--ui-lang en] [--source app] [--url <functions base URL>] [--jwt <token> | --device-key <key>]
+//        [--ui-lang en] [--source app] [--jwt <token> | --device-key <key>]
+//        [--staging-ref <project ref> (with SUPABASE_URL=https://<ref>.supabase.co)]
 //   node scripts/try-reply.ts --measure 10 --lang de|all     p50/p95 time to first card and to done
 //
 // Defaults: the local stack (`supabase start` + `supabase functions serve`), URL and anon key from
@@ -11,6 +12,9 @@
 // Cost per request needs the service-role key (SUPABASE_SERVICE_ROLE_KEY) to read ai_requests;
 // without it, only latency is reported. Fake-mode markers work in --text, e.g. "[[fake:slow]]".
 // Prints replies to this terminal only; never writes them anywhere.
+// Safety: runs only against the local stack, or a staging project named explicitly with
+// --staging-ref whose ref matches the URL. Never production (it signs up test users and grants
+// consent): if REPLYWISE_PRODUCTION_REF is set, that ref is refused too.
 import { execFileSync } from 'node:child_process';
 import { parseArgs } from 'node:util';
 import { CURRENT_AI_POLICY_VERSION } from '../supabase/functions/_shared/policy.ts';
@@ -43,6 +47,7 @@ const { values: args } = parseArgs({
     'ui-lang': { type: 'string', default: 'en' },
     source: { type: 'string', default: 'app' },
     url: { type: 'string' },
+    'staging-ref': { type: 'string' },
     jwt: { type: 'string' },
     'device-key': { type: 'string' },
     measure: { type: 'string' },
@@ -82,6 +87,37 @@ const supabaseUrl = (
 const anonKey = process.env.SUPABASE_ANON_KEY ?? status.ANON_KEY ?? '';
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
 const functionsUrl = (args.url ?? `${supabaseUrl}/functions/v1`).replace(/\/$/, '');
+const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '::1', '[::1]']);
+
+function refuse(message: string): never {
+  console.error(`try-reply: ${message}`);
+  process.exit(2);
+}
+
+function hostOf(url: string): string {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return refuse(`not a URL: ${url}`);
+  }
+}
+
+{
+  const hosts = [hostOf(supabaseUrl), hostOf(functionsUrl)];
+  const stagingRef = args['staging-ref'];
+  if (!hosts.every((h) => LOCAL_HOSTS.has(h))) {
+    if (!stagingRef || !/^[a-z0-9]{20}$/.test(stagingRef)) {
+      refuse('only the local stack, or a staging project named with --staging-ref <20-char ref>.');
+    }
+    if (stagingRef === process.env.REPLYWISE_PRODUCTION_REF)
+      refuse('that is the production project.');
+    const expected = `${stagingRef}.supabase.co`;
+    if (!hosts.every((h) => h === expected)) {
+      refuse(`--staging-ref ${stagingRef} does not match the URL (expected host ${expected}).`);
+    }
+  }
+}
+
 // Pin the invocation to Frankfurt (hosted projects; ignored locally).
 const REGION = { 'x-region': 'eu-central-1' };
 

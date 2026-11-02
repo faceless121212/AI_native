@@ -1,22 +1,24 @@
 // Prompt assembly (architecture §7 step 7). The texts are the *.v1.md files next to this module,
-// owned by prompt-engineer (the current ones are PLACEHOLDERS until Prompt 4). They are imported
-// as text modules, so they are bundled with the function and need no file-read permission.
+// owned by prompt-engineer (the current ones are PLACEHOLDERS until Prompt 4). Each .md has a
+// generated *.v1.ts string module (scripts/gen-prompts.ts, `npm run gen:prompts`; CI runs
+// `npm run check:prompts`), so the Edge Function bundles plain TypeScript and needs no text
+// imports or file reads at runtime.
 //
 // system = safety + reply|polish + lang/<lang> + the tone card from tones.
 // user   = user.v1.md: the chip settings, then the (redacted) text wrapped in a tag with a random
 //          per-request name, which the system prompt says is data, not instructions.
 //
 // Never edit a released version: copy to .v2.md, change, bump PROMPT_VERSION, run evals.
-import safety from './safety.v1.md' with { type: 'text' };
-import reply from './reply.v1.md' with { type: 'text' };
-import polish from './polish.v1.md' with { type: 'text' };
-import tones from './tones.v1.md' with { type: 'text' };
-import user from './user.v1.md' with { type: 'text' };
-import en from './lang/en.v1.md' with { type: 'text' };
-import de from './lang/de.v1.md' with { type: 'text' };
-import fr from './lang/fr.v1.md' with { type: 'text' };
-import es from './lang/es.v1.md' with { type: 'text' };
-import it from './lang/it.v1.md' with { type: 'text' };
+import { text as safety } from './safety.v1.ts';
+import { text as reply } from './reply.v1.ts';
+import { text as polish } from './polish.v1.ts';
+import { text as tones } from './tones.v1.ts';
+import { text as user } from './user.v1.ts';
+import { text as en } from './lang/en.v1.ts';
+import { text as de } from './lang/de.v1.ts';
+import { text as fr } from './lang/fr.v1.ts';
+import { text as es } from './lang/es.v1.ts';
+import { text as it } from './lang/it.v1.ts';
 import type { LlmPrompt } from '../llm/provider.ts';
 import { MAX_OUTPUT_TOKENS } from '../llm/settings.ts';
 import type {

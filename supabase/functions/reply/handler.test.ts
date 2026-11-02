@@ -658,3 +658,266 @@ Deno.test(
     assertEquals(store.requests.get(id)!.status, 'ok');
   },
 );
+
+// ---------------------------------------------------------------------------------------------
+// Review fixes
+
+/** Wraps a provider so a test can act (withdraw consent, revoke a key) when it is called. */
+function onCall(
+  provider: FakeProvider,
+  action: (call: number) => void | Promise<void>,
+): FakeProvider {
+  const original = provider.stream.bind(provider);
+  let call = 0;
+  provider.stream = (prompt, opts) => {
+    void action(call++);
+    return original(prompt, opts);
+  };
+  return provider;
+}
+
+Deno.test(
+  'reply: consent withdrawn mid-request → no retry, error ai_off after the delivered card',
+  async () => {
+    const { store, handler } = setupReply();
+    const { token, userId } = await aiUser(store);
+    const fake = onCall(new FakeProvider({ script: ['explicit', 'ok'] }), async (call) => {
+      if (call === 0) await store.withdrawAiConsent(userId);
+    });
+    const t = setupReply({ providers: [fake], store });
+    const res = await t.handler(replyRequest(token));
+    const events = await readEvents(res);
+    assertEquals(names(events), ['card', 'meta', 'quota', 'error']);
+    assertEquals(events.at(-1)!.data.error, 'ai_off');
+    assertEquals(fake.calls.length, 1, 'no retry');
+    const row = store.requests.get(res.headers.get('x-request-id')!)!;
+    assertEquals([row.status, row.refundedAt], ['partial', null]);
+    void handler;
+  },
+);
+
+Deno.test(
+  'reply: device key revoked mid-request → no fallback, error ai_off, refunded',
+  async () => {
+    const { store } = setupReply();
+    const { userId } = await aiUser(store);
+    const key = 'r'.repeat(43);
+    const { hashDeviceKey } = await import('../_shared/device-key.ts');
+    const created = await store.createDeviceKey(userId, await hashDeviceKey(key), 'ios');
+    const primary = onCall(new FakeProvider({ name: 'anthropic', script: ['error'] }), async () => {
+      if (created.status === 'ok') await store.revokeDeviceKeys(userId, created.keyId);
+    });
+    const fallback = new FakeProvider({ name: 'mistral' });
+    const { handler } = setupReply({ providers: [primary, fallback], store });
+    const res = await handler(jsonRequest('POST', replyBody(), device(key)));
+    const events = await readEvents(res);
+    assertEquals(names(events), ['quota', 'error']);
+    assertEquals(events[1]!.data.error, 'ai_off');
+    assertEquals(fallback.calls.length, 0);
+    assert(store.requests.get(res.headers.get('x-request-id')!)!.refundedAt !== null);
+  },
+);
+
+Deno.test(
+  'reply: an internal error before any card still refunds, closes with error and records the row',
+  async () => {
+    const primary = new FakeProvider({ name: 'anthropic', script: ['error'] });
+    const fallback = new FakeProvider({ name: 'mistral' });
+    const { store, handler, deps } = setupReply({ providers: [primary, fallback] });
+    deps.analytics = {
+      track: (_u, e) => {
+        if (e.name === 'provider_fallback') throw new Error('analytics broke');
+      },
+      trackAnonymous: () => {},
+    };
+    const { token } = await aiUser(store);
+    const res = await handler(replyRequest(token));
+    const events = await readEvents(res);
+    assertEquals(names(events), ['quota', 'error']);
+    assertEquals(events[1]!.data.error, 'internal');
+    assertEquals(events[0]!.data.leftToday, 13, 'refunded');
+    assertEquals(store.requests.get(res.headers.get('x-request-id')!)!.status, 'error');
+  },
+);
+
+Deno.test(
+  'reply: post-stream work is handed to waitUntil and completes after a disconnect',
+  async () => {
+    const slow = new FakeProvider({ script: ['slow'], slowMs: 200 });
+    const { store, handler, deps } = setupReply({ providers: [slow] });
+    const work: Promise<unknown>[] = [];
+    deps.waitUntil = (p) => work.push(p);
+    const { token } = await aiUser(store);
+    const client = new AbortController();
+    const res = await handler(replyRequest(token, {}, { signal: client.signal }));
+    client.abort();
+    await res.body?.cancel().catch(() => {});
+    assertEquals(work.length, 1);
+    await work[0];
+    const row = store.requests.get(res.headers.get('x-request-id')!)!;
+    assertEquals([row.status, row.refundedAt !== null], ['cancelled', true]);
+  },
+);
+
+Deno.test('reply: production outside eu-central-1 → 503 before anything is charged', async () => {
+  const { store, handler } = setupReply({
+    llm: { ok: true, providers: [new FakeProvider()], regionOk: false },
+  });
+  const { token } = await aiUser(store);
+  const res = await handler(replyRequest(token));
+  assertEquals([res.status, (await res.json()).error], [503, 'provider_down']);
+  assertEquals(store.requests.size, 0);
+});
+
+Deno.test(
+  'reply: crisis backstop sets meta.crisis when the model signal is missing or cut short',
+  async () => {
+    const text = "I can't anymore, I want to die";
+    for (const [scenario, expected] of [
+      ['error', ['meta', 'quota', 'error']],
+      ['refusal', ['card', 'meta', 'quota', 'done']],
+      ['error-after-card', ['card', 'meta', 'quota', 'done']],
+    ] as const) {
+      const { store, handler } = setupReply({
+        providers: [new FakeProvider({ script: [scenario] })],
+      });
+      const { token } = await aiUser(store);
+      const res = await handler(replyRequest(token, { text, langHint: 'en' }));
+      const events = await readEvents(res);
+      assertEquals(names(events), [...expected], scenario);
+      assertEquals(events.find((e) => e.event === 'meta')!.data.crisis, true, scenario);
+      assertEquals(
+        store.requests
+          .get(res.headers.get('x-request-id')!)!
+          .finish!.safetyFlags.includes('crisis' as never),
+        false,
+      );
+    }
+    // No META at all (malformed twice): synthesised meta with crisis.
+    const { store, handler } = setupReply({
+      providers: [new FakeProvider({ script: ['malformed', 'malformed'] })],
+    });
+    const { token } = await aiUser(store);
+    const events = await readEvents(await handler(replyRequest(token, { text, langHint: 'en' })));
+    assertEquals(
+      events.filter((e) => e.event === 'meta').map((e) => e.data.crisis),
+      [true],
+    );
+  },
+);
+
+Deno.test(
+  'reply: crisis backstop stays out of a normal answer and never lowers crisis',
+  async () => {
+    const calm = setupReply();
+    const a = await aiUser(calm.store);
+    const events = await readEvents(
+      await calm.handler(replyRequest(a.token, { text: 'I want to die laughing, haha' })),
+    );
+    // Normal end with the model's META: the model's crisis=false stands (no second meta).
+    assertEquals(
+      events.filter((e) => e.event === 'meta').map((e) => e.data.crisis),
+      [false],
+    );
+    const plain = setupReply({ providers: [new FakeProvider({ script: ['error'] })] });
+    const b = await aiUser(plain.store);
+    const failed = await readEvents(
+      await plain.handler(replyRequest(b.token, { text: 'Wie war dein Tag?' })),
+    );
+    assertEquals(names(failed), ['quota', 'error'], 'no meta without a crisis phrase');
+  },
+);
+
+Deno.test('reply: safety flags go to analytics only as anonymous events', async () => {
+  const { store, handler, analytics } = setupReply();
+  const { token } = await aiUser(store);
+  await readEvents(
+    await handler(
+      replyRequest(token, { text: 'mail me a@b.de', relationship: 'colleague', tone: 'flirty' }),
+    ),
+  );
+  assertEquals(
+    analytics.events.some((e) => (e.name as string) === 'safety_flag'),
+    false,
+  );
+  assertEquals(analytics.anonymous.map((e) => e.props.type).sort(), [
+    'flirt_forced_off',
+    'redacted',
+  ]);
+  assertEquals(
+    JSON.stringify(analytics.anonymous).includes(store.requests.values().next().value!.userId),
+    false,
+  );
+});
+
+Deno.test(
+  'reply/event: feedback only for delivered card indexes; cancelled requests accept inserted',
+  async () => {
+    // Polish where only the rewrite survives (light edit dropped as explicit, retry gives none).
+    const { store, handler } = setupReply();
+    const { token, userId } = await aiUser(store);
+    const id = crypto.randomUUID();
+    store.requests.set(id, {
+      id,
+      userId,
+      input: {
+        kind: 'polish',
+        source: 'keyboard',
+        tone: 'warm',
+        relationship: 'friend',
+        closeness: 3,
+        formality: 'casual',
+        flirt: 'off',
+        safetyFlags: [],
+      },
+      createdAt: Date.now(),
+      charge: 'starter',
+      chargeDate: '2026-11-02',
+      refundedAt: null,
+      status: 'partial',
+      finish: null,
+    });
+    await store.finishRequest(id, {
+      status: 'partial',
+      lang: 'de',
+      provider: 'fake',
+      model: 'fake-v1',
+      promptVersion: 'v1',
+      tokensIn: 1,
+      tokensOut: 1,
+      costMicroEur: 0,
+      msFirst: 1,
+      msTotal: 2,
+      safetyFlags: [],
+      cards: 1,
+      deliveredCards: [1],
+    });
+    const post = (cardIndex: number, type: string) =>
+      handler(
+        jsonRequest(
+          'POST',
+          { requestId: id, cardIndex, type },
+          { authorization: `Bearer ${token}` },
+          '/reply/event',
+        ),
+      );
+    assertEquals((await post(0, 'up')).status, 404, 'light edit never delivered');
+    assertEquals((await post(1, 'inserted')).status, 200);
+    store.requests.get(id)!.status = 'cancelled';
+    assertEquals(
+      await (await post(1, 'down')).text().then((t) => JSON.parse(t).error),
+      'not_found',
+    );
+    const cancelledId = crypto.randomUUID();
+    store.requests.set(cancelledId, { ...store.requests.get(id)!, id: cancelledId });
+    const r = await handler(
+      jsonRequest(
+        'POST',
+        { requestId: cancelledId, cardIndex: 1, type: 'inserted' },
+        { authorization: `Bearer ${token}` },
+        '/reply/event',
+      ),
+    );
+    assertEquals(await r.json(), { recorded: true }, 'inserted card of a cancelled request counts');
+  },
+);
