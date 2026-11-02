@@ -2,7 +2,7 @@
   "whatWeSee": {
     "title": "Ce que Replywise peut voir",
     "line1": "Rien de ce que tu tapes ne quitte ton téléphone, sauf si tu touches « Répondre » ou « Peaufiner ».",
-    "line2": "Quand tu touches un de ces boutons, seuls le message copié et ton brouillon sont envoyés à notre fournisseur d’IA, et traités dans l’UE.",
+    "line2": "Quand tu touches un de ces boutons, seul le message copié ou ton brouillon est envoyé à notre fournisseur d’IA, et traité dans l’UE.",
     "line3": "Nous ne gardons pas tes conversations."
   },
   "actions": {

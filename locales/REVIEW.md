@@ -7,7 +7,7 @@ Notes that apply to more than one language:
 - **Gender of tone adjectives (fr, es, it):** the adjectives agree with the masculine noun "ton / tono" (a "warm tone"). They do not describe the user, but a woman could read e.g. "Assuré" / "Seguro" / "Sicuro" as being about herself. Please confirm this reads as describing the tone, or suggest an epicene or noun form.
 - **Relationship chips** describe the other person. To avoid assuming gender, we used epicene words (fr Partenaire, Collègue; es Pareja, Colega; it Partner, Collega) or category nouns (de Freundeskreis, fr Amitié, es Amistad, it Amicizia; de Arbeit).
 - **iOS Settings path (`keyboard:bar.noFullAccessPath`):** Apple's localised iPhone User Guide (iOS 27, "Add or change keyboards") confirms Settings → General → Keyboard → Keyboards as **Einstellungen → Allgemein → Tastatur → Tastaturen**, **Réglages → Général → Clavier → Claviers**, **Ajustes → General → Teclado → Teclados**, **Impostazioni → Generali → Tastiera → Tastiere**. I couldn't load an Apple page showing the "Allow Full Access" toggle, so that label comes from memory (fairly confident): de "Vollen Zugriff erlauben", fr "Autoriser l’accès complet", es "Permitir acceso total", it "Consenti accesso completo". **Check it on a real device in each language.**
-- **"Settings" in `notifications:trialEndsTomorrow`:** translated with the iOS name (Einstellungen / Réglages / Ajustes / Impostazioni). On Android the system app is called "Paramètres" in French and "Configuración" in Spanish, and cancelling happens in Google Play. If "Settings" means the Replywise app's own Settings screen, these are fine, provided that screen gets the same name. Product needs to decide.
+- **Store subscription screens (`notifications:trialEndsTomorrowIos` / `trialEndsTomorrowAndroid`):** these replaced `trialEndsTomorrow`, because you cancel in the store, not in the phone's Settings app. "App Store" and "Google Play" stay as they are. The subscription screen names are written from memory, not from a store page I could open. App Store, very confident: de "Abonnements", fr "Abonnements", es "Suscripciones", it "Abbonamenti". Google Play, fairly confident: de "Abos" (under "Zahlungen und Abos"), fr "Abonnements", es "Suscripciones", it "Abbonamenti". **Check both stores on a real device in each language.**
 
 | Language | Key | Translation | Why check |
 |---|---|---|---|
@@ -88,3 +88,17 @@ Notes that apply to more than one language:
 | de/fr/es/it | common:status.info, success, warning, error | see common.json | Screen-reader words for banner severity |
 | de/fr/es/it | common:status.stepDone, stepCurrent | see common.json | Screen-reader state of a setup step; fr "terminée" agrees with "étape" |
 | de/fr/es/it | paywall:plansLabel | see paywall.json | Screen-reader name of the plan list (radio group) |
+
+## Copy change: data line and trial reminder (needs a native check)
+
+| Language | Key | Translation | Why check |
+|---|---|---|---|
+| de | onboarding:whatWeSee.line2 | Dann geht nur die kopierte Nachricht oder dein Entwurf an unseren KI-Anbieter – verarbeitet in der EU. | Now "or" (Reply sends the message, Polish sends the draft). Singular verb "geht" |
+| fr | onboarding:whatWeSee.line2 | Quand tu touches un de ces boutons, seul le message copié ou ton brouillon est envoyé à notre fournisseur d’IA, et traité dans l’UE. | "seul … ou …" with singular agreement |
+| es | onboarding:whatWeSee.line2 | Cuando tocas, solo el mensaje copiado o tu borrador va a nuestro proveedor de IA, que lo procesa en la UE. | Singular "va" / "lo" |
+| it | onboarding:whatWeSee.line2 | Quando tocchi, solo il messaggio copiato o la tua bozza va al nostro fornitore di IA, con elaborazione nell’UE. | Rephrased ending ("con elaborazione") to avoid choosing between "elaborato"/"elaborata" |
+| de | notifications:trialEndsTomorrowIos | … Du kannst jederzeit in deinen Abonnements im App Store kündigen. | App Store screen name "Abonnements" |
+| de | notifications:trialEndsTomorrowAndroid | … Du kannst jederzeit in deinen Abos bei Google Play kündigen. | Google Play screen name "Abos"; "bei" vs "in" Google Play |
+| fr | notifications:trialEndsTomorrowIos / Android | … Tu peux annuler à tout moment dans tes abonnements App Store / Google Play. | Store screen name "Abonnements" |
+| es | notifications:trialEndsTomorrowIos / Android | … Cancela cuando quieras en tus suscripciones del App Store / de Google Play. | "del App Store" (masc.) vs "de Google Play" |
+| it | notifications:trialEndsTomorrowIos / Android | … Puoi annullare quando vuoi nei tuoi abbonamenti dell’App Store / di Google Play. | "dell’App Store" vs "di Google Play" |

@@ -80,7 +80,7 @@ eas build --profile development         # dev client build
 
 - `.env` (never committed): `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`, `EXPO_PUBLIC_REVENUECAT_IOS_KEY`, `EXPO_PUBLIC_REVENUECAT_ANDROID_KEY`, `EXPO_PUBLIC_POSTHOG_KEY`, `EXPO_PUBLIC_SENTRY_DSN`, `EXPO_PUBLIC_REPLY_FUNCTION_URL`.
 - Edge Function secrets via `supabase secrets set`: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `BEDROCK_REGION`, `BEDROCK_MODEL_ID`, `MISTRAL_API_KEY`, `MISTRAL_MODEL`, `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` (direct Claude API: development and staging only, see inventory §3), `LLM_PROVIDER_PRIMARY` / `LLM_PROVIDER_FALLBACK` (`bedrock|mistral|anthropic`), `APP_ENV` (`local|staging|production`), `LLM_MODE` (`fake|live`), `REVENUECAT_WEBHOOK_SECRET`, `POSTHOG_KEY`, `SENTRY_DSN`, `DAILY_COST_ALERT_EUR`.
-- App Group: `group.app.replywise.shared`. Keychain access group: `$(AppIdentifierPrefix)app.replywise.shared`. Bundle IDs: `app.replywise` (app), `app.replywise.keyboard` (extension). Android package `app.replywise`.
+- App Group: `group.app.replywise.shared`. Keychain access group: `$(AppIdentifierPrefix)app.replywise.shared` (shared with the keyboard; holds only the device key). The app lists its own group `$(AppIdentifierPrefix)app.replywise` first, so the Supabase session never lands in the shared group. Bundle IDs: `app.replywise` (app), `app.replywise.keyboard` (extension). Android package `app.replywise`. Staging (`APP_VARIANT=staging`) uses fully separate names with `.staging` (`group.app.replywise.staging.shared`, `app.replywise.staging`, …). All of these come from `config/app-groups.js`.
 - Local and CI use `LLM_MODE=fake` (deterministic canned replies). Only staging and production call real models.
 
 ## Definition of done
