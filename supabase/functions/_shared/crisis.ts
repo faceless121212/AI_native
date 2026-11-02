@@ -4,18 +4,19 @@
 // refused, or the stream ended early, so the client still shows the crisis card.
 //
 // The result is a boolean used for the SSE `meta` event only: it is never stored, logged or sent
-// to analytics. Lists reviewed by prompt-engineer in Prompt 4; they favour recall on clear
-// phrases over catching every wording, without everyday idioms. Matching: lowercase, accents stripped,
+// to analytics. Lists reviewed by prompt-engineer in Prompt 4; they lean to recall (see below). Matching: lowercase, accents stripped,
 // word boundaries; a trailing "*" matches a word prefix.
 import { normalize } from './postcheck.ts';
 
 export const CRISIS_PHRASES: Readonly<Record<'en' | 'de' | 'fr' | 'es' | 'it', readonly string[]>> =
   {
-    // Reviewed by prompt-engineer (Prompt 4). Removed idioms that misfire in everyday texting
-    // ("my mum is going to kill me", "ça va me tuer", "questo caldo mi uccide", "er bringt mich
-    // um 8 zum Bahnhof", "nicht mehr da sein", "cortarme el pelo", "acabar con todo el trabajo"):
-    // danger phrases need a he/she subject or a first-person intent. Added slang and danger phrases. Verify with native
-    // speakers before launch (docs: native review pack).
+    // Reviewed by prompt-engineer (Prompt 4, after code review). The backstop only runs when the
+    // model's META is missing, the provider refused, or the stream ended early, i.e. exactly the
+    // cases where nothing else shows the 112 card. So it leans to recall: a false positive costs
+    // one extra crisis card, a false negative means no card. Idioms like "my mum is going to kill
+    // me" or "questo caldo mi ammazza" match on purpose; only unambiguous everyday phrases are
+    // excluded (CRISIS_EXCEPTIONS below, and no bare "cortarme"/"tagliarmi": haircuts). Verify
+    // with native speakers before launch.
     en: [
       'suicide',
       'suicidal',
@@ -41,16 +42,15 @@ export const CRISIS_PHRASES: Readonly<Record<'en' | 'de' | 'fr' | 'es' | 'it', r
       'better off without me',
       'self harm',
       'self-harm',
-      'want to hurt myself',
-      'going to hurt myself',
+      'hurt myself',
+      'hurting myself',
+      'cut myself',
       'cutting myself',
-      'cut myself again',
       'overdose',
-      'he is going to kill me',
-      "he's going to kill me",
-      'she is going to kill me',
-      "she's going to kill me",
-      "they're going to kill me",
+      'going to kill me',
+      'gonna kill me',
+      'will kill me',
+      "'ll kill me",
       'threatening to kill',
       'threatened to kill me',
       'scared for my life',
@@ -62,14 +62,17 @@ export const CRISIS_PHRASES: Readonly<Record<'en' | 'de' | 'fr' | 'es' | 'it', r
     de: [
       'suizid*',
       'selbstmord*',
+      'mich umbringen',
       'mich umzubringen',
-      'mich selbst umbringen',
-      'mich umbringen will',
-      'werde mich umbringen',
+      'bringt mich um',
+      'bring mich um',
+      'mich toten',
+      'mich zu toten',
       'mir das leben nehmen',
       'mir das leben zu nehmen',
       'will sterben',
       'sterben will',
+      'mochte sterben',
       'nicht mehr leben',
       'will nicht mehr da sein',
       'nicht mehr aufwachen',
@@ -80,19 +83,19 @@ export const CRISIS_PHRASES: Readonly<Record<'en' | 'de' | 'fr' | 'es' | 'it', r
       'mir selbst wehtun',
       'mir etwas antun',
       'mir was antun',
-      'will mich umbringen',
       'droht mich umzubringen',
       'angst um mein leben',
       'ich bin in gefahr',
     ],
     fr: [
-      'suicide',
-      'me suicider',
-      'suicidaire',
+      'suicid*',
       'je vais me tuer',
       'je veux me tuer',
       'envie de me tuer',
+      'va me tuer',
+      'veut me tuer',
       "envie d'en finir",
+      'veux en finir',
       'en finir avec la vie',
       'mettre fin a mes jours',
       'mettre fin a ma vie',
@@ -104,19 +107,16 @@ export const CRISIS_PHRASES: Readonly<Record<'en' | 'de' | 'fr' | 'es' | 'it', r
       'veux disparaitre',
       'me faire du mal',
       'me scarifier',
-      'il va me tuer',
-      'elle va me tuer',
-      'veut me tuer',
       'menace de me tuer',
       'peur pour ma vie',
       'je suis en danger',
     ],
     es: [
-      'suicidio',
-      'suicidarme',
-      'suicida',
+      'suicid*',
       'quiero matarme',
       'voy a matarme',
+      'me quiero matar',
+      'me voy a matar',
       'ganas de matarme',
       'pienso en matarme',
       'quitarme la vida',
@@ -130,6 +130,7 @@ export const CRISIS_PHRASES: Readonly<Record<'en' | 'de' | 'fr' | 'es' | 'it', r
       'ganas de acabar con todo',
       'hacerme dano',
       'autolesion*',
+      'me va a matar',
       'me quiere matar',
       'me ha amenazado de muerte',
       'amenaza con matarme',
@@ -137,11 +138,15 @@ export const CRISIS_PHRASES: Readonly<Record<'en' | 'de' | 'fr' | 'es' | 'it', r
       'estoy en peligro',
     ],
     it: [
-      'suicidio',
-      'suicidarmi',
-      'suicida',
+      'suicid*',
       'uccidermi',
       'ammazzarmi',
+      'mi voglio uccidere',
+      'mi voglio ammazzare',
+      'mi uccido',
+      'mi ammazzo',
+      'mi uccide',
+      'mi ammazza',
       'togliermi la vita',
       'voglio morire',
       'non voglio piu vivere',
@@ -158,6 +163,14 @@ export const CRISIS_PHRASES: Readonly<Record<'en' | 'de' | 'fr' | 'es' | 'it', r
       'sono in pericolo',
     ],
   };
+
+/**
+ * Unambiguous everyday phrases removed before matching (normalised text): "Er bringt mich um 8
+ * zum Bahnhof" (= brings me at 8). Keep this list short; when in doubt, show the card.
+ */
+const CRISIS_EXCEPTIONS: readonly RegExp[] = [
+  /(?<![\p{L}\p{N}])bringt? mich um (?=\d|halb |viertel |punkt |mitternacht)/gu,
+];
 
 function escape(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -177,5 +190,7 @@ const PATTERN = new RegExp(
 
 /** True when the text contains a crisis phrase in any of the five languages. */
 export function looksLikeCrisis(text: string): boolean {
-  return PATTERN.test(normalize(text).replace(/[’`´]/g, "'"));
+  let norm = normalize(text).replace(/[’`´]/g, "'");
+  for (const exception of CRISIS_EXCEPTIONS) norm = norm.replace(exception, ' ');
+  return PATTERN.test(norm);
 }

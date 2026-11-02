@@ -27,6 +27,28 @@ Deno.test('crisis backstop: clear phrases in all five languages, accents and cas
     'Estoy en peligro, ven por favor',
     'Sto pensando di farla finita',
     'Ho paura per la mia vita',
+    // Code review (recall): must match
+    'I cut myself last night',
+    'I hurt myself on purpose',
+    "I've been hurting myself again",
+    'my boyfriend is going to kill me',
+    "he's gonna kill me",
+    'he will kill me',
+    'Er wird mich umbringen',
+    'Mein Mann bringt mich um',
+    'Je veux en finir',
+    'Mon mec va me tuer',
+    'Mi novio me va a matar',
+    'Mi marito mi ammazza',
+    'Mi ammazza, aiuto',
+    'Me quiero matar',
+    'me voy a matar',
+    'Me voy a suicidar',
+    'Mi voglio uccidere',
+    'mi uccido',
+    'mi ammazzo',
+    'ich will mich töten',
+    'ich möchte sterben',
   ];
   for (const text of crisis) assertEquals(looksLikeCrisis(text), true, text);
 });
@@ -40,16 +62,14 @@ Deno.test('crisis backstop: ordinary messages do not trigger it', () => {
     'Che bello vederti!',
     'This traffic is killing me',
     '[email] [phone]',
-    // Everyday idioms that must not show a crisis card (Prompt 4 list review)
-    'My mum is going to kill me if I am late again',
+    // Unambiguous everyday phrases that must not show a crisis card. Ambiguous idioms ("my mum
+    // is going to kill me") match on purpose: the backstop leans to recall.
     'Ab morgen werde ich zwei Wochen nicht mehr da sein, Urlaub!',
     'Er bringt mich um 8 zum Bahnhof',
-    'Meine Mutter wird mich umbringen, wenn ich zu spät komme',
-    'Ce boulot va me tuer',
+    'Sie bringt mich um halb neun nach Hause',
     "J'ai hâte d'en finir avec ce dossier",
     'Mañana voy a cortarme el pelo',
     'Hoy voy a acabar con todo el trabajo',
-    'Questo caldo mi uccide',
     'Facciamola finita con questa discussione, andiamo a cena',
     'It is only 5 kms away',
   ];
