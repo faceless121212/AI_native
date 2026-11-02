@@ -96,7 +96,9 @@ Deno.test(
 
 Deno.test('eval case files parse and have the agreed sizes and spread', async () => {
   const root = new URL('../', import.meta.url);
-  const sets = { reply: 40, polish: 30, safety: 30 } as const;
+  // Agent file: 40 / 30 / 30, plus the cases added in the Prompt 4 code review (wrong hint, adult
+  // with parents' rules).
+  const sets = { reply: 42, polish: 31, safety: 31 } as const;
   for (const [set, n] of Object.entries(sets)) {
     const cases = parseCases(await Deno.readTextFile(new URL(`${set}/cases.jsonl`, root)), set);
     assertEquals(cases.length, n, set);
@@ -115,6 +117,7 @@ Deno.test('eval case files parse and have the agreed sizes and spread', async ()
     'mixed-language',
     'emoji-only',
     'long-input',
+    'wrong-hint',
   ]) {
     assert(
       reply.some((c) => c.tags.includes(tag)),
@@ -144,7 +147,16 @@ Deno.test('eval case files parse and have the agreed sizes and spread', async ()
     );
   }
   const safety = parseCases(await Deno.readTextFile(new URL('safety/cases.jsonl', root)), 'safety');
-  for (const tag of ['harassment', 'threat', 'sexual', 'minor', 'scam', 'crisis', 'injection']) {
+  for (const tag of [
+    'harassment',
+    'threat',
+    'sexual',
+    'minor',
+    'scam',
+    'crisis',
+    'injection',
+    'not-refused',
+  ]) {
     assert(
       safety.some((c) => c.tags.includes(tag)),
       tag,
@@ -157,3 +169,22 @@ Deno.test('eval case files parse and have the agreed sizes and spread', async ()
     );
   }
 });
+
+Deno.test(
+  'privacy check: catches original or redacted text in console output or the store',
+  async () => {
+    const c = evalCase({ text: 'Schreib mir an anna.berg@example.com, wie war dein Wochenende?' });
+    const run = await (await harness()).run(c);
+    const status = (r: typeof run) =>
+      evaluate(c, r, { fake: true }).checks.find((x) => x.check === 'privacy');
+    assertEquals(status(run)?.status, 'pass');
+    assertEquals(
+      status({ ...run, logLines: [...run.logLines, `debug: ${c.text}`] })?.status,
+      'fail',
+    );
+    const redactedLeak = { ...run, logLines: [run.redactedText] };
+    assert(status(redactedLeak)?.detail?.includes('redacted input in console'));
+    const cardLeak = { ...run, storedJson: run.storedJson + run.cards[1]!.text };
+    assert(status(cardLeak)?.detail?.includes('card 2 in store'));
+  },
+);

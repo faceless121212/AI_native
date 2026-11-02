@@ -4,8 +4,8 @@
 // `npm run check:prompts`), so the Edge Function bundles plain TypeScript and needs no text
 // imports or file reads at runtime.
 //
-// system = safety + reply|polish + lang/<lang> (rules, the example group of the selected tone,
-//          banned phrases) + the tone card from tones. Only one language file and one example
+// system = safety + reply|polish + lang/<lang> (rules, the example group of the selected tone
+//          and relationship, banned phrases) + the tone card from tones. Only one language file and one example
 //          group go in, to keep the system prompt short (first-token latency).
 // user   = user.v1.md: the chip settings, then the (redacted) text wrapped in a tag with a random
 //          per-request name, which the system prompt says is data, not instructions.
@@ -43,17 +43,29 @@ function strip(md: string): string {
 }
 
 /** Example groups in the language files; each tone uses one (spec §11: review per tone group). */
-export type ToneGroup = 'care' | 'play' | 'clear';
+export type ToneGroup = 'care' | 'play' | 'flirt' | 'clear';
+export const TONE_GROUPS: readonly ToneGroup[] = ['care', 'play', 'flirt', 'clear'];
 export const TONE_GROUP: Readonly<Record<Tone, ToneGroup>> = {
   warm: 'care',
   calm: 'care',
   apologise: 'care',
   funny: 'play',
-  flirty: 'play',
+  flirty: 'flirt',
   confident: 'play',
   sayNoKindly: 'clear',
   professional: 'clear',
 };
+
+/**
+ * The example group sent with a request. Flirt examples (a match exchange) only go to Flirty
+ * with a match or partner; everyone else gets the neutral groups, so flirting can't bleed into
+ * replies to friends, family or colleagues.
+ */
+export function exampleGroup(tone: Tone, relationship: Relationship): ToneGroup {
+  const group = TONE_GROUP[tone];
+  if (group === 'flirt' && relationship !== 'match' && relationship !== 'partner') return 'play';
+  return group;
+}
 
 /** "## name" sections of a markdown file (editor comments removed). */
 export function sections(md: string): Map<string, string> {
@@ -85,6 +97,7 @@ function langRules(lang: Lang, md: string): LangRules {
     examples: {
       care: get('examples care'),
       play: get('examples play'),
+      flirt: get('examples flirt'),
       clear: get('examples clear'),
     },
     banned: get('banned'),
@@ -158,11 +171,12 @@ export function buildPrompt(input: PromptInput, tag: string = randomTag()): LlmP
   if (tone === undefined) throw new Error(`No tone card for ${input.tone}`);
 
   const rules = LANG_RULES[lang];
+  const group = exampleGroup(input.tone, input.relationship);
   const system = [
     SAFETY,
     KIND_PROMPT[input.kind].replaceAll('{{TAG}}', tag),
     rules.rules,
-    `Examples (tone group ${TONE_GROUP[input.tone]}):\n${rules.examples[TONE_GROUP[input.tone]]}`,
+    `Examples (tone group ${group}):\n${rules.examples[group]}`,
     rules.banned,
     tone,
   ]

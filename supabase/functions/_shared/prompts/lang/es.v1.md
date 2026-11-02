@@ -1,6 +1,6 @@
-<!-- Spanish (es-ES) v1 (Prompt 4, prompt-engineer). Sections: rules (always sent), examples care|play|clear (only the group of the selected tone is sent: care = warm, calm, apologise; play = funny, flirty, confident; clear = sayNoKindly, professional), banned (always sent). Each example group: 3 good + 3 bad replies. Native review pending. Released files are frozen: copy to .v2.md to change. -->
+<!-- Spanish (es-ES) v1 (Prompt 4, prompt-engineer). Sections: rules (always sent; they apply when the reply is in this language, the message's own language wins over the hint), examples care|play|flirt|clear (only the group of the selected tone is sent: care = warm, calm, apologise; play = funny, confident, and flirty outside match/partner; flirt = flirty with match or partner only; clear = sayNoKindly, professional), banned (always sent). Each example group: 3 good + 3 bad replies. Native review pending. Released files are frozen: copy to .v2.md to change. -->
 ## rules
-Language: Spanish (Spain). Write every reply in Spanish from Spain, even though these instructions are in English. Use vosotros for a group, not ustedes; Spain words (vale, móvil, ordenador, coche, quedar).
+When the reply is in Spanish (the message is Spanish, or reply_language is es and the message is in none of the five languages): use Spanish from Spain. Use vosotros for a group, not ustedes; Spain words (vale, móvil, ordenador, coche, quedar).
 Address: casual = tú (tú, te, ti, tu, contigo); formal = usted (usted, le, su, with third-person verbs: "¿Le viene bien?"). Never mix both in one reply. Formal fits "Buenos días", "Muchas gracias", "Con mucho gusto"; no "tío", no slang.
 Gender: agreement follows i_am for the user (estoy cansada / cansado, encantada / encantado) and they_are for the other person (¿estás lista / listo?). If unspecified, rephrase ("me hace mucha ilusión" instead of "estoy encantado/a", "¿te va bien?" instead of "¿estás listo/a?"); no "@", "x" or "e" endings.
 Style: natural Spain texting ("qué bien", "vale", "genial", "jaja", "me apunto"); keep accents (á, é, í, ó, ú, ñ).
@@ -17,6 +17,15 @@ Bad: Que fuerte!! Lo siento mucho!! (missing ¡, exclamation flood)
 Bad: Bueno, ya te dije que no era para ti. (passive-aggressive, "I told you so")
 
 ## examples play
+Example (friend, friendly, casual, funny). Message: Se me ha vuelto a morir la masa madre. La tercera este año.
+Good: Tres en un año ya es casi un récord. ¿Qué ha pasado esta vez?
+Good: Descanse en paz. ¿Vamos el sábado a la panadería para superarlo?
+Good: A estas alturas, la masa madre te tiene miedo.
+Bad: JAJAJA eres un desastre 😂😂😂 (mocking, emoji flood)
+Bad: Ay, cariño, ¿otra vez se te olvidó? (pet name, patronising)
+Bad: Jaja. (ignores the detail, kills the chat)
+
+## examples flirt
 Example (match, getting to know, casual, flirty, flirt light, they_are woman). Message: Hoy he intentado hacer paella por primera vez y casi quemo la cocina 😅
 Good: Eso es pasión por la cocina 😄 ¿Me invitas a la segunda prueba?
 Good: Lo importante es que la cocina sigue en pie. ¿Al final estaba rica?
@@ -27,9 +36,9 @@ Bad: Jaja vale. (ignores the detail, kills the chat)
 
 ## examples clear
 Example (colleague, friendly, formal, sayNoKindly). Message: ¿Podría cubrir el turno del sábado por la mañana?
-Good: Gracias por contar conmigo, pero el sábado no me es posible. ¿Le parece si lo comento con Lucía?
-Good: Lo siento, este sábado ya tengo un compromiso. La semana que viene sí podría ayudarle.
-Good: Me temo que no puedo el sábado. Si le sirve, puedo dejar preparado el informe el viernes.
+Good: Gracias por contar conmigo, pero el sábado no me es posible.
+Good: Lo siento, este sábado no puedo. ¿Quizá alguien más del equipo pueda cubrirlo?
+Good: Me temo que esta vez no puedo. Espero que encuentre a alguien.
 Bad: Como ya le dije, los sábados no trabajo. (passive-aggressive)
 Bad: Uf, tío, ni de coña. (slang, far too casual for usted)
 Bad: ¿No puedes pedírselo a otro? (tú instead of usted, dismissive)

@@ -82,6 +82,8 @@ export interface CaseRun {
   crisisCounted: boolean;
   /** Pipeline log events of this request (codes only, never text). */
   logEvents: Record<string, unknown>[];
+  /** Every console line printed during the request (privacy check only; never written out). */
+  logLines: string[];
   /** JSON of everything the store kept about this request, for the no-text check. */
   storedJson: string;
 }
@@ -130,10 +132,26 @@ export class Harness {
       clientRequestId: crypto.randomUUID(),
     };
 
+    // Everything the function code prints while this request runs (all console methods, raw
+    // strings and objects), for the privacy check; structured lines also go to logEvents.
     const logEvents: Record<string, unknown>[] = [];
-    const originals = { info: console.info, error: console.error };
+    const logLines: string[] = [];
+    const METHODS = ['log', 'info', 'debug', 'warn', 'error', 'trace'] as const;
+    const originals = METHODS.map((m) => [m, console[m]] as const);
     const capture = (...args: unknown[]) => {
       for (const a of args) {
+        let line: string;
+        try {
+          line =
+            typeof a === 'string'
+              ? a
+              : a instanceof Error
+                ? `${a.name}: ${a.message}`
+                : JSON.stringify(a);
+        } catch {
+          line = String(a);
+        }
+        logLines.push(line);
         try {
           const parsed = typeof a === 'string' ? JSON.parse(a) : null;
           if (parsed && typeof parsed === 'object') logEvents.push(parsed);
@@ -142,8 +160,7 @@ export class Harness {
         }
       }
     };
-    console.info = capture;
-    console.error = capture;
+    for (const m of METHODS) console[m] = capture;
 
     const crisisBefore = [...this.store.crisisDaily.values()].reduce((a, b) => a + b, 0);
     const started = performance.now();
@@ -167,6 +184,7 @@ export class Harness {
       safetyFlags: [],
       crisisCounted: false,
       logEvents,
+      logLines,
       storedJson: '',
     };
     try {
@@ -215,8 +233,7 @@ export class Harness {
       run.msFirstCard = msFirstCard;
       // Post-stream work (finish row, crisis count) runs in the same promise chain; give it a tick.
       await new Promise((r) => setTimeout(r, 0));
-      console.info = originals.info;
-      console.error = originals.error;
+      for (const [m, original] of originals) console[m] = original;
     }
 
     const stored = [...this.store.requests.values()].find((r) => r.userId === user.userId);

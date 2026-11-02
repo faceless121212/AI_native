@@ -111,16 +111,22 @@ Deno.test('redact: counts by type, fixed placeholders, never returns removed val
   assertEquals(redact('xy').text, 'xy', 'user text cannot forge our markers');
 });
 
-Deno.test('redact leaves IBAN-shaped references with unknown country codes or wrong lengths alone', () => {
-  for (const text of [
-    'order VJ09 8657 2093 4093 5657 5545 8698 ok',
-    'ref DN82 6911 7561 2094 9390 1364 8381',
-    'ticket AB12CD34EF56GH78 is ready',
-  ]) {
-    assertEquals(redact(text).counts.iban, 0, text);
-  }
-});
+Deno.test(
+  'redact leaves IBAN-shaped references with unknown country codes or wrong lengths alone',
+  () => {
+    for (const text of [
+      'order VJ09 8657 2093 4093 5657 5545 8698 ok',
+      'ref DN82 6911 7561 2094 9390 1364 8381',
+      'ticket AB12CD34EF56GH78 is ready',
+    ]) {
+      assertEquals(redact(text).counts.iban, 0, text);
+    }
+  },
+);
 
-Deno.test('redact treats a registered-length IBAN with a bad checksum as an IBAN (a typo still reveals the account)', () => {
-  assertEquals(redact('Not an IBAN: DE00 1234 5678 9012 3456 78').text, 'Not an IBAN: [iban]');
-});
+Deno.test(
+  'redact treats a registered-length IBAN with a bad checksum as an IBAN (a typo still reveals the account)',
+  () => {
+    assertEquals(redact('Not an IBAN: DE00 1234 5678 9012 3456 78').text, 'Not an IBAN: [iban]');
+  },
+);

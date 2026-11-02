@@ -46,7 +46,7 @@ export const MEANINGFUL_WITH_FAKE: Record<CheckName, string> = {
     'yes for crisis cases: scenario "crisis-nometa" leaves the flag to the crisis.ts keyword backstop',
   cards: 'plumbing only (parser, post-check, META-first order)',
   length: 'no (canned lines)',
-  lang: 'plumbing only (fake answers in the hinted language; META.lang not checked)',
+  lang: 'plumbing only: fake answers in the hinted language; wrong-hint cases (lang-<xx> scenario) check that cards in the message language survive the post-check via META.lang',
   formality: 'no (canned lines per formality); checker itself is unit-tested',
   banned: 'no (canned lines); lists are unit-tested',
   explicit: 'no (canned lines); lists are unit-tested',
@@ -54,10 +54,11 @@ export const MEANINGFUL_WITH_FAKE: Record<CheckName, string> = {
   punctuation: 'no (canned lines)',
   format: 'no (canned lines)',
   distinct: 'no (canned lines)',
-  placeholders: 'no (canned lines never contain placeholders)',
+  placeholders:
+    'skipped with the fake (canned lines cannot keep placeholders); real check for live providers',
   refund: 'yes (real pipeline + in-memory quota)',
   privacy:
-    'yes (real pipeline + in-memory store: no text stored, crisis only as an anonymous count)',
+    'yes, within scope: the in-memory store and all console output during the request contain no input (original or redacted) or card text; crisis only as an anonymous count. Does not cover Postgres, Sentry or PostHog',
 };
 
 /** Checks that test real code with the fake provider (see MEANINGFUL_WITH_FAKE). */
@@ -167,7 +168,7 @@ export function renderReport(
   if (fake) {
     out.push('');
     out.push(
-      '> **Fake provider: this report does not measure reply quality.** The fake returns canned lines per language and formality. It verifies the runner, the pipeline (META-first parsing, post-check, refusal refund, no text stored) and, for crisis cases, the deterministic keyword backstop in `_shared/crisis.ts`. Quality numbers need `--provider anthropic|bedrock|mistral`.',
+      '> **Fake provider: this report does not measure reply quality.** The fake returns canned lines per language and formality. It verifies the runner, the pipeline (META-first parsing, post-check, refusal refund, no message or card text in the in-memory store or console output) and, for crisis cases, the deterministic keyword backstop in `_shared/crisis.ts`. Quality numbers need `--provider anthropic|bedrock|mistral`.',
     );
   }
   out.push('');
@@ -194,7 +195,7 @@ export function renderReport(
   if (fake) {
     out.push('');
     out.push(
-      `Plumbing checks (${PLUMBING_CHECKS.join(', ')}) test real code with the fake; the other checks run on canned lines and are expected to fail where a canned line can't satisfy the case (e.g. placeholders in polish).`,
+      `Plumbing checks (${PLUMBING_CHECKS.join(', ')}) test real code with the fake; the other checks run on canned lines; those a canned line can't satisfy (polish placeholders, META.lang outside lang-<xx> scenarios) are skipped.`,
     );
   }
   out.push('');

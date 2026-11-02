@@ -12,6 +12,8 @@ import {
   sections,
   targetLang,
   TONE_GROUP,
+  TONE_GROUPS,
+  exampleGroup,
 } from './index.ts';
 import { text as tonesMd } from './tones.v1.ts';
 
@@ -33,7 +35,8 @@ Deno.test('prompts: system = safety + kind + language + tone card; no editor com
   const p = buildPrompt(base, 'message-0001');
   assertMatch(p.system, /^Safety rules/);
   assertMatch(p.system, /R1\|/);
-  assertMatch(p.system, /Language: German/);
+  assertMatch(p.system, /When the reply is in German/);
+  assertMatch(p.system, /the message's own language wins/);
   assertMatch(p.system, /Examples \(tone group play\)/);
   assertMatch(p.system, /Tone: funny/);
   assertFalse(p.system.includes('<!--'));
@@ -42,6 +45,32 @@ Deno.test('prompts: system = safety + kind + language + tone card; no editor com
   assertMatch(p.system, /message-0001/);
   assertEquals([p.kind, p.lang, p.formality, p.maxTokens], ['reply', 'de', 'casual', 600]);
   assertEquals(PROMPT_VERSION, 'v1');
+});
+
+Deno.test('prompts: flirt examples only for Flirty with a match or partner (no bleed)', () => {
+  assertEquals(exampleGroup('flirty', 'match'), 'flirt');
+  assertEquals(exampleGroup('flirty', 'partner'), 'flirt');
+  assertEquals(exampleGroup('flirty', 'friend'), 'play');
+  assertEquals(exampleGroup('funny', 'match'), 'play');
+  assertEquals(exampleGroup('confident', 'colleague'), 'play');
+  for (const relationship of ['friend', 'family', 'colleague'] as const) {
+    for (const tone of Tone.options) {
+      const system = buildPrompt(
+        { ...base, tone, relationship, flirt: 'off' },
+        'message-0001',
+      ).system;
+      assertFalse(system.includes(LANG_RULES.de.examples.flirt), `${tone} ${relationship}`);
+    }
+  }
+  const flirty = buildPrompt({ ...base, tone: 'flirty' }, 'message-0001').system;
+  assert(flirty.includes(LANG_RULES.de.examples.flirt));
+  // The shared play group is neutral: no match/partner exchange in it.
+  for (const lang of LANGS)
+    assertFalse(/^Example \((match|partner)/m.test(LANG_RULES[lang].examples.play), lang);
+});
+
+Deno.test('prompts: every language file states when it applies (message language wins)', () => {
+  for (const lang of LANGS) assertMatch(LANG_RULES[lang].rules, /^When the reply is in /, lang);
 });
 
 Deno.test('prompts: only the example group of the selected tone is sent', () => {
@@ -135,7 +164,7 @@ function examples(body: string) {
 
 Deno.test('prompts: each language file has 3 good and 3 bad examples per tone group', () => {
   for (const lang of LANGS) {
-    for (const group of ['care', 'play', 'clear'] as const) {
+    for (const group of TONE_GROUPS) {
       const ex = examples(LANG_RULES[lang].examples[group]);
       assertEquals([ex.good.length, ex.bad.length], [3, 3], `${lang} ${group}`);
       for (const bad of ex.bad) assertMatch(bad, /\([^)]+\)$/, `${lang} ${group}: reason`);
@@ -146,7 +175,7 @@ Deno.test('prompts: each language file has 3 good and 3 bad examples per tone gr
 
 Deno.test('prompts: good examples survive the post-check (no blocklist false positives)', () => {
   for (const lang of LANGS) {
-    for (const group of ['care', 'play', 'clear'] as const) {
+    for (const group of TONE_GROUPS) {
       for (const good of examples(LANG_RULES[lang].examples[group]).good) {
         assertEquals(postCheckCard(good, lang), { ok: true, text: good }, `${lang}: ${good}`);
         assertFalse(looksLikeCrisis(good), `${lang}: ${good}`);
@@ -184,6 +213,10 @@ Deno.test(
       ['On peut coucher avec toi ce soir', 'explicit'],
       ['Quiero follarte', 'explicit'],
       ['Stasera fare sesso?', 'explicit'],
+      ['Me pones cachonda', 'explicit'],
+      ['Ti voglio scopare stasera', 'explicit'],
+      ['Envoie une photo à poil', 'explicit'],
+      ['Show me your tits', 'explicit'],
     ];
     for (const [text, reason] of dropped) {
       assertEquals(postCheckCard(text, null), { ok: false, reason }, text);
@@ -198,6 +231,14 @@ Deno.test(
       'Ciao bella, come stai?',
       'Hola guapa, ¿qué tal?',
       'Wie schon gesagt, ich freue mich!',
+      // Code review: legitimate in at least one language
+      'Qué cachondo eres, me meo de risa',
+      'Menudo cachondeo ayer',
+      'Ma che cazzo dici, dai',
+      'Devo scopare il pavimento prima di uscire',
+      'Il a un chien à poil ras',
+      '¿Puedes correrte un poco a la izquierda?',
+      'The whole plan went tits up',
     ]) {
       assertEquals(postCheckCard(text, null).ok, true, text);
     }

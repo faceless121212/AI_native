@@ -64,7 +64,11 @@ const verdict = (check: CheckName, problems: string[]): CheckResult =>
   problems.length ? fail(check, problems.join('; ')) : ok(check);
 
 export interface EvaluateOptions {
-  /** The fake provider echoes the hinted language in META, so META.lang can't be checked. */
+  /**
+   * Fake provider: checks its canned lines can't satisfy are skipped (shown as skip in the
+   * report): META.lang (the fake echoes the hint, except lang-<xx> scenarios) and polish
+   * placeholders. Live providers get every check.
+   */
   fake: boolean;
 }
 
@@ -136,7 +140,9 @@ export function evaluate(c: EvalCase, run: CaseRun, opts: EvaluateOptions): Case
     // Language: no card in another language, and at least one card recognisably right.
     const verdicts = texts.map((t) => langVerdict(t, lang));
     const wrong = verdicts.flatMap((v, i) => (v === 'wrong' ? [`card ${i + 1} not ${lang}`] : []));
-    if (e.metaLang && !opts.fake && run.meta?.lang !== e.metaLang) {
+    // The fake echoes the hinted language in META, except in its lang-<xx> scenarios.
+    const metaCheckable = !opts.fake || (c.fake?.startsWith('lang-') ?? false);
+    if (e.metaLang && metaCheckable && run.meta?.lang !== e.metaLang) {
       wrong.push(`META.lang=${run.meta?.lang ?? 'missing'}, expected ${e.metaLang}`);
     }
     if (wrong.length) checks.push(fail('lang', wrong.join('; ')));
@@ -217,7 +223,9 @@ export function evaluate(c: EvalCase, run: CaseRun, opts: EvaluateOptions): Case
         ? verdict('distinct', distinctProblems(texts))
         : skip('distinct', 'polish'),
     );
-    if (c.kind === 'polish') {
+    if (c.kind === 'polish' && opts.fake) {
+      checks.push(skip('placeholders', 'fake provider: canned lines cannot keep placeholders'));
+    } else if (c.kind === 'polish') {
       checks.push(
         verdict(
           'placeholders',
@@ -234,15 +242,34 @@ export function evaluate(c: EvalCase, run: CaseRun, opts: EvaluateOptions): Case
     checks.push(run.refunded ? fail('refund', 'refunded although cards were shown') : ok('refund'));
   } else checks.push(skip('refund', `HTTP ${run.httpStatus}`));
 
-  // Privacy: nothing the store kept may contain the message or a card (CLAUDE.md rule 5).
+  // Privacy (CLAUDE.md rule 5): neither the in-memory store nor anything printed to the console
+  // during the request may contain the message (original or redacted) or a card. Probes are
+  // snippets of ≥ 12 chars: start, middle and end of each text.
   const leaks: string[] = [];
-  const probe = (s: string) => s.trim().slice(0, 40);
-  if (probe(c.text).length >= 12 && run.storedJson.includes(probe(c.text)))
-    leaks.push('input text stored');
-  for (const t of texts)
-    if (probe(t).length >= 12 && run.storedJson.includes(probe(t))) leaks.push('card text stored');
-  if (run.storedJson.includes('"crisis"') && run.safetyFlags.includes('crisis'))
-    leaks.push('crisis flag stored per request');
+  const probes = (s: string): string[] => {
+    const t = s.trim();
+    if (t.length < 12) return [];
+    const mid = Math.max(0, Math.floor(t.length / 2) - 10);
+    return [...new Set([t.slice(0, 24), t.slice(mid, mid + 24), t.slice(-24)])].filter(
+      (p) => p.length >= 12,
+    );
+  };
+  const logs = run.logLines.join('\n');
+  const sinks: [string, string][] = [
+    ['store', run.storedJson],
+    ['console', logs],
+  ];
+  const sources: [string, string][] = [
+    ['input text', c.text],
+    ['redacted input', run.redactedText],
+    ...texts.map((t, i): [string, string] => [`card ${i + 1}`, t]),
+  ];
+  for (const [sinkName, sink] of sinks) {
+    for (const [what, text] of sources) {
+      if (probes(text).some((p) => sink.includes(p))) leaks.push(`${what} in ${sinkName}`);
+    }
+  }
+  if (run.safetyFlags.includes('crisis')) leaks.push('crisis flag stored per request');
   if (crisis !== run.crisisCounted)
     leaks.push(`crisis_daily count ${run.crisisCounted ? 'added' : 'missing'}`);
   checks.push(verdict('privacy', leaks));

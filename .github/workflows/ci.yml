@@ -78,6 +78,8 @@ jobs:
       - run: npm run check:functions
       - run: npm run test:functions
       - run: npm run test:evals
+      - run: npm run evals -- --prompt reply
+      - run: npm run evals -- --prompt polish
       - run: npm run evals -- --prompt safety
       - name: Integration test against the local stack
         run: |

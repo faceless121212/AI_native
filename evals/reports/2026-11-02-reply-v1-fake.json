@@ -6,19 +6,19 @@
     "provider": "fake",
     "model": "fake-v1",
     "systemPrompt": {
-      "minChars": 6227,
-      "maxChars": 6570,
-      "estTokensMin": 1730,
-      "estTokensMax": 1825
+      "minChars": 6647,
+      "maxChars": 7006,
+      "estTokensMin": 1846,
+      "estTokensMax": 1946
     }
   },
   "total": {
-    "cases": 40,
-    "passed": 40
+    "cases": 42,
+    "passed": 42
   },
   "plumbing": {
-    "cases": 40,
-    "passed": 40
+    "cases": 42,
+    "passed": 42
   },
   "perLang": {
     "en": {
@@ -27,9 +27,9 @@
       "plumbingPassed": 8
     },
     "de": {
-      "cases": 8,
-      "passed": 8,
-      "plumbingPassed": 8
+      "cases": 9,
+      "passed": 9,
+      "plumbingPassed": 9
     },
     "fr": {
       "cases": 8,
@@ -42,84 +42,84 @@
       "plumbingPassed": 8
     },
     "it": {
-      "cases": 8,
-      "passed": 8,
-      "plumbingPassed": 8
+      "cases": 9,
+      "passed": 9,
+      "plumbingPassed": 9
     }
   },
   "perCheck": {
     "refused": {
-      "applicable": 40,
-      "passed": 40
+      "applicable": 42,
+      "passed": 42
     },
     "crisis": {
-      "applicable": 40,
-      "passed": 40
+      "applicable": 42,
+      "passed": 42
     },
     "cards": {
-      "applicable": 40,
-      "passed": 40
+      "applicable": 42,
+      "passed": 42
     },
     "length": {
-      "applicable": 40,
-      "passed": 40
+      "applicable": 42,
+      "passed": 42
     },
     "lang": {
-      "applicable": 40,
-      "passed": 40
+      "applicable": 42,
+      "passed": 42
     },
     "formality": {
-      "applicable": 40,
-      "passed": 40
+      "applicable": 42,
+      "passed": 42
     },
     "banned": {
-      "applicable": 40,
-      "passed": 40
+      "applicable": 42,
+      "passed": 42
     },
     "explicit": {
-      "applicable": 40,
-      "passed": 40
+      "applicable": 42,
+      "passed": 42
     },
     "emoji": {
-      "applicable": 40,
-      "passed": 40
+      "applicable": 42,
+      "passed": 42
     },
     "punctuation": {
       "applicable": 16,
       "passed": 16
     },
     "format": {
-      "applicable": 40,
-      "passed": 40
+      "applicable": 42,
+      "passed": 42
     },
     "distinct": {
-      "applicable": 40,
-      "passed": 40
+      "applicable": 42,
+      "passed": 42
     },
     "placeholders": {
       "applicable": 0,
       "passed": 0
     },
     "refund": {
-      "applicable": 40,
-      "passed": 40
+      "applicable": 42,
+      "passed": 42
     },
     "privacy": {
-      "applicable": 40,
-      "passed": 40
+      "applicable": 42,
+      "passed": 42
     }
   },
   "latency": {
-    "firstCardP50": 1.3760199999999259,
-    "firstCardP95": 88.94707599999998,
-    "totalP50": 1.899913999999967,
-    "totalP95": 89.57493100000005
+    "firstCardP50": 1.182409000000007,
+    "firstCardP95": 3.249828999999977,
+    "totalP50": 1.6220690000000104,
+    "totalP95": 4.033836999999949
   },
   "cost": {
     "meanMicroEurPerReply": 0,
     "totalMicroEur": 0,
-    "meanTokensIn": 1684.325,
-    "meanTokensOut": 66.7
+    "meanTokensIn": 1797.7619047619048,
+    "meanTokensOut": 66.69047619047619
   },
   "failures": []
 }

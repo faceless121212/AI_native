@@ -1,12 +1,14 @@
-// Native review pack (Deno): 50 sample replies per language, balanced across the three tone groups
-// (care: warm, calm, apologise · play: funny, flirty, confident · clear: sayNoKindly,
-// professional), as one CSV per language for a native speaker to rate 1–5 and comment
+// Native review pack (Deno): 50 sample replies per language, balanced across the four tone groups
+// (care: warm, calm, apologise · play: funny, confident · flirt: flirty with match or partner ·
+// clear: sayNoKindly, professional), as one CSV per language for a native speaker to rate 1–5 and comment
 // (spec §11). Inputs: evals/review/messages.jsonl (synthetic messages, never real user text).
 // Replies go through the same in-process handler and pipeline as the evals (evals/lib/harness.ts).
 //
 //   deno run --no-lock --config supabase/functions/deno.json --allow-env --allow-read
 //     --allow-write=evals/review-packs --allow-net scripts/export-review-pack.ts
 //     [--provider fake|anthropic|bedrock|mistral] [--lang de] [--per-lang 50] [--out <dir>]
+//   (npm run review-pack -- …). --out must be a folder under evals/review-packs/ (Deno write
+//   permission); anything else is refused.
 //
 // Writes <out>/<lang>.csv (default out: evals/review-packs/<date>-<prompt version>-<provider>/).
 // With --provider fake the replies are canned test lines, not model output: every row says so.
@@ -16,6 +18,7 @@ import { parseArgs } from 'node:util';
 import { z } from 'zod';
 import {
   TONE_GROUP,
+  TONE_GROUPS,
   PROMPT_VERSION,
   type ToneGroup,
 } from '../supabase/functions/_shared/prompts/index.ts';
@@ -49,7 +52,7 @@ const fake = provider === 'fake';
 
 const ReviewMessageSchema = z.strictObject({
   lang: Lang,
-  group: z.enum(['care', 'play', 'clear']),
+  group: z.enum(['care', 'play', 'flirt', 'clear']),
   relationship: Relationship,
   closeness: Closeness,
   formality: Formality,
@@ -70,7 +73,7 @@ const TONES_BY_GROUP = Object.entries(TONE_GROUP).reduce(
     acc[group].push(tone as Tone);
     return acc;
   },
-  { care: [], play: [], clear: [] } as Record<ToneGroup, Tone[]>,
+  { care: [], play: [], flirt: [], clear: [] } as Record<ToneGroup, Tone[]>,
 );
 const GENDERS: Gender[] = ['woman', 'man', 'unspecified'];
 
@@ -83,9 +86,16 @@ const providers = await makeProviders(provider, (name) => Deno.env.get(name)).ca
 const harness = new Harness(providers, provider);
 const model = providers[0]!.model;
 const date = new Date().toISOString().slice(0, 10);
+// --out must stay under evals/review-packs/: that is the only place the npm script lets Deno
+// write (--allow-write=evals/review-packs), and it keeps packs out of the rest of the repo.
+const packsRoot = new URL('evals/review-packs/', root);
 const outDir = args.out
   ? new URL(`${args.out.replace(/\/?$/, '/')}`, `file://${Deno.cwd()}/`)
-  : new URL(`evals/review-packs/${date}-${PROMPT_VERSION}-${provider}/`, root);
+  : new URL(`${date}-${PROMPT_VERSION}-${provider}/`, packsRoot);
+if (!outDir.href.startsWith(packsRoot.href) || outDir.href.includes('/../')) {
+  console.error(`--out must be a folder under ${packsRoot.pathname} (Deno may only write there).`);
+  Deno.exit(2);
+}
 await Deno.mkdir(outDir, { recursive: true });
 
 const HEADER = [
@@ -116,9 +126,11 @@ function csvField(value: string | number): string {
 
 const langs = args.lang ? [Lang.parse(args.lang)] : Lang.options;
 for (const lang of langs) {
-  const groups: ToneGroup[] = ['care', 'play', 'clear'];
-  // Balanced quota per group: 50 → 17 / 17 / 16.
-  const quota = groups.map((_, i) => Math.floor(perLang / 3) + (i < perLang % 3 ? 1 : 0));
+  const groups = TONE_GROUPS;
+  // Balanced quota per group: 50 → 13 / 13 / 12 / 12.
+  const quota = groups.map(
+    (_, i) => Math.floor(perLang / groups.length) + (i < perLang % groups.length ? 1 : 0),
+  );
   const rows: string[][] = [];
   let run = 0;
   for (const [gi, group] of groups.entries()) {
