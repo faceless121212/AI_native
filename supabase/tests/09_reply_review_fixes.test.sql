@@ -16,6 +16,8 @@ begin
     perform public.grant_ai_consent(v_id, '2026-11-01', '2026-11-01');
   else
     insert into public.consents (user_id, kind, policy_version) values (v_id, 'ai_sharing', '2026-11-01');
+    -- Starter credits come with sign-up; this user has used them all (as a 90-day rollup would show).
+    insert into public.credit_ledger (user_id, delta, reason, bucket) values (v_id, -10, 'rollup', 'starter');
   end if;
   return v_id;
 end;

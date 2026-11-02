@@ -62,9 +62,12 @@ as $$
 $$;
 revoke all on function public.inactive_accounts(timestamptz, interval) from public, anon, authenticated;
 
+-- security definer: deleting auth users needs the owner's (postgres) rights; the function stays
+-- executable by service_role only (pg_cron runs it as postgres).
 create or replace function public.run_retention(p_now timestamptz)
 returns jsonb
 language plpgsql
+security definer
 set search_path = ''
 as $$
 declare

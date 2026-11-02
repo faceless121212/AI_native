@@ -5,7 +5,6 @@ import type { ProviderName } from './llm/provider.ts';
 import type {
   FlirtLevel,
   Formality,
-  Gender,
   Lang,
   LangHint,
   Plan,
@@ -22,7 +21,6 @@ export type GrantConsentResult =
       status: 'ok';
       policyVersion: string;
       grantedAt: string;
-      starterGranted: boolean;
       aiEnabled: boolean;
     }
   | { status: 'age_required' | 'no_profile' | 'unknown_policy_version' };
@@ -39,8 +37,6 @@ export interface ConsentRepo {
 export interface ProfileState {
   id: string;
   uiLang: Lang;
-  iAm: Gender | null;
-  theyAre: Gender | null;
   ageConfirmedAt: string | null;
   timezone: string;
   createdAt: string;
@@ -50,8 +46,6 @@ export interface ProfileState {
 export interface ProfilePatch {
   ageConfirmed?: true;
   uiLang?: Lang;
-  iAm?: Gender;
-  theyAre?: Gender;
   timezone?: string;
 }
 
@@ -152,4 +146,9 @@ export interface ReplyRepo {
     type: ReplyFeedbackType,
   ): Promise<ReplyEventResult>;
   quotaState(userId: string): Promise<QuotaSnapshot | null>;
+  /**
+   * +1 on the anonymous crisis_daily count (UTC day, language, source). Deliberately takes no
+   * user or request ID: nothing per user is stored about crisis.
+   */
+  recordCrisis(lang: LangHint, source: RequestSource): Promise<void>;
 }

@@ -1,11 +1,12 @@
 -- Schema shape, RLS switched on everywhere, and who may touch what (architecture §8).
 begin;
 \ir _helpers.psql
-select plan(33);
+select plan(35);
 
 select tables_are('public', array[
   'profiles', 'consents', 'device_keys', 'usage_days', 'credit_ledger', 'entitlements',
-  'ai_requests', 'ai_requests_daily', 'reply_events', 'referrals', 'support_messages', 'provider_status'
+  'ai_requests', 'ai_requests_daily', 'reply_events', 'referrals', 'support_messages', 'provider_status',
+  'crisis_daily'
 ], 'public has exactly the architecture §8 tables');
 select views_are('public', array['daily_cost'], 'public has exactly the daily_cost view');
 
@@ -61,7 +62,7 @@ select policies_are('public', 'referrals', array['referrals: owner can read own 
 select is_empty($$
   select tablename from pg_policies
   where schemaname = 'public'
-    and tablename in ('ai_requests', 'ai_requests_daily', 'reply_events', 'device_keys', 'support_messages', 'provider_status')
+    and tablename in ('ai_requests', 'ai_requests_daily', 'reply_events', 'device_keys', 'support_messages', 'provider_status', 'crisis_daily')
 $$, 'server-only tables have no policies');
 select is_empty($$
   select policyname from pg_policies
@@ -99,6 +100,20 @@ select has_trigger('auth', 'users', 'on_auth_user_created', 'auth.users has the 
 select ok(
   (select p.prosecdef from pg_proc p where p.oid = 'public.handle_new_user'::regproc),
   'handle_new_user is security definer'
+);
+
+-- Elevated-rights functions are an allow-list: adding one must be a deliberate, reviewed change.
+select results_eq(
+  $$ select p.proname::text collate "C" from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = 'public' and p.prosecdef order by 1 $$,
+  $$ values ('handle_new_user'::text collate "C"), ('run_retention'::text collate "C") $$,
+  'only handle_new_user and run_retention run with elevated (security definer) rights'
+);
+select ok(
+  not has_function_privilege('anon', 'public.run_retention(timestamptz)', 'execute')
+  and not has_function_privilege('authenticated', 'public.run_retention(timestamptz)', 'execute')
+  and has_function_privilege('service_role', 'public.run_retention(timestamptz)', 'execute'),
+  'run_retention (deletes data, security definer) is callable by service_role only'
 );
 
 select has_trigger('public', 'profiles', 'profiles_set_updated_at', 'profiles keeps updated_at current');

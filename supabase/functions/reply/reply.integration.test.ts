@@ -101,11 +101,31 @@ Deno.test({
     assertEquals(names(events), ['quota', 'error']);
     assertEquals(events[0]!.data.leftToday, 12, 'refunded');
 
-    // 3. crisis: signalled to the client, not stored
+    // 3. crisis: signalled to the client, counted only in the anonymous daily table
+    const crisisCount = async () => {
+      const { data } = await db
+        .from('crisis_daily')
+        .select('*')
+        .eq('date', new Date().toISOString().slice(0, 10))
+        .eq('lang', 'de')
+        .eq('source', 'keyboard');
+      return { count: Number(data?.[0]?.count ?? 0), columns: Object.keys(data?.[0] ?? {}) };
+    };
+    const before = await crisisCount();
     res = await reply(replyRequest(token, { text: TEXT }));
     const crisisId = res.headers.get('x-request-id')!;
     events = await readEvents(res);
     assertEquals(events.find((e) => e.event === 'meta')!.data.crisis, true);
+    const after = await crisisCount();
+    assertEquals(after.count, before.count + 1, 'crisis_daily +1');
+    assertEquals(after.columns.sort(), [
+      'count',
+      'created_at',
+      'date',
+      'lang',
+      'source',
+      'updated_at',
+    ]);
 
     const { data: rows } = await db
       .from('ai_requests')

@@ -17,8 +17,8 @@ import {
 
 /** Architecture §7: fall back when the first token takes longer than 2.5 s. */
 export const FIRST_TOKEN_TIMEOUT_MS = 2_500;
-/** With nobody to fall back to, wait this long for the first token before failing. */
-export const LAST_PROVIDER_FIRST_TOKEN_TIMEOUT_MS = 8_000;
+/** With nobody to fall back to, wait this long for the first token before failing (user decision). */
+export const LAST_PROVIDER_FIRST_TOKEN_TIMEOUT_MS = 5_000;
 /** Max silence between chunks once streaming. */
 export const CHUNK_IDLE_TIMEOUT_MS = 10_000;
 

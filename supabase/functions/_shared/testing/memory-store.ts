@@ -1,5 +1,5 @@
 // In-memory stand-in for the database, for handler tests. It mirrors the rules of the SQL
-// functions (starter credits once, withdraw revokes keys, key creation gated on age + consent,
+// functions (starter credits once at sign-up, withdraw revokes keys, key creation gated on age + consent,
 // rotation per platform); the SQL itself is tested with pgTAP in supabase/tests.
 import type { AuthDeps, DeviceKeyLookup } from '../auth.ts';
 import type {
@@ -22,7 +22,7 @@ import type {
 import { httpError } from '../errors.ts';
 import { AI_POLICY } from '../policy.ts';
 import { canonicalTimeZone } from '../timezone.ts';
-import type { Plan, Platform, ReplyFeedbackType } from '../schemas.ts';
+import type { LangHint, Plan, Platform, ReplyFeedbackType, RequestSource } from '../schemas.ts';
 
 export interface StoredConsent {
   userId: string;
@@ -42,7 +42,7 @@ export interface StoredDeviceKey {
 export interface StoredCredit {
   userId: string;
   delta: number;
-  reason: 'starter' | 'referral' | 'refund' | 'admin' | 'spend';
+  reason: 'starter' | 'referral' | 'refund' | 'admin' | 'spend' | 'rollup';
   requestId?: string;
   bucket?: 'starter' | 'bonus';
 }
@@ -142,12 +142,12 @@ export class MemoryStore implements AuthDeps, ConsentRepo, ProfileRepo, DeviceKe
     this.profiles.set(userId, {
       id: userId,
       uiLang: 'en',
-      iAm: null,
-      theyAre: null,
       ageConfirmedAt: null,
       timezone: 'UTC',
       createdAt: this.ts(),
     });
+    // Like handle_new_user: +10 starter credits at sign-up, once.
+    this.credits.push({ userId, delta: 10, reason: 'starter' });
     const token = `token-${userId}`;
     this.sessions.set(token, userId);
     return { userId, token };
@@ -191,13 +191,10 @@ export class MemoryStore implements AuthDeps, ConsentRepo, ProfileRepo, DeviceKe
       latest = { userId, policyVersion, grantedAt: this.ts(), withdrawnAt: null };
       this.consents.push(latest);
     }
-    const hasStarter = this.credits.some((c) => c.userId === userId && c.reason === 'starter');
-    if (!hasStarter) this.credits.push({ userId, delta: 10, reason: 'starter' });
     return Promise.resolve({
       status: 'ok',
       policyVersion: latest.policyVersion,
       grantedAt: latest.grantedAt,
-      starterGranted: !hasStarter,
       aiEnabled: this.aiAllowed(userId),
     });
   }
@@ -238,8 +235,6 @@ export class MemoryStore implements AuthDeps, ConsentRepo, ProfileRepo, DeviceKe
     if (!p) return Promise.resolve(null);
     if (patch.ageConfirmed) p.ageConfirmedAt ??= this.ts();
     if (patch.uiLang) p.uiLang = patch.uiLang;
-    if (patch.iAm) p.iAm = patch.iAm;
-    if (patch.theyAre) p.theyAre = patch.theyAre;
     if (patch.timezone) {
       // Like the database: only canonical names are stored (the handler canonicalises first).
       if (patch.timezone !== 'UTC' && canonicalTimeZone(patch.timezone) !== patch.timezone) {
@@ -325,11 +320,17 @@ export class MemoryStore implements AuthDeps, ConsentRepo, ProfileRepo, DeviceKe
     const sum = (f: (c: StoredCredit) => boolean) =>
       rows.filter(f).reduce((a, c) => a + c.delta, 0);
     const starterGranted = sum((c) => c.reason === 'starter');
-    const bonusGranted = sum((c) => c.reason !== 'starter' && c.requestId === undefined);
-    const starterUsed = -sum(
-      (c) => c.requestId !== undefined && (c.bucket ?? 'starter') === 'starter',
+    const bonusGranted = sum(
+      (c) => c.reason !== 'starter' && c.reason !== 'rollup' && c.requestId === undefined,
     );
-    const bonusUsed = -sum((c) => c.requestId !== undefined && c.bucket === 'bonus');
+    const starterUsed = -sum(
+      (c) =>
+        (c.requestId !== undefined || c.reason === 'rollup') &&
+        (c.bucket ?? 'starter') === 'starter',
+    );
+    const bonusUsed = -sum(
+      (c) => (c.requestId !== undefined || c.reason === 'rollup') && c.bucket === 'bonus',
+    );
     return {
       starter: Math.max(0, starterGranted - starterUsed),
       bonus: Math.max(0, bonusGranted - bonusUsed),
@@ -486,6 +487,15 @@ export class MemoryStore implements AuthDeps, ConsentRepo, ProfileRepo, DeviceKe
     }
     this.replyEvents.push({ requestId, userId, cardIndex, type });
     return Promise.resolve('ok');
+  }
+
+  /** `${utcDate}|${lang}|${source}` → count. No user, like crisis_daily. */
+  readonly crisisDaily = new Map<string, number>();
+
+  recordCrisis(lang: LangHint, source: RequestSource): Promise<void> {
+    const key = `${this.now().toISOString().slice(0, 10)}|${lang}|${source}`;
+    this.crisisDaily.set(key, (this.crisisDaily.get(key) ?? 0) + 1);
+    return Promise.resolve();
   }
 
   quotaState(userId: string): Promise<QuotaSnapshot | null> {

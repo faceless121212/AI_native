@@ -31,6 +31,7 @@ import {
   type LangHint,
   type MetaEvent,
   type QuotaEvent,
+  type RequestSource,
   type SseEventName,
   SseEventPayloads,
 } from '../_shared/schemas.ts';
@@ -67,6 +68,8 @@ export interface PipelineInput {
    * early. Never stored, logged or sent to analytics.
    */
   crisisBackstop: boolean;
+  /** For the anonymous crisis_daily count only. */
+  source: RequestSource;
   /** Request arrival, for ms_first / ms_total. */
   startedAt: number;
 }
@@ -320,9 +323,13 @@ async function run(input: PipelineInput, deps: PipelineDeps, signal: AbortSignal
     else if (metaSent && backstop && !crisisSent) sendMeta(true, refused); // upgrade only
   }
 
-  // Refund when nothing reached the user (failure, AI turned off, or cancel before the first card).
+  // Refund when nothing reached the user: failure, AI turned off, cancel, or a refusal (provider
+  // or model) before the first card (user decision: refusals are refunded).
   let quota = input.quota;
-  if (delivered.size === 0 && (status === 'error' || status === 'cancelled')) {
+  if (
+    delivered.size === 0 &&
+    (status === 'error' || status === 'cancelled' || status === 'refused')
+  ) {
     try {
       const refund = await deps.repo.refundReply(requestId);
       if (refund.status === 'ok' && refund.quota) quota = refund.quota;
@@ -382,6 +389,16 @@ async function run(input: PipelineInput, deps: PipelineDeps, signal: AbortSignal
     });
   } catch (err) {
     logError(FN, 'finish', err);
+  }
+
+  // Crisis: one anonymous +1 per request whose meta.crisis reached the client (model or backstop).
+  // Day, language and source only; no user, no request ID (crisis_daily).
+  if (crisisSent) {
+    try {
+      await deps.repo.recordCrisis((modelMeta()?.lang ?? expectedLang()) as LangHint, input.source);
+    } catch (err) {
+      logError(FN, 'crisis_count', err);
+    }
   }
 
   // Anonymous aggregate only: never keyed by the user (privacy review).

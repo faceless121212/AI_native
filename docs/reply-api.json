@@ -104,8 +104,6 @@
       "properties": {
         "ageConfirmed": { "type": "boolean", "const": true },
         "uiLang": { "type": "string", "enum": ["en", "de", "fr", "es", "it"] },
-        "iAm": { "type": "string", "enum": ["woman", "man", "unspecified"] },
-        "theyAre": { "type": "string", "enum": ["woman", "man", "unspecified"] },
         "timezone": {
           "type": "string",
           "maxLength": 64,
@@ -184,16 +182,9 @@
               "type": "string",
               "format": "date-time",
               "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
-            },
-            "starterCreditsGranted": { "type": "boolean" }
+            }
           },
-          "required": [
-            "action",
-            "aiEnabled",
-            "policyVersion",
-            "grantedAt",
-            "starterCreditsGranted"
-          ],
+          "required": ["action", "aiEnabled", "policyVersion", "grantedAt"],
           "additionalProperties": false
         },
         {
@@ -222,18 +213,6 @@
           "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
         },
         "uiLang": { "type": "string", "enum": ["en", "de", "fr", "es", "it"] },
-        "iAm": {
-          "anyOf": [
-            { "type": "string", "enum": ["woman", "man", "unspecified"] },
-            { "type": "null" }
-          ]
-        },
-        "theyAre": {
-          "anyOf": [
-            { "type": "string", "enum": ["woman", "man", "unspecified"] },
-            { "type": "null" }
-          ]
-        },
         "ageConfirmedAt": {
           "anyOf": [
             {
@@ -252,16 +231,7 @@
           "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
         }
       },
-      "required": [
-        "id",
-        "uiLang",
-        "iAm",
-        "theyAre",
-        "ageConfirmedAt",
-        "timezone",
-        "aiEnabled",
-        "createdAt"
-      ],
+      "required": ["id", "uiLang", "ageConfirmedAt", "timezone", "aiEnabled", "createdAt"],
       "additionalProperties": false
     },
     "DeviceKeyCreateResponse": {

@@ -45,7 +45,10 @@ export function setupReply(
   return { store, health, analytics, handler, deps, providers };
 }
 
-/** Signed in, 18+ confirmed, AI consent granted (with the 10 starter credits unless starter=false). */
+/**
+ * Signed in (with the 10 starter credits from sign-up), 18+ confirmed, AI consent granted.
+ * starter=false: the starter credits are already used up (as a 90-day rollup row would show).
+ */
 export async function aiUser(
   store: MemoryStore,
   opts: { starter?: boolean; timezone?: string } = {},
@@ -54,6 +57,7 @@ export async function aiUser(
   await store.patchProfile(user.userId, { ageConfirmed: true });
   if (opts.timezone) store.profiles.get(user.userId)!.timezone = opts.timezone;
   if (opts.starter === false) {
+    store.credits.push({ userId: user.userId, delta: -10, reason: 'rollup', bucket: 'starter' });
     store.consents.push({
       userId: user.userId,
       policyVersion: CURRENT_AI_POLICY_VERSION,

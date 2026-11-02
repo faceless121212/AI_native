@@ -1,7 +1,7 @@
 // POST /consent  {action: 'grant', policyVersion} | {action: 'withdraw'}   (Supabase JWT)
 // Grant: only for a policy version listed in _shared/policy.ts and not below the minimum (else
-// 400 unknown_policy_version); requires age confirmed; the first grant ever adds 10 starter
-// replies (once, enforced in SQL). Withdraw: stops AI at once and revokes every device key.
+// 400 unknown_policy_version); requires age confirmed. Starter credits are not granted here
+// (they come with sign-up, handle_new_user). Withdraw: stops AI at once and revokes every device key.
 import { authenticate, type AuthDeps } from '../_shared/auth.ts';
 import { httpError, jsonResponse, methodNotAllowed } from '../_shared/errors.ts';
 import { readJson } from '../_shared/http.ts';
@@ -44,13 +44,12 @@ export async function handleConsent(req: Request, deps: ConsentDeps): Promise<Re
       throw httpError('age_required', 'Confirm you are 18 or over first.');
     }
     if (result.status !== 'ok') throw httpError('not_found', 'Profile not found.');
-    logEvent('consent', 'granted', { starterGranted: result.starterGranted });
+    logEvent('consent', 'granted');
     const response: ConsentGrantResponse = {
       action: 'grant',
       aiEnabled: result.aiEnabled,
       policyVersion: result.policyVersion,
       grantedAt: result.grantedAt,
-      starterCreditsGranted: result.starterGranted,
     };
     return jsonResponse(response);
   }

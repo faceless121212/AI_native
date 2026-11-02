@@ -25,7 +25,14 @@ import type { ProviderStatusStore } from './llm/health.ts';
 import { PROVIDER_NAMES, type ProviderName } from './llm/provider.ts';
 import { AI_POLICY } from './policy.ts';
 import { REPLY_RATE_LIMIT } from './rate-limit.ts';
-import { Gender, Lang, Plan, type Platform, type ReplyFeedbackType } from './schemas.ts';
+import {
+  Lang,
+  type LangHint,
+  Plan,
+  type Platform,
+  type ReplyFeedbackType,
+  type RequestSource,
+} from './schemas.ts';
 
 /** Error carrying only the Postgres/PostgREST code (never the message, which can echo values). */
 export class DbError extends Error {
@@ -58,7 +65,6 @@ const GrantRow = z.discriminatedUnion('status', [
     status: z.literal('ok'),
     policy_version: z.string(),
     granted_at: Timestamp,
-    starter_granted: z.boolean(),
     ai_enabled: z.boolean(),
   }),
   z.object({ status: z.enum(['age_required', 'no_profile', 'unknown_policy_version']) }),
@@ -77,8 +83,6 @@ const WithdrawRow = z.discriminatedUnion('status', [
 const ProfileRow = z.object({
   id: z.string(),
   ui_lang: Lang,
-  i_am: Gender.nullable(),
-  they_are: Gender.nullable(),
   age_confirmed_at: Timestamp.nullable(),
   timezone: z.string(),
   created_at: Timestamp,
@@ -108,8 +112,6 @@ function toProfile(row: z.output<typeof ProfileRow>): ProfileState {
   return {
     id: row.id,
     uiLang: row.ui_lang,
-    iAm: row.i_am,
-    theyAre: row.they_are,
     ageConfirmedAt: row.age_confirmed_at === null ? null : iso(row.age_confirmed_at),
     timezone: row.timezone,
     createdAt: iso(row.created_at),
@@ -155,7 +157,6 @@ export class SupabaseRepo implements ConsentRepo, ProfileRepo, DeviceKeyRepo {
       status: 'ok',
       policyVersion: row.policy_version,
       grantedAt: iso(row.granted_at),
-      starterGranted: row.starter_granted,
       aiEnabled: row.ai_enabled,
     };
   }
@@ -190,8 +191,6 @@ export class SupabaseRepo implements ConsentRepo, ProfileRepo, DeviceKeyRepo {
         p_min_policy_version: this.minPolicyVersion,
         p_age_confirmed: patch.ageConfirmed ?? null,
         p_ui_lang: patch.uiLang ?? null,
-        p_i_am: patch.iAm ?? null,
-        p_they_are: patch.theyAre ?? null,
         p_timezone: patch.timezone ?? null,
       },
       ProfileRow.nullable(),
@@ -385,6 +384,19 @@ export class SupabaseReplyRepo implements ReplyRepo {
       { p_user_id: userId, p_request_id: requestId, p_card_index: cardIndex, p_type: type },
       z.enum(['ok', 'duplicate', 'not_found']),
     );
+  }
+
+  async recordCrisis(lang: LangHint, source: RequestSource): Promise<void> {
+    const { error } = await this.db.rpc('increment_crisis_daily', {
+      p_lang: lang,
+      p_source: source,
+    });
+    if (error) {
+      throw new DbError(
+        'increment_crisis_daily',
+        typeof error.code === 'string' ? error.code : null,
+      );
+    }
   }
 
   async quotaState(userId: string): Promise<QuotaSnapshot | null> {

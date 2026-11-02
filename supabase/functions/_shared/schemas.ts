@@ -126,8 +126,6 @@ export const ConsentGrantResponse = z.object({
   aiEnabled: z.boolean(),
   policyVersion: PolicyVersion,
   grantedAt: IsoDateTime,
-  /** True only on the call that added the 10 starter replies (first grant ever). */
-  starterCreditsGranted: z.boolean(),
 });
 export type ConsentGrantResponse = z.infer<typeof ConsentGrantResponse>;
 export const ConsentWithdrawResponse = z.object({
@@ -147,13 +145,15 @@ export type ConsentResponse = z.infer<typeof ConsentResponse>;
 // ---------------------------------------------------------------------------------------------
 // profile: GET, PATCH (Supabase JWT)
 
-/** At least one field. Age: the client only says "confirmed"; the server records the time. */
+/**
+ * At least one field. Age: the client only says "confirmed"; the server records the time.
+ * "I am" / "They are" are not part of the profile: they stay on the phone and are sent with each
+ * ReplyRequest (never stored).
+ */
 export const ProfilePatchRequest = z
   .strictObject({
     ageConfirmed: z.literal(true).optional(),
     uiLang: Lang.optional(),
-    iAm: Gender.optional(),
-    theyAre: Gender.optional(),
     timezone: TimeZoneName.optional(),
   })
   .refine((patch) => Object.values(patch).some((value) => value !== undefined), {
@@ -164,8 +164,6 @@ export type ProfilePatchRequest = z.infer<typeof ProfilePatchRequest>;
 export const ProfileResponse = z.object({
   id: z.uuid(),
   uiLang: Lang,
-  iAm: Gender.nullable(),
-  theyAre: Gender.nullable(),
   ageConfirmedAt: IsoDateTime.nullable(),
   timezone: z.string(),
   /** Age confirmed and the latest AI consent not withdrawn (mirror into v1.aiEnabled). */

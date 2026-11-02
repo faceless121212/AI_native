@@ -31,7 +31,7 @@ create temp table cost_before as select * from public.daily_cost;
 
 select tests.as_service();
 select is(public.run_retention('2026-12-31T12:00:00Z'),
-  '{"ai_requests": 3, "usage_days": 1, "reply_events": 1, "support_messages": 1}'::jsonb,
+  '{"ai_requests": 3, "usage_days": 1, "reply_events": 1, "support_messages": 1, "credit_rows_folded": 0, "inactive_accounts": 0}'::jsonb,
   'run_retention reports what it removed');
 reset role;
 
@@ -61,7 +61,7 @@ select set_eq('select body from public.support_messages', $$ values ('recent') $
 -- Idempotent: a second run removes nothing and changes no totals.
 select tests.as_service();
 select is(public.run_retention('2026-12-31T12:00:00Z'),
-  '{"ai_requests": 0, "usage_days": 0, "reply_events": 0, "support_messages": 0}'::jsonb,
+  '{"ai_requests": 0, "usage_days": 0, "reply_events": 0, "support_messages": 0, "credit_rows_folded": 0, "inactive_accounts": 0}'::jsonb,
   'a second run on the same day removes nothing');
 reset role;
 select is((select sum(requests)::int from public.ai_requests_daily), 3, 'aggregate unchanged by the second run');

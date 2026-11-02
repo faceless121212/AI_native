@@ -92,7 +92,7 @@ Deno.test({
     res = await deviceKey(jsonRequest('POST', { platform: 'ios' }, bearer(token)));
     assertEquals([res.status, (await res.json()).error], [403, 'ai_off']);
 
-    // Grant twice: starter credits once.
+    // Starter credits came with sign-up; granting (three times, concurrently) adds none.
     const grants = await Promise.all(
       [1, 2, 3].map(async () =>
         ConsentResponse.parse(
@@ -108,7 +108,7 @@ Deno.test({
         ),
       ),
     );
-    assertEquals(grants.filter((g) => g.action === 'grant' && g.starterCreditsGranted).length, 1);
+    assertEquals(grants.filter((g) => g.action === 'grant' && g.aiEnabled).length, 3);
     const { data: credits } = await db
       .from('credit_ledger')
       .select('delta, reason')

@@ -1,4 +1,5 @@
--- consents + starter credits: gate, idempotent grant, starter credits exactly once, withdraw
+-- consents + starter credits: gate, idempotent grant, starter credits exactly once (granted at
+-- sign-up, never by consent), withdraw
 -- revokes device keys, owner-only reads.
 begin;
 \ir _helpers.psql
@@ -13,7 +14,8 @@ select tests.as_service();
 select is(public.grant_ai_consent(:'user_a_a', '2026-11-01', '2026-11-01') ->> 'status', 'age_required',
   'grant without age confirmation → age_required');
 select is((select count(*)::int from public.consents where user_id = :'user_a_a'), 0, 'no consent row stored');
-select is((select count(*)::int from public.credit_ledger where user_id = :'user_a_a'), 0, 'no starter credits');
+select results_eq(format($$ select delta, reason from public.credit_ledger where user_id = %L $$, :'user_a_a'),
+  $$ values (10, 'starter'::text) $$, 'starter credits come with sign-up, not consent');
 select is(public.grant_ai_consent(gen_random_uuid(), '2026-11-01', '2026-11-01') ->> 'status', 'no_profile', 'unknown user → no_profile');
 
 select public.patch_profile(:'user_a_a', p_min_policy_version => '2026-11-01', p_age_confirmed => true) is not null as ok \gset
@@ -22,14 +24,14 @@ select is(public.ai_allowed(:'user_a_a', '2026-11-01'), false, 'age alone does n
 -- First grant
 select public.grant_ai_consent(:'user_a_a', '2026-11-01', '2026-11-01') as g1 \gset
 select is(:'g1'::jsonb ->> 'status', 'ok', 'first grant ok');
-select is((:'g1'::jsonb ->> 'starter_granted')::boolean, true, 'first grant adds starter credits');
+select ok(not (:'g1'::jsonb ? 'starter_granted'), 'consent no longer reports or grants starter credits');
 select is(public.ai_allowed(:'user_a_a', '2026-11-01'), true, 'AI allowed after age + consent');
 select results_eq(
   format($$ select delta, reason from public.credit_ledger where user_id = %L $$, :'user_a_a'),
   $$ values (10, 'starter'::text) $$, 'ledger has exactly +10 starter');
 
 -- Re-grant same version: idempotent
-select is((public.grant_ai_consent(:'user_a_a', '2026-11-01', '2026-11-01') ->> 'starter_granted')::boolean, false,
+select is((select (public.grant_ai_consent(:'user_a_a', '2026-11-01', '2026-11-01') ->> 'status') || ':' || (select count(*) from public.credit_ledger where user_id = :'user_a_a')), 'ok:1',
   'second grant adds no credits');
 select is((select count(*)::int from public.consents where user_id = :'user_a_a'), 1,
   'same policy version → no new consent row');
@@ -50,7 +52,7 @@ select is((select count(*)::int from public.device_keys where user_id = :'user_a
 select is(public.ai_allowed(:'user_a_a', '2026-11-01'), false, 'AI off after withdraw');
 
 -- Regrant after withdraw: AI back on, credits still only once
-select is((public.grant_ai_consent(:'user_a_a', '2026-12-01', '2026-11-01') ->> 'starter_granted')::boolean, false,
+select is((select (public.grant_ai_consent(:'user_a_a', '2026-12-01', '2026-11-01') ->> 'status') || ':' || (select count(*) from public.credit_ledger where user_id = :'user_a_a')), 'ok:1',
   'regrant after withdraw adds no credits');
 select is(public.ai_allowed(:'user_a_a', '2026-11-01'), true, 'AI on again after regrant');
 select is((select sum(delta)::int from public.credit_ledger where user_id = :'user_a_a' and reason = 'starter'), 10,

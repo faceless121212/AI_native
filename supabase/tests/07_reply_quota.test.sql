@@ -16,8 +16,8 @@ as $$
     p_closeness => 3, p_formality => 'casual', p_flirt => 'off', p_now => p_now);
 $$;
 
--- An age-confirmed, consented user in p_tz. p_starter: grant the 10 starter credits (via the real
--- consent function) or not (consent row only, so the daily allowance is used straight away).
+-- An age-confirmed, consented user in p_tz. p_starter: keep the 10 starter credits from sign-up, or
+-- mark them used (so the daily allowance is used straight away).
 create function tests.ai_user(p_tz text, p_starter boolean)
 returns uuid
 language plpgsql
@@ -30,6 +30,8 @@ begin
     perform public.grant_ai_consent(v_id, '2026-11-01', '2026-11-01');
   else
     insert into public.consents (user_id, kind, policy_version) values (v_id, 'ai_sharing', '2026-11-01');
+    -- Starter credits come with sign-up; this user has used them all (as a 90-day rollup would show).
+    insert into public.credit_ledger (user_id, delta, reason, bucket) values (v_id, -10, 'rollup', 'starter');
   end if;
   return v_id;
 end;

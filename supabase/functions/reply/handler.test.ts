@@ -1,7 +1,10 @@
 import { assert, assertEquals, assertFalse, assertMatch } from 'jsr:@std/assert@1';
 import { FakeProvider } from '../_shared/llm/fake.ts';
 import { DOWN_FOR_MS } from '../_shared/llm/health.ts';
-import { FIRST_TOKEN_TIMEOUT_MS } from '../_shared/llm/runner.ts';
+import {
+  FIRST_TOKEN_TIMEOUT_MS,
+  LAST_PROVIDER_FIRST_TOKEN_TIMEOUT_MS,
+} from '../_shared/llm/runner.ts';
 import { RateLimiter } from '../_shared/rate-limit.ts';
 import { device, jsonRequest } from '../_shared/testing/helpers.ts';
 import {
@@ -533,7 +536,7 @@ Deno.test('reply: a card over 300 characters is dropped (2 left, no retry)', asy
 });
 
 Deno.test(
-  'reply: model refusal (META refused) → meta refused, no cards, no retry, not refunded',
+  'reply: model refusal (META refused) → meta refused, no cards, no retry, refunded',
   async () => {
     const fake = new FakeProvider({ script: ['refused'] });
     const { store, handler } = setupReply({ providers: [fake] });
@@ -542,12 +545,11 @@ Deno.test(
     const events = await readEvents(res);
     assertEquals(names(events), ['meta', 'quota', 'done']);
     assertEquals(events[0]!.data.refused, true);
+    assertEquals(events[1]!.data.leftToday, 13, 'refund shown in the quota event');
     assertEquals(fake.calls.length, 1);
     const row = store.requests.get(res.headers.get('x-request-id')!)!;
-    assertEquals(
-      [row.status, row.refundedAt, row.finish!.safetyFlags],
-      ['refused', null, ['refused']],
-    );
+    assertEquals([row.status, row.finish!.safetyFlags], ['refused', ['refused']]);
+    assert(row.refundedAt !== null, 'a refusal with no card shown is refunded (user decision)');
   },
 );
 
@@ -919,5 +921,62 @@ Deno.test(
       ),
     );
     assertEquals(await r.json(), { recorded: true }, 'inserted card of a cancelled request counts');
+  },
+);
+
+Deno.test('reply: first-token limits are 2.5 s with a fallback and 5 s without one', () => {
+  assertEquals([FIRST_TOKEN_TIMEOUT_MS, LAST_PROVIDER_FIRST_TOKEN_TIMEOUT_MS], [2_500, 5_000]);
+});
+
+Deno.test(
+  'reply: provider refusal before any card is refunded; after a card it is not',
+  async () => {
+    // Before a card (META-only refusal): refunded.
+    const a = setupReply({ providers: [new FakeProvider({ script: ['refused'] })] });
+    const ua = await aiUser(a.store);
+    const ra = await a.handler(replyRequest(ua.token));
+    await readEvents(ra);
+    assert(a.store.requests.get(ra.headers.get('x-request-id')!)!.refundedAt !== null);
+
+    const b = setupReply({
+      providers: [new FakeProvider({ name: 'anthropic', script: ['refusal'] })],
+    });
+    const ub = await aiUser(b.store);
+    const rb = await b.handler(replyRequest(ub.token));
+    const events = await readEvents(rb);
+    assertEquals(names(events), ['card', 'meta', 'quota', 'done']);
+    const row = b.store.requests.get(rb.headers.get('x-request-id')!)!;
+    assertEquals([row.status, row.refundedAt], ['refused', null], 'a card was shown: not refunded');
+  },
+);
+
+Deno.test(
+  'reply: crisis → one anonymous crisis_daily count (model or backstop), nothing per user',
+  async () => {
+    // Model says crisis.
+    const m = setupReply({ providers: [new FakeProvider({ script: ['crisis'] })] });
+    const um = await aiUser(m.store);
+    await readEvents(await m.handler(replyRequest(um.token, { source: 'keyboard' })));
+    assertEquals([...m.store.crisisDaily.values()], [1]);
+    const [key] = [...m.store.crisisDaily.keys()];
+    assertMatch(key!, /^\d{4}-\d{2}-\d{2}\|de\|keyboard$/);
+    assertEquals(key!.includes(um.userId), false);
+    // Backstop (provider error, crisis phrase in the input).
+    const b = setupReply({ providers: [new FakeProvider({ script: ['error'] })] });
+    const ub = await aiUser(b.store);
+    await readEvents(
+      await b.handler(
+        replyRequest(ub.token, { text: 'I want to die', langHint: 'en', source: 'app' }),
+      ),
+    );
+    assertEquals(
+      [...b.store.crisisDaily].map(([k, v]) => [k.slice(11), v]),
+      [['en|app', 1]],
+    );
+    // A normal answer counts nothing.
+    const n = setupReply();
+    const un = await aiUser(n.store);
+    await readEvents(await n.handler(replyRequest(un.token)));
+    assertEquals(n.store.crisisDaily.size, 0);
   },
 );
