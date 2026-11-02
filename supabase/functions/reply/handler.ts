@@ -183,6 +183,7 @@ export async function handleReply(req: Request, deps: ReplyDeps): Promise<Respon
       quota: consumed.quota,
       flags,
       crisisBackstop: looksLikeCrisis(redacted.text),
+      inputChars: Array.from(redacted.text).length,
       source: body.source,
       startedAt,
     },

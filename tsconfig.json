@@ -19,6 +19,9 @@
     "supabase/functions",
     "targets",
     "modules/*/android",
-    "modules/*/ios"
+    "modules/*/ios",
+    "evals",
+    "scripts/run-evals.ts",
+    "scripts/export-review-pack.ts"
   ]
 }

@@ -5,6 +5,7 @@ import {
   FIRST_TOKEN_TIMEOUT_MS,
   LAST_PROVIDER_FIRST_TOKEN_TIMEOUT_MS,
 } from '../_shared/llm/runner.ts';
+import { PROMPT_VERSION } from '../_shared/prompts/index.ts';
 import { RateLimiter } from '../_shared/rate-limit.ts';
 import { device, jsonRequest } from '../_shared/testing/helpers.ts';
 import {
@@ -60,7 +61,7 @@ Deno.test(
       [finish.provider, finish.model, finish.lang, finish.cards],
       ['fake', 'fake-v1', 'de', 3],
     );
-    assertEquals(finish.promptVersion, 'v1-placeholder');
+    assertEquals(finish.promptVersion, PROMPT_VERSION);
     assert(finish.tokensIn > 0 && finish.tokensOut > 0);
     assertEquals(finish.costMicroEur, 0);
     assert(finish.msFirst !== null && finish.msFirst <= finish.msTotal);

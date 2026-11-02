@@ -269,10 +269,14 @@ export function cleanCardText(raw: string): string {
   return text;
 }
 
-export function postCheckCard(raw: string, expectedLang: Lang | null): PostCheckResult {
+export function postCheckCard(
+  raw: string,
+  expectedLang: Lang | null,
+  maxChars: number = CARD_TEXT_MAX_CHARS,
+): PostCheckResult {
   const text = cleanCardText(raw);
   if (text === '') return { ok: false, reason: 'empty' };
-  if (Array.from(text).length > CARD_TEXT_MAX_CHARS) return { ok: false, reason: 'too_long' };
+  if (Array.from(text).length > maxChars) return { ok: false, reason: 'too_long' };
   const normalized = normalize(text);
   if (EXPLICIT?.test(normalized)) return { ok: false, reason: 'explicit' };
   if (BANNED?.test(normalized)) return { ok: false, reason: 'banned' };

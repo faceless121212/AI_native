@@ -1,0 +1,50 @@
+{"lang": "en", "group": "care", "relationship": "friend", "closeness": 4, "formality": "casual", "text": "Had the worst day, my landlord is selling the flat and I have to move out by March"}
+{"lang": "en", "group": "care", "relationship": "partner", "closeness": 5, "formality": "casual", "text": "You seemed really quiet at dinner tonight. Everything ok?"}
+{"lang": "en", "group": "care", "relationship": "family", "closeness": 5, "formality": "casual", "text": "Grandma's back home from hospital, she's asking when you'll visit"}
+{"lang": "en", "group": "flirt", "relationship": "match", "closeness": 2, "formality": "casual", "text": "Ok confession: I've watched Bake Off three times all the way through"}
+{"lang": "en", "group": "flirt", "relationship": "partner", "closeness": 5, "formality": "casual", "text": "Guess who just booked a table at that Italian place you liked?"}
+{"lang": "en", "group": "play", "relationship": "friend", "closeness": 4, "formality": "casual", "text": "Pub quiz on Thursday? We need a sports person, which neither of us is"}
+{"lang": "en", "group": "clear", "relationship": "colleague", "closeness": 2, "formality": "formal", "text": "Could you join the 8am call with the Berlin team tomorrow?"}
+{"lang": "en", "group": "clear", "relationship": "colleague", "closeness": 3, "formality": "formal", "text": "Can you review my slides before Friday? No rush."}
+{"lang": "en", "group": "clear", "relationship": "friend", "closeness": 3, "formality": "casual", "text": "Can I borrow your car this weekend? Mine's in the garage"}
+{"lang": "en", "group": "play", "relationship": "colleague", "closeness": 3, "formality": "casual", "text": "The coffee machine is broken again. Third time this month."}
+{"lang": "de", "group": "care", "relationship": "friend", "closeness": 4, "formality": "casual", "text": "Mein Opa ist gestern gestorben. Ich weiß gar nicht, was ich sagen soll."}
+{"lang": "de", "group": "care", "relationship": "partner", "closeness": 5, "formality": "casual", "text": "Ich hab das Gefühl, wir sehen uns gerade kaum noch."}
+{"lang": "de", "group": "care", "relationship": "family", "closeness": 4, "formality": "casual", "text": "Kannst du mich zurückrufen? Papa geht es nicht so gut, nichts Schlimmes, aber ich mach mir Sorgen."}
+{"lang": "de", "group": "flirt", "relationship": "match", "closeness": 2, "formality": "casual", "text": "Ich muss gestehen: Ich hab noch nie Ikea-Möbel ohne übrige Schrauben aufgebaut"}
+{"lang": "de", "group": "flirt", "relationship": "partner", "closeness": 5, "formality": "casual", "text": "Rate mal, wer heute Abend kocht? Kleiner Tipp: nicht du."}
+{"lang": "de", "group": "play", "relationship": "friend", "closeness": 3, "formality": "casual", "text": "Kommst du am Samstag mit zum Flohmarkt? Ich such immer noch eine Lampe"}
+{"lang": "de", "group": "clear", "relationship": "colleague", "closeness": 2, "formality": "formal", "text": "Könnten Sie mir bis morgen früh die Zahlen fürs Quartal schicken?"}
+{"lang": "de", "group": "clear", "relationship": "colleague", "closeness": 3, "formality": "formal", "text": "Hätten Sie Lust, im Projektteam für die neue Website mitzumachen?"}
+{"lang": "de", "group": "clear", "relationship": "friend", "closeness": 4, "formality": "casual", "text": "Kannst du mir 200 Euro leihen? Ich zahl's dir nächsten Monat zurück."}
+{"lang": "de", "group": "play", "relationship": "colleague", "closeness": 3, "formality": "casual", "text": "Die Kaffeemaschine ist schon wieder kaputt. Zum dritten Mal diesen Monat."}
+{"lang": "fr", "group": "care", "relationship": "friend", "closeness": 4, "formality": "casual", "text": "Je me suis fait virer ce matin, je suis sous le choc"}
+{"lang": "fr", "group": "care", "relationship": "partner", "closeness": 5, "formality": "casual", "text": "J'ai l'impression que tu m'écoutes plus trop en ce moment"}
+{"lang": "fr", "group": "care", "relationship": "family", "closeness": 5, "formality": "casual", "text": "Ton frère a eu son bac ! Tu l'appelles ce soir ?"}
+{"lang": "fr", "group": "flirt", "relationship": "match", "closeness": 2, "formality": "casual", "text": "Avoue, toi aussi tu mets de l'ananas sur ta pizza ?"}
+{"lang": "fr", "group": "flirt", "relationship": "partner", "closeness": 5, "formality": "casual", "text": "Devine qui a réservé un week-end à Lyon ?"}
+{"lang": "fr", "group": "play", "relationship": "friend", "closeness": 3, "formality": "casual", "text": "Soirée jeux de société vendredi, t'es partant ?"}
+{"lang": "fr", "group": "clear", "relationship": "colleague", "closeness": 2, "formality": "formal", "text": "Pourriez-vous animer la réunion de lundi à ma place ?"}
+{"lang": "fr", "group": "clear", "relationship": "colleague", "closeness": 3, "formality": "formal", "text": "Est-ce que vous pourriez relire mon rapport avant jeudi ?"}
+{"lang": "fr", "group": "clear", "relationship": "friend", "closeness": 4, "formality": "casual", "text": "Tu peux garder mon chat pendant deux semaines en août ?"}
+{"lang": "fr", "group": "play", "relationship": "family", "closeness": 4, "formality": "casual", "text": "Ton père a encore essayé de réparer le lave-vaisselle tout seul..."}
+{"lang": "es", "group": "care", "relationship": "friend", "closeness": 4, "formality": "casual", "text": "Me han suspendido el examen de conducir otra vez, qué rabia"}
+{"lang": "es", "group": "care", "relationship": "partner", "closeness": 5, "formality": "casual", "text": "Hoy te he notado un poco rara, ¿estás bien?"}
+{"lang": "es", "group": "care", "relationship": "family", "closeness": 5, "formality": "casual", "text": "La abuela pregunta si vienes en Navidad, te echa mucho de menos"}
+{"lang": "es", "group": "flirt", "relationship": "match", "closeness": 2, "formality": "casual", "text": "Tengo que confesarte algo: no sé cocinar nada que no sea pasta"}
+{"lang": "es", "group": "flirt", "relationship": "partner", "closeness": 5, "formality": "casual", "text": "¿Adivina quién ha comprado entradas para el concierto del sábado?"}
+{"lang": "es", "group": "play", "relationship": "friend", "closeness": 3, "formality": "casual", "text": "¿Te vienes al karaoke el viernes? Prometo no cantar Bisbal"}
+{"lang": "es", "group": "clear", "relationship": "colleague", "closeness": 2, "formality": "formal", "text": "¿Podría encargarse de la presentación del lunes?"}
+{"lang": "es", "group": "clear", "relationship": "colleague", "closeness": 3, "formality": "formal", "text": "¿Le importaría revisar el contrato antes del jueves?"}
+{"lang": "es", "group": "clear", "relationship": "friend", "closeness": 4, "formality": "casual", "text": "¿Me ayudas con la mudanza el domingo? Empezamos a las 8"}
+{"lang": "es", "group": "play", "relationship": "family", "closeness": 4, "formality": "casual", "text": "Tu padre ha intentado otra vez arreglar el lavavajillas él solo..."}
+{"lang": "it", "group": "care", "relationship": "friend", "closeness": 4, "formality": "casual", "text": "Mi hanno lasciato per messaggio, ci credi?"}
+{"lang": "it", "group": "care", "relationship": "partner", "closeness": 5, "formality": "casual", "text": "Stasera eri un po' strano, è successo qualcosa?"}
+{"lang": "it", "group": "care", "relationship": "family", "closeness": 5, "formality": "casual", "text": "La nonna chiede se vieni a pranzo domenica, ci tiene tanto"}
+{"lang": "it", "group": "flirt", "relationship": "match", "closeness": 2, "formality": "casual", "text": "Confessione: so tutte le canzoni di Sanremo degli ultimi dieci anni"}
+{"lang": "it", "group": "flirt", "relationship": "partner", "closeness": 5, "formality": "casual", "text": "Indovina chi ha prenotato una cena al mare per sabato?"}
+{"lang": "it", "group": "play", "relationship": "friend", "closeness": 3, "formality": "casual", "text": "Calcetto giovedì sera? Ci manca un portiere"}
+{"lang": "it", "group": "clear", "relationship": "colleague", "closeness": 2, "formality": "formal", "text": "Potrebbe presentare Lei il progetto al cliente venerdì?"}
+{"lang": "it", "group": "clear", "relationship": "colleague", "closeness": 3, "formality": "formal", "text": "Le andrebbe di partecipare al gruppo di lavoro sul nuovo sito?"}
+{"lang": "it", "group": "clear", "relationship": "friend", "closeness": 4, "formality": "casual", "text": "Mi presti 300 euro? Te li ridò il mese prossimo"}
+{"lang": "it", "group": "play", "relationship": "colleague", "closeness": 3, "formality": "casual", "text": "La macchinetta del caffè è di nuovo rotta. Terza volta questo mese."}

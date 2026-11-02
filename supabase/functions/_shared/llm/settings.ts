@@ -29,8 +29,12 @@ export const MISTRAL_SETTINGS: MistralSettings = {
   topP: 1,
 };
 
-/** Output token budget per request kind (3 cards ≤ 300 chars each + META; polish 2 cards). */
-export const MAX_OUTPUT_TOKENS = { reply: 600, polish: 600 } as const;
+/**
+ * Output token budget per request kind. Reply: META + 3 cards ≤ 300 chars each. Polish: META +
+ * 2 versions of a draft of up to 1,000 chars (German/French run ~3.5 chars per token, so two full
+ * versions need ~600 tokens): 900 so a long draft's rewrite is not cut off (Prompt 4).
+ */
+export const MAX_OUTPUT_TOKENS = { reply: 600, polish: 900 } as const;
 
 /** Default model when ANTHROPIC_MODEL is not set. */
 export const DEFAULT_ANTHROPIC_MODEL = 'claude-haiku-5-5';

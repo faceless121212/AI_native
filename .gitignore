@@ -53,3 +53,6 @@ local.properties
 
 # Deno treats the root package.json as config and would write a lockfile here
 /deno.lock
+
+# Native review packs contain generated replies; share them, don't commit them
+evals/review-packs/

@@ -50,7 +50,7 @@
     "typecheck": "tsc --noEmit",
     "test": "jest",
     "i18n:check": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/i18n-check.ts",
-    "evals": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/evals.stub.js",
+    "evals": "deno run --no-lock --config supabase/functions/deno.json --allow-env --allow-read --allow-write=evals/reports --allow-net scripts/run-evals.ts",
     "gen:keyboard-strings": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/gen-keyboard-strings.ts",
     "gen:tokens": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/export-tokens.ts",
     "gen": "npm run gen:tokens && npm run gen:keyboard-strings && npm run gen:reply-api && npm run gen:prompts",
@@ -61,7 +61,9 @@
     "check:functions": "deno check --no-lock --config supabase/functions/deno.json supabase/functions/*/index.ts",
     "try:reply": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/try-reply.ts",
     "gen:prompts": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/gen-prompts.ts",
-    "check:prompts": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/gen-prompts.ts --check"
+    "check:prompts": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/gen-prompts.ts --check",
+    "review-pack": "deno run --no-lock --config supabase/functions/deno.json --allow-env --allow-read --allow-write=evals/review-packs --allow-net scripts/export-review-pack.ts",
+    "test:evals": "deno test --no-lock --config supabase/functions/deno.json --allow-env --allow-read evals/lib"
   },
   "private": true,
   "engines": {

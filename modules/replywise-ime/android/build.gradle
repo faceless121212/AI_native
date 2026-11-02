@@ -11,6 +11,9 @@ buildscript {
     repositories {
       google()
       mavenCentral()
+      // Fallback mirror of Maven Central: CI has seen Central throttle or fail to resolve
+      // artifacts that exist (kotlin-stdlib, commons-io), which broke the standalone build.
+      gradlePluginPortal()
     }
     dependencies {
       classpath 'com.android.tools.build:gradle:9.2.1'
@@ -29,6 +32,7 @@ if (isStandalone) {
   repositories {
     google()
     mavenCentral()
+    gradlePluginPortal()
   }
 } else {
   apply plugin: 'expo-module-gradle-plugin'

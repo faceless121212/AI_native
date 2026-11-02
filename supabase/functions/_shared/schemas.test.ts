@@ -191,3 +191,16 @@ Deno.test('ErrorResponse', () => {
   ok(ErrorResponse, { error: 'unauthorized', message: 'x' });
   bad(ErrorResponse, { error: 'unauthorized' });
 });
+
+Deno.test(
+  'cardMaxChars: replies stay at 300, Polish scales with the draft within 300..1300',
+  async () => {
+    const { cardMaxChars, CARD_TEXT_MAX_CHARS, POLISH_CARD_TEXT_MAX_CHARS } =
+      await import('./schemas.ts');
+    const { assertEquals } = await import('jsr:@std/assert@1');
+    assertEquals(cardMaxChars('reply', 900), CARD_TEXT_MAX_CHARS);
+    assertEquals(cardMaxChars('polish', 50), CARD_TEXT_MAX_CHARS);
+    assertEquals(cardMaxChars('polish', 420), 546);
+    assertEquals(cardMaxChars('polish', 1000), POLISH_CARD_TEXT_MAX_CHARS);
+  },
+);
