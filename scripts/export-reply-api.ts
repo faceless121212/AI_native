@@ -26,6 +26,7 @@ const document = {
   constants: {
     REPLY_TEXT_MAX_CHARS: api.REPLY_TEXT_MAX_CHARS,
     CARD_TEXT_MAX_CHARS: api.CARD_TEXT_MAX_CHARS,
+    POLISH_CARD_TEXT_MAX_CHARS: api.POLISH_CARD_TEXT_MAX_CHARS,
     SSE_EVENT_NAMES: [...api.SSE_EVENT_NAMES],
   },
   requests: {

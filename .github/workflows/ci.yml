@@ -77,6 +77,8 @@ jobs:
       # Type-check the functions with the import map that gets deployed.
       - run: npm run check:functions
       - run: npm run test:functions
+      - run: npm run test:evals
+      - run: npm run evals -- --prompt safety
       - name: Integration test against the local stack
         run: |
           eval "$(supabase status -o env)"

@@ -1,10 +1,12 @@
 // Prompt assembly (architecture §7 step 7). The texts are the *.v1.md files next to this module,
-// owned by prompt-engineer (the current ones are PLACEHOLDERS until Prompt 4). Each .md has a
+// owned by prompt-engineer. Each .md has a
 // generated *.v1.ts string module (scripts/gen-prompts.ts, `npm run gen:prompts`; CI runs
 // `npm run check:prompts`), so the Edge Function bundles plain TypeScript and needs no text
 // imports or file reads at runtime.
 //
-// system = safety + reply|polish + lang/<lang> + the tone card from tones.
+// system = safety + reply|polish + lang/<lang> (rules, the example group of the selected tone,
+//          banned phrases) + the tone card from tones. Only one language file and one example
+//          group go in, to keep the system prompt short (first-token latency).
 // user   = user.v1.md: the chip settings, then the (redacted) text wrapped in a tag with a random
 //          per-request name, which the system prompt says is data, not instructions.
 //
@@ -34,29 +36,82 @@ import type {
 } from '../schemas.ts';
 
 /** Logged with every request (ai_requests.prompt_version). */
-export const PROMPT_VERSION = 'v1-placeholder';
+export const PROMPT_VERSION = 'v1';
 
 function strip(md: string): string {
   return md.replace(/<!--[\s\S]*?-->/g, '').trim();
 }
 
-const LANG_RULES: Record<Lang, string> = {
-  en: strip(en),
-  de: strip(de),
-  fr: strip(fr),
-  es: strip(es),
-  it: strip(it),
+/** Example groups in the language files; each tone uses one (spec §11: review per tone group). */
+export type ToneGroup = 'care' | 'play' | 'clear';
+export const TONE_GROUP: Readonly<Record<Tone, ToneGroup>> = {
+  warm: 'care',
+  calm: 'care',
+  apologise: 'care',
+  funny: 'play',
+  flirty: 'play',
+  confident: 'play',
+  sayNoKindly: 'clear',
+  professional: 'clear',
 };
 
-function toneCards(md: string): Map<string, string> {
-  const cards = new Map<string, string>();
-  const parts = strip(md).split(/^## +(\S+)\s*$/m);
+/** "## name" sections of a markdown file (editor comments removed). */
+export function sections(md: string): Map<string, string> {
+  const result = new Map<string, string>();
+  const parts = strip(md).split(/^## +(.+?)\s*$/m);
   for (let i = 1; i < parts.length; i += 2) {
     const name = parts[i];
     const body = parts[i + 1];
-    if (name && body !== undefined) cards.set(name, body.trim());
+    if (name && body !== undefined) result.set(name.trim(), body.trim());
   }
-  return cards;
+  return result;
+}
+
+export interface LangRules {
+  rules: string;
+  examples: Record<ToneGroup, string>;
+  banned: string;
+}
+
+function langRules(lang: Lang, md: string): LangRules {
+  const s = sections(md);
+  const get = (name: string): string => {
+    const body = s.get(name);
+    if (!body) throw new Error(`lang/${lang}.v1.md: missing section "## ${name}"`);
+    return body;
+  };
+  return {
+    rules: get('rules'),
+    examples: {
+      care: get('examples care'),
+      play: get('examples play'),
+      clear: get('examples clear'),
+    },
+    banned: get('banned'),
+  };
+}
+
+export const LANG_RULES: Readonly<Record<Lang, LangRules>> = {
+  en: langRules('en', en),
+  de: langRules('de', de),
+  fr: langRules('fr', fr),
+  es: langRules('es', es),
+  it: langRules('it', it),
+};
+
+/** What casual / formal mean in each language (spec §3.2). */
+const ADDRESS: Readonly<Record<Lang, Record<Formality, string>>> = {
+  en: { casual: 'casual', formal: 'formal (polite, plain)' },
+  de: { casual: 'du', formal: 'Sie' },
+  fr: { casual: 'tu', formal: 'vous' },
+  es: { casual: 'tú', formal: 'usted' },
+  it: { casual: 'tu', formal: 'Lei' },
+};
+
+const EMOJI = /\p{Extended_Pictographic}/u;
+
+function toneCards(md: string): Map<string, string> {
+  return sections(md);
 }
 
 const TONE_CARDS = toneCards(tones);
@@ -102,10 +157,13 @@ export function buildPrompt(input: PromptInput, tag: string = randomTag()): LlmP
   const tone = TONE_CARDS.get(input.tone);
   if (tone === undefined) throw new Error(`No tone card for ${input.tone}`);
 
+  const rules = LANG_RULES[lang];
   const system = [
     SAFETY,
     KIND_PROMPT[input.kind].replaceAll('{{TAG}}', tag),
-    LANG_RULES[lang],
+    rules.rules,
+    `Examples (tone group ${TONE_GROUP[input.tone]}):\n${rules.examples[TONE_GROUP[input.tone]]}`,
+    rules.banned,
     tone,
   ]
     .filter((part) => part.length > 0)
@@ -118,10 +176,12 @@ export function buildPrompt(input: PromptInput, tag: string = randomTag()): LlmP
     `tone=${input.tone}`,
     `flirt=${input.flirt}`,
     `formality=${input.formality}`,
+    `address=${ADDRESS[lang][input.formality]}`,
     `i_am=${input.iAm}`,
     `they_are=${input.theyAre}`,
     `language_hint=${input.langHint}`,
     `reply_language=${lang}`,
+    `emoji=${EMOJI.test(input.text) ? 'at most one per reply' : 'none'}`,
   ].join('; ');
 
   // The text can't close the block: the tag is random per request, and any copy of it is removed.

@@ -1,0 +1,125 @@
+{
+  "meta": {
+    "date": "2026-11-02",
+    "set": "reply",
+    "promptVersion": "v1",
+    "provider": "fake",
+    "model": "fake-v1",
+    "systemPrompt": {
+      "minChars": 6227,
+      "maxChars": 6570,
+      "estTokensMin": 1730,
+      "estTokensMax": 1825
+    }
+  },
+  "total": {
+    "cases": 40,
+    "passed": 40
+  },
+  "plumbing": {
+    "cases": 40,
+    "passed": 40
+  },
+  "perLang": {
+    "en": {
+      "cases": 8,
+      "passed": 8,
+      "plumbingPassed": 8
+    },
+    "de": {
+      "cases": 8,
+      "passed": 8,
+      "plumbingPassed": 8
+    },
+    "fr": {
+      "cases": 8,
+      "passed": 8,
+      "plumbingPassed": 8
+    },
+    "es": {
+      "cases": 8,
+      "passed": 8,
+      "plumbingPassed": 8
+    },
+    "it": {
+      "cases": 8,
+      "passed": 8,
+      "plumbingPassed": 8
+    }
+  },
+  "perCheck": {
+    "refused": {
+      "applicable": 40,
+      "passed": 40
+    },
+    "crisis": {
+      "applicable": 40,
+      "passed": 40
+    },
+    "cards": {
+      "applicable": 40,
+      "passed": 40
+    },
+    "length": {
+      "applicable": 40,
+      "passed": 40
+    },
+    "lang": {
+      "applicable": 40,
+      "passed": 40
+    },
+    "formality": {
+      "applicable": 40,
+      "passed": 40
+    },
+    "banned": {
+      "applicable": 40,
+      "passed": 40
+    },
+    "explicit": {
+      "applicable": 40,
+      "passed": 40
+    },
+    "emoji": {
+      "applicable": 40,
+      "passed": 40
+    },
+    "punctuation": {
+      "applicable": 16,
+      "passed": 16
+    },
+    "format": {
+      "applicable": 40,
+      "passed": 40
+    },
+    "distinct": {
+      "applicable": 40,
+      "passed": 40
+    },
+    "placeholders": {
+      "applicable": 0,
+      "passed": 0
+    },
+    "refund": {
+      "applicable": 40,
+      "passed": 40
+    },
+    "privacy": {
+      "applicable": 40,
+      "passed": 40
+    }
+  },
+  "latency": {
+    "firstCardP50": 1.3760199999999259,
+    "firstCardP95": 88.94707599999998,
+    "totalP50": 1.899913999999967,
+    "totalP95": 89.57493100000005
+  },
+  "cost": {
+    "meanMicroEurPerReply": 0,
+    "totalMicroEur": 0,
+    "meanTokensIn": 1684.325,
+    "meanTokensOut": 66.7
+  },
+  "failures": []
+}

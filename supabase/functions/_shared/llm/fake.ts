@@ -5,7 +5,8 @@
 // Scenarios simulate every pipeline path. Choose one per call either with `script` (tests) or by
 // putting a marker in the message text, e.g. "[[fake:slow]]" (scripts/try-reply.ts, evals):
 //   ok · error · error-after-card · slow · refusal · refused · crisis · malformed · explicit ·
-//   wronglang · long · truncated
+//   wronglang · long · truncated · metafirst (v1 prompt order: META line first) · crisis-nometa
+//   (supportive crisis lines but the META line is lost: exercises the crisis keyword backstop)
 import type { Lang, ReplyKind } from '../schemas.ts';
 import {
   emptyOutcome,
@@ -30,6 +31,8 @@ export const FAKE_SCENARIOS = [
   'wronglang',
   'long',
   'truncated',
+  'metafirst',
+  'crisis-nometa',
 ] as const;
 export type FakeScenario = (typeof FAKE_SCENARIOS)[number];
 
@@ -236,6 +239,13 @@ export function fakeOutput(scenario: FakeScenario, prompt: LlmPrompt): string {
       return `${cards.map((c, i) => (i === 0 ? `${c} ${'la '.repeat(120)}` : c)).join('\n')}\n${meta(lang)}\n`;
     case 'truncated':
       return `${cards[0]}\n${(cards[1] ?? '').slice(0, 12)}`;
+    case 'metafirst':
+      return `${meta(lang)}\n${cards.join('\n')}\n`;
+    case 'crisis-nometa':
+      return `${(kind === 'polish'
+        ? [`L|${CRISIS[lang][0]}`, `W|${CRISIS[lang][1]}`]
+        : CRISIS[lang].map((t, i) => `R${i + 1}|${t}`)
+      ).join('\n')}\n`;
     default:
       return `${cards.join('\n')}\n${meta(lang)}\n`;
   }

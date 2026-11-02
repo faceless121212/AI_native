@@ -27,6 +27,7 @@ import {
   type CardEvent,
   type ErrorCode,
   LANGS,
+  cardMaxChars,
   type Lang,
   type LangHint,
   type MetaEvent,
@@ -68,6 +69,8 @@ export interface PipelineInput {
    * early. Never stored, logged or sent to analytics.
    */
   crisisBackstop: boolean;
+  /** Code points of the (redacted) copied message or draft; sets the Polish card length limit. */
+  inputChars: number;
   /** For the anonymous crisis_daily count only. */
   source: RequestSource;
   /** Request arrival, for ms_first / ms_total. */
@@ -136,6 +139,7 @@ async function run(input: PipelineInput, deps: PipelineDeps, signal: AbortSignal
   const { prompt, requestId } = input;
   const kind = prompt.kind;
   const wanted = kind === 'reply' ? 3 : 2;
+  const maxCardChars = cardMaxChars(kind, input.inputChars);
   const flags = new Set(input.flags);
 
   const delivered = new Map<number, CardEvent>();
@@ -208,7 +212,7 @@ async function run(input: PipelineInput, deps: PipelineDeps, signal: AbortSignal
         variant = item.tag === 'L' ? 'light' : 'rewrite';
         if (delivered.has(index)) continue;
       }
-      const checked = postCheckCard(item.text, expectedLang());
+      const checked = postCheckCard(item.text, expectedLang(), maxCardChars);
       if (!checked.ok) {
         dropped++;
         flags.add('card_dropped');

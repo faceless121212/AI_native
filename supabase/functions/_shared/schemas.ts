@@ -247,6 +247,20 @@ export type ReplyFeedbackResponse = z.infer<typeof ReplyFeedbackResponse>;
 
 /** Max length of one card (architecture §7 step 10). */
 export const CARD_TEXT_MAX_CHARS = 300;
+/** Polish rewrites a draft of up to REPLY_TEXT_MAX_CHARS, so its cards may be longer than a reply. */
+export const POLISH_CARD_TEXT_MAX_CHARS = 1300;
+
+/**
+ * Longest card the post-check keeps: 300 code points for replies; for Polish, 30% more than the
+ * draft (a rewrite may grow a little), at least 300 and at most POLISH_CARD_TEXT_MAX_CHARS.
+ */
+export function cardMaxChars(kind: 'reply' | 'polish', inputChars: number): number {
+  if (kind === 'reply') return CARD_TEXT_MAX_CHARS;
+  return Math.min(
+    POLISH_CARD_TEXT_MAX_CHARS,
+    Math.max(CARD_TEXT_MAX_CHARS, Math.ceil(inputChars * 1.3)),
+  );
+}
 
 /** SSE `card`: one suggestion, sent as soon as its line is complete. Reply: index 0–2; Polish: 0 = light edit, 1 = rewrite. */
 export const CardEvent = z.object({
@@ -255,9 +269,9 @@ export const CardEvent = z.object({
   text: z
     .string()
     .min(1)
-    .max(CARD_TEXT_MAX_CHARS * 2)
+    .max(POLISH_CARD_TEXT_MAX_CHARS * 2)
     .describe(
-      'Server post-check keeps cards to CARD_TEXT_MAX_CHARS code points; label it "AI suggestion".',
+      'Server post-check keeps reply cards to CARD_TEXT_MAX_CHARS code points and Polish cards to cardMaxChars (≤ POLISH_CARD_TEXT_MAX_CHARS); label it "AI suggestion".',
     ),
 });
 export type CardEvent = z.infer<typeof CardEvent>;

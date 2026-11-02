@@ -11,6 +11,7 @@ import { withErrors } from '../_shared/http.ts';
 import { FakeProvider } from '../_shared/llm/fake.ts';
 import { CachedProviderHealth } from '../_shared/llm/health.ts';
 import { CURRENT_AI_POLICY_VERSION } from '../_shared/policy.ts';
+import { PROMPT_VERSION } from '../_shared/prompts/index.ts';
 import { RateLimiter } from '../_shared/rate-limit.ts';
 import {
   SupabaseProviderStatusStore,
@@ -150,7 +151,7 @@ Deno.test({
     for (const row of rows!) {
       assertEquals(
         [row.provider, row.model, row.prompt_version],
-        ['fake', 'fake-v1', 'v1-placeholder'],
+        ['fake', 'fake-v1', PROMPT_VERSION],
       );
       assert(row.ms_total >= 0 && row.tokens_in > 0);
       assertEquals(row.safety_flags, ['redacted']);

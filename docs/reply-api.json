@@ -5,6 +5,7 @@
   "constants": {
     "REPLY_TEXT_MAX_CHARS": 1000,
     "CARD_TEXT_MAX_CHARS": 300,
+    "POLISH_CARD_TEXT_MAX_CHARS": 1300,
     "SSE_EVENT_NAMES": ["card", "meta", "quota", "done", "error"]
   },
   "requests": {
@@ -319,8 +320,8 @@
         "text": {
           "type": "string",
           "minLength": 1,
-          "maxLength": 600,
-          "description": "Server post-check keeps cards to CARD_TEXT_MAX_CHARS code points; label it \"AI suggestion\"."
+          "maxLength": 2600,
+          "description": "Server post-check keeps reply cards to CARD_TEXT_MAX_CHARS code points and Polish cards to cardMaxChars (≤ POLISH_CARD_TEXT_MAX_CHARS); label it \"AI suggestion\"."
         }
       },
       "required": ["index", "variant", "text"],

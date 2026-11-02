@@ -22,6 +22,11 @@ Deno.test('redact: emails, phones in five countries, cards', () => {
 Deno.test('redact: IBANs in any case, compact or with spaces or dashes', () => {
   check([
     ['IBAN DE89 3704 0044 0532 0130 00 thanks', 'IBAN [iban] thanks'],
+    // The IBAN pattern must not swallow the start of the next word (found by the Prompt 4 evals).
+    ['Send to ES91 2100 0418 4502 0005 1332 today please', 'Send to [iban] today please'],
+    ['Send to ES9121000418450200051332 today please', 'Send to [iban] today please'],
+    ['IBAN IT60X0542811101000000123456 asap', 'IBAN [iban] asap'],
+    ['RIB FR14 2004 1010 0505 0001 3M02 606 demain stp', 'RIB [iban] demain stp'],
     ['iban de89 3704 0044 0532 0130 00', 'iban [iban]'],
     ['DE89-3704-0044-0532-0130-00', '[iban]'],
     ['GB82WEST12345698765432', '[iban]'],

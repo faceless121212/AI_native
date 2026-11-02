@@ -82,6 +82,16 @@ function ibanValid(raw: string): boolean {
   return remainder === 1;
 }
 
+/** End index of the longest prefix of `match` that is a valid IBAN, or null if there is none. */
+function validIbanPrefixEnd(match: string): number | null {
+  for (let end = match.length; end >= 15; end--) {
+    const candidate = match.slice(0, end);
+    if (/[ -]$/.test(candidate)) continue;
+    if (ibanValid(candidate)) return end;
+  }
+  return null;
+}
+
 function luhnValid(digits: string): boolean {
   let sum = 0;
   let double = false;
@@ -117,7 +127,12 @@ export function redact(input: string): RedactionResult {
   text = text.replace(BARE_USERINFO_RE, () => hit('link'));
   text = text.replace(BARE_URL_RE, (url) => (looksLikeCredentialUrl(url) ? hit('link') : url));
   text = text.replace(EMAIL_RE, () => hit('email'));
-  text = text.replace(IBAN_RE, (match) => (ibanValid(match) ? hit('iban') : match));
+  text = text.replace(IBAN_RE, (match) => {
+    // The pattern can run into the next word ("… 1332 today" captures "toda"), which breaks the
+    // checksum. Redact the longest prefix that is a valid IBAN and keep the rest of the match.
+    const end = validIbanPrefixEnd(match);
+    return end === null ? match : hit('iban') + match.slice(end);
+  });
 
   // Protect dates, times and year ranges from the number rules (private-use markers, no digits).
   const masked: string[] = [];

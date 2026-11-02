@@ -42,3 +42,11 @@ Deno.test('postcheck: one pair of wrapping quotes is stripped', () => {
   assertEquals(cleanCardText('« Merci ! »'), 'Merci !');
   assertEquals(cleanCardText('"Yes" she said "no"'), '"Yes" she said "no"');
 });
+
+Deno.test('postCheckCard honours a larger limit for long Polish rewrites', async () => {
+  const { postCheckCard } = await import('./postcheck.ts');
+  const { assertEquals } = await import('jsr:@std/assert@1');
+  const long = 'This is a fairly long sentence for a polished draft. '.repeat(8).trim();
+  assertEquals(postCheckCard(long, null).ok, false);
+  assertEquals(postCheckCard(long, null, 600).ok, true);
+});
