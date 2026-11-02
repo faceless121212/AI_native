@@ -5,17 +5,27 @@ import { z } from 'zod';
 import type { AuthDeps, DeviceKeyLookup } from './auth.ts';
 import type {
   ConsentRepo,
+  ConsumeInput,
+  ConsumeResult,
   CreateDeviceKeyResult,
   DeviceKeyRepo,
+  FinishInput,
   GrantConsentResult,
   ProfilePatch,
   ProfileRepo,
   ProfileState,
+  QuotaSnapshot,
+  RefundResult,
+  ReplyEventResult,
+  ReplyRepo,
   WithdrawConsentResult,
 } from './repo.ts';
 import { httpError } from './errors.ts';
+import type { ProviderStatusStore } from './llm/health.ts';
+import { PROVIDER_NAMES, type ProviderName } from './llm/provider.ts';
 import { AI_POLICY } from './policy.ts';
-import { Gender, Lang, type Platform } from './schemas.ts';
+import { REPLY_RATE_LIMIT } from './rate-limit.ts';
+import { Gender, Lang, Plan, type Platform, type ReplyFeedbackType } from './schemas.ts';
 
 /** Error carrying only the Postgres/PostgREST code (never the message, which can echo values). */
 export class DbError extends Error {
@@ -227,5 +237,173 @@ export class SupabaseRepo implements ConsentRepo, ProfileRepo, DeviceKeyRepo {
       { p_user_id: userId, p_key_id: keyId },
       z.number().int(),
     );
+  }
+}
+
+// ---------------------------------------------------------------------------------------------
+// reply, quota, provider status (Prompt 3)
+
+const QuotaFields = {
+  plan: Plan,
+  left_today: z.number().int().nullable(),
+  fair_use_left: z.number().int().nullable(),
+  reset_at: Timestamp,
+};
+
+const ConsumeRow = z.discriminatedUnion('status', [
+  z.object({ status: z.literal('ok'), request_id: z.string(), ...QuotaFields }),
+  z.object({ status: z.enum(['ai_off', 'no_profile']) }),
+  z.object({ status: z.literal('rate'), retry_after: z.number().int() }),
+  z.object({ status: z.enum(['quota_empty', 'fair_use']), ...QuotaFields }),
+]);
+
+const QuotaRow = z.discriminatedUnion('status', [
+  z.object({ status: z.literal('ok'), ...QuotaFields }),
+  z.object({ status: z.literal('no_profile') }),
+]);
+
+const RefundRow = z.discriminatedUnion('status', [
+  z.object({ status: z.literal('ok'), ...QuotaFields }).loose(),
+  z.object({ status: z.enum(['already_refunded', 'not_charged', 'not_found']) }).loose(),
+]);
+
+function toQuota(row: {
+  plan: Plan;
+  left_today: number | null;
+  fair_use_left: number | null;
+  reset_at: string;
+}): QuotaSnapshot {
+  return {
+    plan: row.plan,
+    leftToday: row.left_today === null ? null : Math.max(0, row.left_today),
+    fairUseLeft: row.fair_use_left === null ? null : Math.max(0, row.fair_use_left),
+    resetAt: iso(row.reset_at),
+  };
+}
+
+export class SupabaseReplyRepo implements ReplyRepo {
+  constructor(
+    private readonly db: SupabaseClient,
+    private readonly minPolicyVersion: string = AI_POLICY.minimum,
+    private readonly rateLimit: number = REPLY_RATE_LIMIT,
+  ) {}
+
+  async checkAiAllowed(userId: string): Promise<boolean> {
+    return await rpc(
+      this.db,
+      'ai_allowed',
+      { p_user_id: userId, p_min_policy_version: this.minPolicyVersion },
+      z.boolean(),
+    );
+  }
+
+  async consumeReply(userId: string, input: ConsumeInput): Promise<ConsumeResult> {
+    const row = await rpc(
+      this.db,
+      'consume_reply',
+      {
+        p_user_id: userId,
+        p_local_date: null,
+        p_min_policy_version: this.minPolicyVersion,
+        p_kind: input.kind,
+        p_source: input.source,
+        p_tone: input.tone,
+        p_relationship: input.relationship,
+        p_closeness: input.closeness,
+        p_formality: input.formality,
+        p_flirt: input.flirt,
+        p_safety_flags: input.safetyFlags,
+        p_rate_limit: this.rateLimit,
+      },
+      ConsumeRow,
+    );
+    switch (row.status) {
+      case 'ok':
+        return { status: 'ok', requestId: row.request_id, quota: toQuota(row) };
+      case 'rate':
+        return { status: 'rate', retryAfter: row.retry_after };
+      case 'quota_empty':
+      case 'fair_use':
+        return { status: row.status, quota: toQuota(row) };
+      default:
+        return { status: row.status };
+    }
+  }
+
+  async refundReply(requestId: string): Promise<RefundResult> {
+    const row = await rpc(this.db, 'refund_reply', { p_request_id: requestId }, RefundRow);
+    if (row.status === 'ok') return { status: 'ok', quota: toQuota(row) };
+    return { status: row.status };
+  }
+
+  async finishRequest(requestId: string, input: FinishInput): Promise<void> {
+    // 'crisis' is not a StoredSafetyFlag, so it can't reach this row (open privacy decision).
+    const { error } = await this.db
+      .from('ai_requests')
+      .update({
+        status: input.status,
+        lang: input.lang,
+        provider: input.provider,
+        model: input.model,
+        prompt_version: input.promptVersion,
+        tokens_in: input.tokensIn,
+        tokens_out: input.tokensOut,
+        cost_micro_eur: input.costMicroEur,
+        ms_first: input.msFirst,
+        ms_total: input.msTotal,
+        safety_flags: input.safetyFlags,
+        cards: input.cards,
+      })
+      .eq('id', requestId);
+    if (error)
+      throw new DbError('finish_ai_request', typeof error.code === 'string' ? error.code : null);
+  }
+
+  async recordReplyEvent(
+    userId: string,
+    requestId: string,
+    cardIndex: number,
+    type: ReplyFeedbackType,
+  ): Promise<ReplyEventResult> {
+    return await rpc(
+      this.db,
+      'record_reply_event',
+      { p_user_id: userId, p_request_id: requestId, p_card_index: cardIndex, p_type: type },
+      z.enum(['ok', 'duplicate', 'not_found']),
+    );
+  }
+
+  async quotaState(userId: string): Promise<QuotaSnapshot | null> {
+    const row = await rpc(this.db, 'quota_state', { p_user_id: userId }, QuotaRow);
+    return row.status === 'ok' ? toQuota(row) : null;
+  }
+}
+
+const StatusRows = z.array(
+  z.object({ provider: z.enum(PROVIDER_NAMES), down_until: Timestamp.nullable() }),
+);
+
+export class SupabaseProviderStatusStore implements ProviderStatusStore {
+  constructor(private readonly db: SupabaseClient) {}
+
+  async readStatus(): Promise<Map<ProviderName, Date | null>> {
+    const { data, error } = await this.db.from('provider_status').select('provider, down_until');
+    if (error)
+      throw new DbError('read_provider_status', typeof error.code === 'string' ? error.code : null);
+    const rows = StatusRows.safeParse(data);
+    if (!rows.success) throw new DbError('read_provider_status', 'unexpected_shape');
+    return new Map(
+      rows.data.map((r) => [r.provider, r.down_until === null ? null : new Date(r.down_until)]),
+    );
+  }
+
+  async recordFailure(name: ProviderName): Promise<Date | null> {
+    const until = await rpc(
+      this.db,
+      'record_provider_failure',
+      { p_provider: name },
+      Timestamp.nullable(),
+    );
+    return until === null ? null : new Date(until);
   }
 }

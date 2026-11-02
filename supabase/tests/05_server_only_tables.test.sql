@@ -60,7 +60,7 @@ select is((select count(*)::int from public.ai_requests), 2, 'service role reads
 select results_eq($$ select provider, requests, tokens_in, tokens_out, cost_micro_eur from public.daily_cost order by provider $$,
   $$ values ('bedrock'::text, 1::bigint, 120::bigint, 60::bigint, 450::bigint), ('mistral'::text, 1::bigint, 80::bigint, 40::bigint, 150::bigint) $$,
   'daily_cost sums requests, tokens and cost per provider');
-select set_eq('select provider from public.provider_status', $$ values ('bedrock'), ('mistral') $$, 'provider_status has bedrock and mistral');
+select set_eq('select provider from public.provider_status', $$ values ('bedrock'), ('mistral'), ('anthropic'), ('fake') $$, 'provider_status has a row per provider');
 reset role;
 
 -- Metadata-only constraints: no free text can be smuggled into ai_requests / reply_events.

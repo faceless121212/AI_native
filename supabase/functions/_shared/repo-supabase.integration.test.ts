@@ -2,7 +2,7 @@
 // the real handlers. Opt-in (needs `supabase start`):
 //   eval "$(supabase status -o env)" && SUPABASE_INTEGRATION=1 SUPABASE_URL=$API_URL \
 //     SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY SUPABASE_ANON_KEY=$ANON_KEY \
-//     deno test --allow-env --allow-net=127.0.0.1 supabase/functions
+//     deno test --no-lock --config supabase/functions/deno.json --allow-env --allow-net=127.0.0.1 supabase/functions
 import { assertEquals, assertMatch } from 'jsr:@std/assert@1';
 import { authenticate } from './auth.ts';
 import { createServiceClient } from './db.ts';

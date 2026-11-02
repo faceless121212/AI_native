@@ -57,7 +57,9 @@
     "gen:reply-api": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/export-reply-api.ts",
     "check:reply-api": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/export-reply-api.ts --check",
     "test:db": "supabase test db",
-    "test:functions": "deno test --no-lock --allow-env --allow-net=127.0.0.1 supabase/functions"
+    "test:functions": "deno test --no-lock --config supabase/functions/deno.json --allow-env --allow-net=127.0.0.1 supabase/functions",
+    "check:functions": "deno check --no-lock --config supabase/functions/deno.json supabase/functions/*/index.ts",
+    "try:reply": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/try-reply.ts"
   },
   "private": true,
   "engines": {

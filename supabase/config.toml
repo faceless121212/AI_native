@@ -430,3 +430,21 @@ import_map = "./functions/deno.json"
 [functions.device-key]
 verify_jwt = true
 import_map = "./functions/deno.json"
+
+# verify_jwt = false only where keyboards call with `Authorization: Device <key>` (or no auth for
+# health). These handlers authenticate every request themselves before anything else (JWT or
+# device key, _shared/auth.ts); the Deno tests check that requests without credentials get 401
+# and that no other function has verify_jwt = false (config.test.ts).
+# Clients invoke reply pinned to Frankfurt: header `x-region: eu-central-1`.
+[functions.reply]
+verify_jwt = false
+import_map = "./functions/deno.json"
+
+[functions.quota]
+verify_jwt = false
+import_map = "./functions/deno.json"
+
+# Public health check (Better Stack, app banner): returns status codes only.
+[functions.health]
+verify_jwt = false
+import_map = "./functions/deno.json"

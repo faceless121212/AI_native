@@ -1,7 +1,21 @@
 // Data access used by the handlers, as interfaces so handlers can be tested with an in-memory
 // fake (testing/memory-store.ts). The Supabase implementation is repo-supabase.ts; the SQL
 // functions it calls hold the real rules (supabase/migrations, tested with pgTAP).
-import type { Gender, Lang, Platform } from './schemas.ts';
+import type { ProviderName } from './llm/provider.ts';
+import type {
+  FlirtLevel,
+  Formality,
+  Gender,
+  Lang,
+  LangHint,
+  Plan,
+  Platform,
+  Relationship,
+  ReplyFeedbackType,
+  ReplyKind,
+  RequestSource,
+  Tone,
+} from './schemas.ts';
 
 export type GrantConsentResult =
   | {
@@ -59,4 +73,76 @@ export interface DeviceKeyRepo {
   ): Promise<CreateDeviceKeyResult>;
   /** keyId null = all of the user's keys. Only ever touches the user's own keys. */
   revokeDeviceKeys(userId: string, keyId: string | null): Promise<number>;
+}
+
+// ---------------------------------------------------------------------------------------------
+// reply, quota (Prompt 3)
+
+/** Safety flags that may be stored per request. 'crisis' is deliberately not storable: whether a
+ * per-user crisis signal may be kept at all is an open privacy decision (docs/processors.md). */
+export type StoredSafetyFlag = 'refused' | 'redacted' | 'card_dropped' | 'flirt_forced_off';
+
+export type RequestStatus = 'ok' | 'partial' | 'refused' | 'error' | 'cancelled';
+
+export interface QuotaSnapshot {
+  plan: Plan;
+  leftToday: number | null;
+  fairUseLeft: number | null;
+  resetAt: string;
+}
+
+export interface ConsumeInput {
+  kind: ReplyKind;
+  source: RequestSource;
+  tone: Tone;
+  relationship: Relationship;
+  closeness: number;
+  formality: Formality;
+  flirt: FlirtLevel;
+  safetyFlags: StoredSafetyFlag[];
+}
+
+export type ConsumeResult =
+  | { status: 'ok'; requestId: string; quota: QuotaSnapshot }
+  | { status: 'ai_off' | 'no_profile' }
+  | { status: 'rate'; retryAfter: number }
+  | { status: 'quota_empty' | 'fair_use'; quota: QuotaSnapshot };
+
+export type RefundResult =
+  | { status: 'ok'; quota: QuotaSnapshot | null }
+  | { status: 'already_refunded' | 'not_charged' | 'not_found' };
+
+export interface FinishInput {
+  status: RequestStatus;
+  lang: LangHint | null;
+  provider: ProviderName | null;
+  model: string | null;
+  promptVersion: string;
+  tokensIn: number;
+  tokensOut: number;
+  costMicroEur: number;
+  msFirst: number | null;
+  msTotal: number;
+  safetyFlags: StoredSafetyFlag[];
+  /** Card slots used (highest delivered index + 1); feedback is accepted for these indices. */
+  cards: number;
+}
+
+export type ReplyEventResult = 'ok' | 'duplicate' | 'not_found';
+
+export interface ReplyRepo {
+  /** Age confirmed and an active AI consent at the minimum policy version. */
+  checkAiAllowed(userId: string): Promise<boolean>;
+  /** Atomic gate + rate + quota charge; creates the ai_requests row on 'ok'. */
+  consumeReply(userId: string, input: ConsumeInput): Promise<ConsumeResult>;
+  refundReply(requestId: string): Promise<RefundResult>;
+  /** Final metadata for the request row. Never text. */
+  finishRequest(requestId: string, input: FinishInput): Promise<void>;
+  recordReplyEvent(
+    userId: string,
+    requestId: string,
+    cardIndex: number,
+    type: ReplyFeedbackType,
+  ): Promise<ReplyEventResult>;
+  quotaState(userId: string): Promise<QuotaSnapshot | null>;
 }

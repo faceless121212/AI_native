@@ -199,7 +199,8 @@ export const DeviceKeyRevokeResponse = z.object({ revoked: z.number().int().min(
 export type DeviceKeyRevokeResponse = z.infer<typeof DeviceKeyRevokeResponse>;
 
 // ---------------------------------------------------------------------------------------------
-// reply: POST, SSE response (Supabase JWT or device key). Implemented in Prompt 3.
+// reply: POST, SSE response (Supabase JWT or device key). POST reply/event for feedback.
+// quota: GET (Supabase JWT or device key) → QuotaResponse.
 
 /** Max input length in Unicode code points (spec §3.3: 1,000 characters; clients cut the rest). */
 export const REPLY_TEXT_MAX_CHARS = 1000;
@@ -242,6 +243,10 @@ export const ReplyFeedbackRequest = z.strictObject({
 });
 export type ReplyFeedbackRequest = z.infer<typeof ReplyFeedbackRequest>;
 
+/** `recorded` is false when the same (request, card, type) was already recorded. 404 for a request that isn't yours or has no such card. */
+export const ReplyFeedbackResponse = z.object({ recorded: z.boolean() });
+export type ReplyFeedbackResponse = z.infer<typeof ReplyFeedbackResponse>;
+
 /** Max length of one card (architecture §7 step 10). */
 export const CARD_TEXT_MAX_CHARS = 300;
 
@@ -259,7 +264,11 @@ export const CardEvent = z.object({
 });
 export type CardEvent = z.infer<typeof CardEvent>;
 
-/** SSE `meta`: from the model's META line. crisis → show the crisis card above the cards. */
+/**
+ * SSE `meta`: from the model's META line, sent once, as soon as it arrives (before or after the
+ * cards). crisis → show the crisis card above the cards. refused → show the neutral note and clear
+ * any cards already shown (a provider-side refusal can end the stream after a card).
+ */
 export const MetaEvent = z.object({
   requestId: z.uuid(),
   lang: LangHint,
@@ -289,6 +298,22 @@ export type DoneEvent = z.infer<typeof DoneEvent>;
 /** SSE `error`: the stream failed; same codes as HTTP errors. */
 export const ErrorEvent = z.object({ error: ErrorCode, message: z.string() });
 export type ErrorEvent = z.infer<typeof ErrorEvent>;
+
+// ---------------------------------------------------------------------------------------------
+// health: GET, no auth (Better Stack, app banner → v1.providerDown). 200 unless status is 'down' (503).
+
+export const HealthResponse = z.object({
+  status: z.enum(['ok', 'degraded', 'down']),
+  /** True when no configured AI provider is usable now. */
+  providerDown: z.boolean(),
+  /** Earliest time a down provider is retried; null when none is down. */
+  downUntil: IsoDateTime.nullable(),
+});
+export type HealthResponse = z.infer<typeof HealthResponse>;
+
+// ---------------------------------------------------------------------------------------------
+// SSE stream of `reply`. Order: card* and meta as they arrive, then quota, then done; or quota +
+// error when the request failed (no card sent: the reply was refunded).
 
 export const SSE_EVENT_NAMES = ['card', 'meta', 'quota', 'done', 'error'] as const;
 export type SseEventName = (typeof SSE_EVENT_NAMES)[number];

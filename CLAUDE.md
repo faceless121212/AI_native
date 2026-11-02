@@ -59,7 +59,7 @@ swift test --package-path targets/keyboard          # Swift core logic (layouts,
 supabase start                          # local backend (Docker)
 supabase db reset                       # re-run migrations + seed
 supabase test db                        # pgTAP tests
-deno test --allow-env --allow-net=127.0.0.1 supabase/functions   # Edge Function tests (fake LLM provider)
+npm run test:functions                  # Edge Function tests (fake LLM provider; deno test with supabase/functions/deno.json)
 npm run evals -- --prompt reply         # run the eval set against the local reply function
 maestro test e2e/                       # end-to-end app flows
 eas build --profile development         # dev client build

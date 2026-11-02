@@ -74,7 +74,7 @@ jobs:
         run: supabase start -x studio,imgproxy,vector,logflare,realtime,storage-api,edge-runtime,supavisor,mailpit,postgres-meta
       - run: supabase test db
       # Type-check the functions with the import map that gets deployed.
-      - run: deno check --config supabase/functions/deno.json supabase/functions/*/index.ts
+      - run: npm run check:functions
       - run: npm run test:functions
       - name: Integration test against the local stack
         run: |
