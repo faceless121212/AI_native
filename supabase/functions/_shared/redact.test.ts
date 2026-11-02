@@ -26,6 +26,11 @@ Deno.test('redact: IBANs in any case, compact or with spaces or dashes', () => {
     ['Send to ES91 2100 0418 4502 0005 1332 today please', 'Send to [iban] today please'],
     ['Send to ES9121000418450200051332 today please', 'Send to [iban] today please'],
     ['IBAN IT60X0542811101000000123456 asap', 'IBAN [iban] asap'],
+    // Country code + registered length: the IBAN is cut where its groups end, and nothing after it
+    // is swallowed ("ok", "today").
+    ['IBAN DE89 3704 0044 0532 0130 00 ok', 'IBAN [iban] ok'],
+    // An IBAN with a typo (bad checksum) still gives away the account, so it is redacted.
+    ['IBAN DE89 3704 0044 0532 0130 01 thanks', 'IBAN [iban] thanks'],
     ['RIB FR14 2004 1010 0505 0001 3M02 606 demain stp', 'RIB [iban] demain stp'],
     ['iban de89 3704 0044 0532 0130 00', 'iban [iban]'],
     ['DE89-3704-0044-0532-0130-00', '[iban]'],
@@ -76,7 +81,9 @@ Deno.test(
       'Room 101, bus 42, 1234 steps',
       'Look https://www.example.com/menu and www.example.com/about',
       'DEAL with it, ITALIA 2026 rocks',
-      'Not an IBAN: DE00 1234 5678 9012 3456 78',
+      // A German-length IBAN with a bad checksum is now redacted on purpose (a typo still reveals
+      // the account), so the leave-alone example is a reference with no registered country code.
+      'Not an IBAN: VJ00 1234 5678 9012 3456 78',
       'Not a card: 4111 1111 1111 1112',
       'pinned 2048 photos',
     ];
@@ -102,4 +109,18 @@ Deno.test('redact: counts by type, fixed placeholders, never returns removed val
     '[phone]',
   ]);
   assertEquals(redact('xy').text, 'xy', 'user text cannot forge our markers');
+});
+
+Deno.test('redact leaves IBAN-shaped references with unknown country codes or wrong lengths alone', () => {
+  for (const text of [
+    'order VJ09 8657 2093 4093 5657 5545 8698 ok',
+    'ref DN82 6911 7561 2094 9390 1364 8381',
+    'ticket AB12CD34EF56GH78 is ready',
+  ]) {
+    assertEquals(redact(text).counts.iban, 0, text);
+  }
+});
+
+Deno.test('redact treats a registered-length IBAN with a bad checksum as an IBAN (a typo still reveals the account)', () => {
+  assertEquals(redact('Not an IBAN: DE00 1234 5678 9012 3456 78').text, 'Not an IBAN: [iban]');
 });

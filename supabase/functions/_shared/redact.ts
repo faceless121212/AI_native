@@ -70,24 +70,37 @@ function looksLikeCredentialUrl(url: string): boolean {
   return false;
 }
 
-function ibanValid(raw: string): boolean {
-  const iban = raw.replace(/[ -]/g, '').toUpperCase();
-  if (iban.length < 15 || iban.length > 34) return false;
-  const rearranged = iban.slice(4) + iban.slice(0, 4);
-  let remainder = 0;
-  for (const ch of rearranged) {
-    const value = /\d/.test(ch) ? ch : String(ch.charCodeAt(0) - 55);
-    for (const digit of value) remainder = (remainder * 10 + Number(digit)) % 97;
-  }
-  return remainder === 1;
-}
+/**
+ * IBAN length per country (SWIFT IBAN registry; check current when adding countries). Only these
+ * countries are recognised, so order or booking references with other letters are left alone.
+ */
+const IBAN_LENGTHS: Record<string, number> = {
+  AD: 24, AE: 23, AL: 28, AT: 20, AZ: 28, BA: 20, BE: 16, BG: 22, BH: 22, BR: 29, BY: 28, CH: 21,
+  CR: 22, CY: 28, CZ: 24, DE: 22, DK: 18, DO: 28, EE: 20, EG: 29, ES: 24, FI: 18, FO: 18, FR: 27,
+  GB: 22, GE: 22, GI: 23, GL: 18, GR: 27, GT: 28, HR: 21, HU: 28, IE: 22, IL: 23, IQ: 23, IS: 26,
+  IT: 27, JO: 30, KW: 30, KZ: 20, LB: 28, LC: 32, LI: 21, LT: 20, LU: 20, LV: 21, LY: 25, MC: 27,
+  MD: 24, ME: 22, MK: 19, MR: 27, MT: 31, MU: 30, NL: 18, NO: 15, PK: 24, PL: 28, PS: 29, PT: 25,
+  QA: 29, RO: 24, RS: 22, SA: 24, SC: 31, SE: 24, SI: 19, SK: 24, SM: 27, SV: 28, TL: 23, TN: 24,
+  TR: 26, UA: 29, VA: 22, VG: 24, XK: 20,
+};
 
-/** End index of the longest prefix of `match` that is a valid IBAN, or null if there is none. */
-function validIbanPrefixEnd(match: string): number | null {
-  for (let end = match.length; end >= 15; end--) {
-    const candidate = match.slice(0, end);
-    if (/[ -]$/.test(candidate)) continue;
-    if (ibanValid(candidate)) return end;
+/**
+ * End index of the IBAN at the start of `match`, or null. The regex can run into the next word
+ * ("… 1332 today" captures "toda"), so the IBAN is cut at its country's registered length, and
+ * only where a group ends (end of match, or before a space or dash). The checksum is not required:
+ * an IBAN with a typo still gives away the account, so it is redacted too.
+ */
+function ibanEnd(match: string): number | null {
+  const length = IBAN_LENGTHS[match.slice(0, 2).toUpperCase()];
+  if (!length) return null;
+  let chars = 0;
+  for (let i = 0; i < match.length; i++) {
+    if (/[ -]/.test(match[i] ?? '')) continue;
+    chars++;
+    if (chars === length) {
+      const end = i + 1;
+      return end === match.length || /[ -]/.test(match[end] ?? '') ? end : null;
+    }
   }
   return null;
 }
@@ -128,9 +141,7 @@ export function redact(input: string): RedactionResult {
   text = text.replace(BARE_URL_RE, (url) => (looksLikeCredentialUrl(url) ? hit('link') : url));
   text = text.replace(EMAIL_RE, () => hit('email'));
   text = text.replace(IBAN_RE, (match) => {
-    // The pattern can run into the next word ("… 1332 today" captures "toda"), which breaks the
-    // checksum. Redact the longest prefix that is a valid IBAN and keep the rest of the match.
-    const end = validIbanPrefixEnd(match);
+    const end = ibanEnd(match);
     return end === null ? match : hit('iban') + match.slice(end);
   });
 
