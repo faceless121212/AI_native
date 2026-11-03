@@ -4,6 +4,10 @@
 // One item per line. Text arrives in arbitrary chunks, so lines are buffered until their newline.
 // Lines in any order are accepted (META may come first). Anything else is reported as invalid
 // (never with its content).
+// Line breaks inside a card: the model writes them as the two characters `\n` and a literal
+// backslash as `\\` (polish prompt). Polish cards (L, W) get real newlines back; reply cards (R*)
+// stay single-line, so a `\n` there becomes a space. Unescaping runs on the whole line after it
+// is complete, so an escape split across chunks is handled like any other text.
 import { z } from 'zod';
 import { LangHint, type ReplyKind } from '../schemas.ts';
 
@@ -34,6 +38,33 @@ const TAGS: Record<ReplyKind, readonly CardTag[]> = {
   polish: ['L', 'W'],
 };
 
+/**
+ * Undoes the card escapes, scanning left to right so `\\n` is a backslash followed by "n".
+ * 'keep' (polish): `\n` → newline, `\\` → `\`, spaces before a newline dropped.
+ * 'flatten' (reply): `\n` → one space (with the spaces around it); `\\` kept as written (the
+ * reply prompt defines no escapes). Any other backslash is kept as written in both modes.
+ */
+export function unescapeCardText(text: string, mode: 'keep' | 'flatten'): string {
+  let out = '';
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    const next = text[i + 1];
+    if (c === '\\' && next === 'n') {
+      out = out.replace(/[ \t]+$/, '');
+      if (mode === 'keep') out += '\n';
+      else {
+        out += ' ';
+        while (text[i + 2] === ' ' || text[i + 2] === '\t') i++;
+      }
+      i++;
+    } else if (c === '\\' && next === '\\') {
+      out += mode === 'keep' ? '\\' : '\\\\';
+      i++;
+    } else out += c;
+  }
+  return out.trim();
+}
+
 export function parseLine(line: string, kind: ReplyKind): ParsedItem | null {
   if (line.trim() === '') return null;
   const match = LINE.exec(line);
@@ -53,8 +84,9 @@ export function parseLine(line: string, kind: ReplyKind): ParsedItem | null {
       : { type: 'invalid', reason: 'bad_meta' };
   }
   if (!TAGS[kind].includes(tag)) return { type: 'invalid', reason: 'wrong_kind' };
-  if (rest === '') return { type: 'invalid', reason: 'empty' };
-  return { type: 'card', tag, text: rest };
+  const text = unescapeCardText(rest, kind === 'polish' ? 'keep' : 'flatten');
+  if (text === '') return { type: 'invalid', reason: 'empty' };
+  return { type: 'card', tag, text };
 }
 
 export class LineParser {

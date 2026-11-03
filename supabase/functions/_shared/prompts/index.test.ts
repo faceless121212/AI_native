@@ -143,6 +143,18 @@ Deno.test('prompts: polish prompt, every tone has a card, other language → UI 
   assertFalse(randomTag() === randomTag());
 });
 
+Deno.test(
+  'prompts: polish asks for kept line breaks written as \\n; the draft keeps its own',
+  () => {
+    const draft = 'Hi Sam,\n\nthanks for today.\nSee you soon!';
+    const polish = buildPrompt({ ...base, kind: 'polish', text: draft });
+    assertMatch(polish.system, /keep the draft's paragraph and line breaks/);
+    assert(polish.system.includes('two characters \\n and a backslash as \\\\.'));
+    assert(polish.user.includes(draft), 'real newlines of the draft reach the model');
+    assertFalse(buildPrompt({ ...base, kind: 'reply' }).system.includes('two characters \\n'));
+  },
+);
+
 Deno.test('prompts: 8 tone cards, each with what to do and what to avoid', () => {
   const cards = sections(tonesMd);
   assertEquals([...cards.keys()].sort(), [...Tone.options].sort());

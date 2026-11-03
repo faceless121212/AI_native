@@ -321,7 +321,7 @@
           "type": "string",
           "minLength": 1,
           "maxLength": 2600,
-          "description": "Server post-check keeps reply cards to CARD_TEXT_MAX_CHARS code points and Polish cards to cardMaxChars (≤ POLISH_CARD_TEXT_MAX_CHARS); label it \"AI suggestion\"."
+          "description": "Server post-check keeps reply cards to CARD_TEXT_MAX_CHARS code points and Polish cards to cardMaxChars (≤ POLISH_CARD_TEXT_MAX_CHARS; a newline counts as one); label it \"AI suggestion\". Polish cards (light, rewrite) may contain \"\\n\" newlines from the draft's line breaks; insert them as-is. Reply cards never contain a newline."
         }
       },
       "required": ["index", "variant", "text"],

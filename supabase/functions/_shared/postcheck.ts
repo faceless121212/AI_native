@@ -1,6 +1,8 @@
 // Post-check for each card before it is sent (architecture §7 step 10): length ≤ 300 code points,
 // no banned phrase, no explicit term, and the language matches (cheap stop-word heuristic). A
-// failing card is dropped; the reason code is logged, never the text.
+// failing card is dropped; the reason code is logged, never the text. Polish cards may contain
+// newlines (unescaped by llm/lines.ts): each counts as one character, and list matching sees it as
+// a space, so a banned phrase split over two lines is still caught.
 import { CARD_TEXT_MAX_CHARS, type Lang } from './schemas.ts';
 import { BANNED_PHRASES, EXPLICIT_TERMS } from './prompts/blocklist.v1.ts';
 
@@ -249,7 +251,10 @@ export function confidentlyOtherLanguage(text: string, expected: Lang): boolean 
   return scores[best] >= 3 && scores[expected] * 3 <= scores[best];
 }
 
-/** Strips one pair of wrapping quotes the model may add despite the prompt. */
+/**
+ * Strips one pair of wrapping quotes the model may add despite the prompt. Only the ends are
+ * trimmed: newlines inside a Polish card are kept.
+ */
 export function cleanCardText(raw: string): string {
   let text = raw.trim();
   const pairs: Array<[string, string]> = [

@@ -46,6 +46,7 @@ const SCENARIOS: FakeScenario[] = [
   'wronglang',
   'long',
   'truncated',
+  'multiline',
 ];
 
 const MODEL_OUTPUT = [

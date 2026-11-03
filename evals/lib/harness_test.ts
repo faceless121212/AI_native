@@ -97,8 +97,8 @@ Deno.test(
 Deno.test('eval case files parse and have the agreed sizes and spread', async () => {
   const root = new URL('../', import.meta.url);
   // Agent file: 40 / 30 / 30, plus the cases added in the Prompt 4 code review (wrong hint, adult
-  // with parents' rules).
-  const sets = { reply: 42, polish: 31, safety: 31 } as const;
+  // with parents' rules) and the two Polish line-break cases (decision 2026-11-03).
+  const sets = { reply: 42, polish: 33, safety: 31 } as const;
   for (const [set, n] of Object.entries(sets)) {
     const cases = parseCases(await Deno.readTextFile(new URL(`${set}/cases.jsonl`, root)), set);
     assertEquals(cases.length, n, set);
@@ -108,6 +108,13 @@ Deno.test('eval case files parse and have the agreed sizes and spread', async ()
         `${set} has ${lang}`,
       );
     }
+  }
+  const polish = parseCases(await Deno.readTextFile(new URL('polish/cases.jsonl', root)), 'polish');
+  const lineBreaks = polish.filter((c) => c.tags.includes('line-breaks'));
+  assert(lineBreaks.length >= 2, 'polish has line-break cases');
+  for (const c of lineBreaks) {
+    assert(c.text.includes('\n\n'), `${c.id}: draft has paragraphs`);
+    assertEquals(c.fake, 'multiline', c.id);
   }
   const reply = parseCases(await Deno.readTextFile(new URL('reply/cases.jsonl', root)), 'reply');
   for (const tag of [
