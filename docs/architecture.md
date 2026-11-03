@@ -102,6 +102,12 @@ Keys (versioned, `v1.` prefix), written by the app unless noted:
 
 iOS: without Full Access, the extension can't use the shared container or network. It falls back to built-in defaults (Casual, Friend, Warm) and shows the "No Full Access" bar. The app treats "no heartbeat with hasFullAccess=true in the last 10 minutes after the guide" as not granted.
 
+Storage types: `v1.aiEnabled` is a Bool; `v1.uiLang` and `v1.trialEndsAt` are strings; every other key is a JSON string. The App Group also holds a `Diagnostics/` folder where the keyboard's MetricKit subscriber writes crash and hang payloads (no text) for the app to upload.
+
+Group names are not hard-coded in Swift. Both sides derive them from the bundle ID: the app `<app>` and the keyboard `<app>.keyboard` use the App Group `group.<app>.shared` and the shared keychain group `$(AppIdentifierPrefix)<app>.shared`, so staging (`app.replywise.staging`) and production stay separate. `config/app-groups.js` is the build-time source; `src/__tests__/keyboard-groups.test.ts` ties the runtime rule to it. The app reads its team prefix from the `AppIdentifierPrefix` Info.plist key (with a keychain probe as fallback); the keyboard only has the shared group and doesn't need the prefix. The device key is stored `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`, so it never moves to another phone through a backup.
+
+"Keyboard added" detection: iOS has no public API to list enabled keyboards (`AppleKeyboards` in user defaults is undocumented, so it isn't used). The app counts the keyboard as added once it has written `v1.keyboardHeartbeat`, which needs Full Access. Until then the app can't tell whether the keyboard was added, so the onboarding guide (Prompt 7) asks the user to confirm the step.
+
 ## 6. Keyboard state machine (bar)
 
 ```
@@ -179,6 +185,8 @@ RLS on every table: users read only their own rows in `profiles`, `consents`, `e
 
 - Resident memory target < 40 MB, checked with Xcode's memory gauge on an older device (e.g. iPhone SE 2nd gen / iPhone 11).
 - No images; SF Symbols only. One SwiftUI hierarchy; no `UIHostingController` re-creation on each key press.
+- Keys are SwiftUI views inside that one hierarchy; the globe (next-keyboard) key is a UIKit `UIButton` embedded in it, because `handleInputModeList(from:with:)` needs a UIView and the touch event.
+- Haptics: iOS has no public way to read the system Keyboard Feedback → Haptic setting, so a light haptic plays only with Full Access; the click sound follows the system setting via `UIInputViewAudioFeedback`.
 - Key-press to character < 16 ms; keyboard first frame < 250 ms after switch.
 - Stream parsing on a background task; UI updates on the main actor, batched.
 - Release `URLSession` tasks on `viewWillDisappear`; cancel streams on dismiss.
