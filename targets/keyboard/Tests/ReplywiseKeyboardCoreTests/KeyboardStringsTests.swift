@@ -26,6 +26,18 @@ final class KeyboardStringsTests: XCTestCase {
         }
     }
 
+    func testKeyLabelsAreSetInEveryLanguage() {
+        for language in SupportedLanguage.allCases {
+            let s = KeyboardStrings.forLanguage(language)
+            for value in [s.keysShift, s.keysCapsLock, s.keysDelete, s.keysSpace, s.keysNumbers,
+                          s.keysLetters, s.keysMoreSymbols, s.keysAlternativesHint, s.nextKeyboard] {
+                XCTAssertFalse(value.trimmingCharacters(in: .whitespaces).isEmpty, "\(language)")
+            }
+        }
+        XCTAssertEqual(KeyboardStrings.en.keysSpace, "space")
+        XCTAssertEqual(KeyboardStrings.en.keysCapsLock, "Caps lock")
+    }
+
     func testPlaceholdersAreFilled() {
         for language in SupportedLanguage.allCases {
             let strings = KeyboardStrings.forLanguage(language)

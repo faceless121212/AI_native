@@ -50,6 +50,24 @@ public struct KeyboardStrings: Sendable {
     public let flirtPlayful: String
     public let formalityCasual: String
     public let formalityFormal: String
+    public let keysShift: String
+    public let keysCapsLock: String
+    public let keysDelete: String
+    public let keysSpace: String
+    public let keysNumbers: String
+    public let keysLetters: String
+    public let keysMoreSymbols: String
+    public let keysAlternativesHint: String
+    public let returnKeyDefault: String
+    public let returnKeyGo: String
+    public let returnKeySearch: String
+    public let returnKeySend: String
+    public let returnKeyDone: String
+    public let returnKeyNext: String
+    public let returnKeyJoin: String
+    public let returnKeyRoute: String
+    public let returnKeyContinue: String
+    public let returnKeyEmergencyCall: String
 
     public func counterLeftToday(count: Int) -> String {
         let template = language.isPluralOne(count) ? counterLeftTodayOne : counterLeftTodayOther
@@ -117,7 +135,25 @@ extension KeyboardStrings {
         flirtLight: "Light",
         flirtPlayful: "Playful",
         formalityCasual: "Casual",
-        formalityFormal: "Formal"
+        formalityFormal: "Formal",
+        keysShift: "Shift",
+        keysCapsLock: "Caps lock",
+        keysDelete: "Delete",
+        keysSpace: "space",
+        keysNumbers: "Numbers",
+        keysLetters: "Letters",
+        keysMoreSymbols: "More symbols",
+        keysAlternativesHint: "Swipe up or down for more characters.",
+        returnKeyDefault: "return",
+        returnKeyGo: "go",
+        returnKeySearch: "search",
+        returnKeySend: "send",
+        returnKeyDone: "done",
+        returnKeyNext: "next",
+        returnKeyJoin: "join",
+        returnKeyRoute: "route",
+        returnKeyContinue: "continue",
+        returnKeyEmergencyCall: "emergency call"
     )
 
     public static let de = KeyboardStrings(
@@ -166,7 +202,25 @@ extension KeyboardStrings {
         flirtLight: "Leicht",
         flirtPlayful: "Verspielt",
         formalityCasual: "Locker",
-        formalityFormal: "Förmlich"
+        formalityFormal: "Förmlich",
+        keysShift: "Shift",
+        keysCapsLock: "Caps lock",
+        keysDelete: "Delete",
+        keysSpace: "space",
+        keysNumbers: "Numbers",
+        keysLetters: "Letters",
+        keysMoreSymbols: "More symbols",
+        keysAlternativesHint: "Swipe up or down for more characters.",
+        returnKeyDefault: "return",
+        returnKeyGo: "go",
+        returnKeySearch: "search",
+        returnKeySend: "send",
+        returnKeyDone: "done",
+        returnKeyNext: "next",
+        returnKeyJoin: "join",
+        returnKeyRoute: "route",
+        returnKeyContinue: "continue",
+        returnKeyEmergencyCall: "emergency call"
     )
 
     public static let fr = KeyboardStrings(
@@ -215,7 +269,25 @@ extension KeyboardStrings {
         flirtLight: "Léger",
         flirtPlayful: "Taquin",
         formalityCasual: "Décontracté",
-        formalityFormal: "Formel"
+        formalityFormal: "Formel",
+        keysShift: "Shift",
+        keysCapsLock: "Caps lock",
+        keysDelete: "Delete",
+        keysSpace: "space",
+        keysNumbers: "Numbers",
+        keysLetters: "Letters",
+        keysMoreSymbols: "More symbols",
+        keysAlternativesHint: "Swipe up or down for more characters.",
+        returnKeyDefault: "return",
+        returnKeyGo: "go",
+        returnKeySearch: "search",
+        returnKeySend: "send",
+        returnKeyDone: "done",
+        returnKeyNext: "next",
+        returnKeyJoin: "join",
+        returnKeyRoute: "route",
+        returnKeyContinue: "continue",
+        returnKeyEmergencyCall: "emergency call"
     )
 
     public static let es = KeyboardStrings(
@@ -264,7 +336,25 @@ extension KeyboardStrings {
         flirtLight: "Ligero",
         flirtPlayful: "Juguetón",
         formalityCasual: "Informal",
-        formalityFormal: "Formal"
+        formalityFormal: "Formal",
+        keysShift: "Shift",
+        keysCapsLock: "Caps lock",
+        keysDelete: "Delete",
+        keysSpace: "space",
+        keysNumbers: "Numbers",
+        keysLetters: "Letters",
+        keysMoreSymbols: "More symbols",
+        keysAlternativesHint: "Swipe up or down for more characters.",
+        returnKeyDefault: "return",
+        returnKeyGo: "go",
+        returnKeySearch: "search",
+        returnKeySend: "send",
+        returnKeyDone: "done",
+        returnKeyNext: "next",
+        returnKeyJoin: "join",
+        returnKeyRoute: "route",
+        returnKeyContinue: "continue",
+        returnKeyEmergencyCall: "emergency call"
     )
 
     public static let it = KeyboardStrings(
@@ -313,7 +403,25 @@ extension KeyboardStrings {
         flirtLight: "Leggero",
         flirtPlayful: "Giocoso",
         formalityCasual: "Informale",
-        formalityFormal: "Formale"
+        formalityFormal: "Formale",
+        keysShift: "Shift",
+        keysCapsLock: "Caps lock",
+        keysDelete: "Delete",
+        keysSpace: "space",
+        keysNumbers: "Numbers",
+        keysLetters: "Letters",
+        keysMoreSymbols: "More symbols",
+        keysAlternativesHint: "Swipe up or down for more characters.",
+        returnKeyDefault: "return",
+        returnKeyGo: "go",
+        returnKeySearch: "search",
+        returnKeySend: "send",
+        returnKeyDone: "done",
+        returnKeyNext: "next",
+        returnKeyJoin: "join",
+        returnKeyRoute: "route",
+        returnKeyContinue: "continue",
+        returnKeyEmergencyCall: "emergency call"
     )
 
     public static func forLanguage(_ language: SupportedLanguage) -> KeyboardStrings {

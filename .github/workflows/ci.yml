@@ -35,6 +35,79 @@ jobs:
       - run: swift --version
       - run: swift test --package-path targets/keyboard
 
+  ios-build:
+    # Compiles every Swift file of the keyboard extension (targets/keyboard, minus Package.swift and
+    # Tests/) and of the local Expo modules (modules/keyboard-bridge) inside the real Xcode project.
+    # Simulator, Debug, unsigned: no Apple team or certificates needed.
+    name: iOS build (app + keyboard extension, simulator, unsigned)
+    runs-on: macos-15
+    timeout-minutes: 75
+    env:
+      CI: 1
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - name: Select the newest installed Xcode
+        run: |
+          XCODE="$(ls -d /Applications/Xcode_*.app | sort -V | tail -n 1)"
+          sudo xcode-select -s "$XCODE"
+          xcodebuild -version
+      - run: npm ci
+      # APP_VARIANT unset = production names; APPLE_TEAM_ID unset is fine (unsigned build).
+      - name: Prebuild iOS
+        run: npx expo prebuild -p ios --clean --no-install
+      - name: Show the keyboard target settings prebuild generated
+        run: |
+          cat ios/.targets/ReplywiseKeyboard/generated.entitlements
+          grep -n "ReplywiseKeyboard.appex in Embed" ios/Replywise.xcodeproj/project.pbxproj
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ios/Pods
+            ~/Library/Caches/CocoaPods
+          key: pods-${{ runner.os }}-${{ hashFiles('package-lock.json', 'app.config.ts', 'modules/*/ios/*.podspec') }}
+          restore-keys: pods-${{ runner.os }}-
+      - name: Install pods
+        working-directory: ios
+        run: pod install
+      - name: Build (xcodebuild)
+        run: |
+          set -o pipefail
+          mkdir -p build
+          xcodebuild \
+            -workspace ios/Replywise.xcworkspace \
+            -scheme Replywise \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            COMPILER_INDEX_STORE_ENABLE=NO \
+            build 2>&1 | tee build/xcodebuild.log | grep -E "error:|warning: .*targets/keyboard|warning: .*keyboard-bridge|BUILD (SUCCEEDED|FAILED)" || true
+          grep -q "BUILD SUCCEEDED" build/xcodebuild.log
+      - name: Check the keyboard extension is built and embedded
+        run: |
+          APP=build/DerivedData/Build/Products/Debug-iphonesimulator/Replywise.app
+          APPEX="$APP/PlugIns/ReplywiseKeyboard.appex"
+          test -d "$APPEX"
+          plutil -p "$APPEX/Info.plist"
+          test "$(plutil -extract NSExtension.NSExtensionAttributes.RequestsOpenAccess raw "$APPEX/Info.plist")" = "true"
+          test "$(plutil -extract NSExtension.NSExtensionPointIdentifier raw "$APPEX/Info.plist")" = "com.apple.keyboard-service"
+          test "$(plutil -extract CFBundleIdentifier raw "$APPEX/Info.plist")" = "app.replywise.keyboard"
+          # The app carries the team prefix key for keyboard-bridge (empty in an unsigned build).
+          plutil -extract AppIdentifierPrefix raw "$APP/Info.plist" || true
+          plutil -p "$APP/Info.plist" | grep -q AppIdentifierPrefix
+      - name: Upload the build log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcodebuild-log
+          path: build/xcodebuild.log
+          if-no-files-found: ignore
+
   android-ime:
     name: Android IME core (Gradle unit tests)
     runs-on: ubuntu-latest

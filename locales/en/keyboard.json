@@ -61,5 +61,27 @@
   "formality": {
     "casual": "Casual",
     "formal": "Formal"
+  },
+  "keys": {
+    "shift": "Shift",
+    "capsLock": "Caps lock",
+    "delete": "Delete",
+    "space": "space",
+    "numbers": "Numbers",
+    "letters": "Letters",
+    "moreSymbols": "More symbols",
+    "alternativesHint": "Swipe up or down for more characters."
+  },
+  "returnKey": {
+    "default": "return",
+    "go": "go",
+    "search": "search",
+    "send": "send",
+    "done": "done",
+    "next": "next",
+    "join": "join",
+    "route": "route",
+    "continue": "continue",
+    "emergencyCall": "emergency call"
   }
 }
