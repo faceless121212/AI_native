@@ -61,5 +61,27 @@
   "formality": {
     "casual": "Décontracté",
     "formal": "Formel"
+  },
+  "keys": {
+    "shift": "Majuscule",
+    "capsLock": "Verrouillage des majuscules",
+    "delete": "Supprimer",
+    "space": "espace",
+    "numbers": "Chiffres",
+    "letters": "Lettres",
+    "moreSymbols": "Plus de symboles",
+    "alternativesHint": "Balaie vers le haut ou le bas pour plus de caractères."
+  },
+  "returnKey": {
+    "default": "retour",
+    "go": "aller",
+    "search": "rechercher",
+    "send": "envoyer",
+    "done": "OK",
+    "next": "suivant",
+    "join": "rejoindre",
+    "route": "itinéraire",
+    "continue": "continuer",
+    "emergencyCall": "appel d’urgence"
   }
 }

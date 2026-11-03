@@ -61,5 +61,27 @@
   "formality": {
     "casual": "Locker",
     "formal": "Förmlich"
+  },
+  "keys": {
+    "shift": "Umschalt",
+    "capsLock": "Feststelltaste",
+    "delete": "Löschen",
+    "space": "Leerzeichen",
+    "numbers": "Zahlen",
+    "letters": "Buchstaben",
+    "moreSymbols": "Weitere Symbole",
+    "alternativesHint": "Streiche nach oben oder unten für weitere Zeichen."
+  },
+  "returnKey": {
+    "default": "Return",
+    "go": "Öffnen",
+    "search": "Suchen",
+    "send": "Senden",
+    "done": "Fertig",
+    "next": "Weiter",
+    "join": "Verbinden",
+    "route": "Route",
+    "continue": "Weiter",
+    "emergencyCall": "Notruf"
   }
 }

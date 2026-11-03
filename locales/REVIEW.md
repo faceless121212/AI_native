@@ -102,3 +102,46 @@ Notes that apply to more than one language:
 | fr | notifications:trialEndsTomorrowIos / Android | … Tu peux annuler à tout moment dans tes abonnements App Store / Google Play. | Store screen name "Abonnements" |
 | es | notifications:trialEndsTomorrowIos / Android | … Cancela cuando quieras en tus suscripciones del App Store / de Google Play. | "del App Store" (masc.) vs "de Google Play" |
 | it | notifications:trialEndsTomorrowIos / Android | … Puoi annullare quando vuoi nei tuoi abbonamenti dell’App Store / di Google Play. | "dell’App Store" vs "di Google Play" |
+
+## Prompt 5: iOS keyboard keys (needs a native check on a real iPhone)
+
+`keyboard:keys.*` are VoiceOver labels and hints. `keyboard:returnKey.*` are the visible return-key labels and should match what Apple's own keyboard shows in each language. I wrote all of these from memory because I couldn't open an Apple source. **Compare each one with the system keyboard on a device set to that language**, using the matching field types: URL (go), search, Messages (send), Wi-Fi password (join), Maps (route), emergency call.
+Casing: German capitalises its nouns and verbs on keys. fr, es and it use lower case like en, but "OK" stays upper case.
+
+| Language | Key | Translation | Confidence / why check |
+|---|---|---|---|
+| de | keyboard:keys.shift / capsLock | Umschalt / Feststelltaste | Fairly sure |
+| de | keyboard:keys.delete / space | Löschen / Leerzeichen | Sure; "Leerzeichen" is the visible space bar label |
+| de | keyboard:keys.numbers / letters / moreSymbols | Zahlen / Buchstaben / Weitere Symbole | Fairly sure; "Ziffern" is an alternative for numbers |
+| de | keyboard:keys.alternativesHint | Streiche nach oben oder unten für weitere Zeichen. | Apple's German guides use "streichen"; "Wische" is an alternative |
+| de | keyboard:returnKey.default | Return | Fairly sure; check it isn't "Zeilenschaltung" or a ⏎ symbol in current iOS |
+| de | keyboard:returnKey.go / search / send / done / next | Öffnen / Suchen / Senden / Fertig / Weiter | Fairly sure |
+| de | keyboard:returnKey.join | Verbinden | Unsure. The brief suggested "Beitreten", but I think iOS shows "Verbinden" for Wi-Fi join |
+| de | keyboard:returnKey.route / continue / emergencyCall | Route / Weiter / Notruf | Fairly sure; "continue" and "next" are both "Weiter" |
+| fr | keyboard:keys.shift / capsLock | Majuscule / Verrouillage des majuscules | Fairly sure |
+| fr | keyboard:keys.delete / space | Supprimer / espace | Sure |
+| fr | keyboard:keys.numbers / letters / moreSymbols | Chiffres / Lettres / Plus de symboles | Fairly sure; "Symboles" is an alternative |
+| fr | keyboard:keys.alternativesHint | Balaie vers le haut ou le bas pour plus de caractères. | Informal "tu" form of Apple's "Balayez" |
+| fr | keyboard:returnKey.default / go / search / send | retour / aller / rechercher / envoyer | Fairly sure |
+| fr | keyboard:returnKey.done | OK | Fairly sure (Apple FR "Done" = "OK") |
+| fr | keyboard:returnKey.next / join / continue | suivant / rejoindre / continuer | Medium; "rejoindre" is the least sure |
+| fr | keyboard:returnKey.route | itinéraire | Medium |
+| fr | keyboard:returnKey.emergencyCall | appel d’urgence | Medium; 15 characters, so check it fits the key. "urgence" is shorter |
+| es | keyboard:keys.shift / capsLock | Mayúsculas / Bloqueo de mayúsculas | Fairly sure |
+| es | keyboard:keys.delete / space | Borrar / espacio | Sure |
+| es | keyboard:keys.numbers / letters / moreSymbols | Números / Letras / Más símbolos | Fairly sure |
+| es | keyboard:keys.alternativesHint | Desliza hacia arriba o hacia abajo para ver más caracteres. | Fine |
+| es | keyboard:returnKey.default / go / search / send | intro / ir / buscar / enviar | Fairly sure |
+| es | keyboard:returnKey.done | OK | Fairly sure (Apple ES "Done" = "OK") |
+| es | keyboard:returnKey.next / continue / route | siguiente / continuar / ruta | Medium |
+| es | keyboard:returnKey.join | conectarse | Unsure; "unirse" or "conectar" are alternatives |
+| es | keyboard:returnKey.emergencyCall | emergencia | Unsure; shortened because "llamada de emergencia" (21) won't fit a key |
+| it | keyboard:keys.shift / capsLock | Maiuscole / Blocco maiuscole | Fairly sure |
+| it | keyboard:keys.delete / space | Elimina / spazio | Sure |
+| it | keyboard:keys.numbers / letters / moreSymbols | Numeri / Lettere / Altri simboli | Fairly sure |
+| it | keyboard:keys.alternativesHint | Scorri verso l’alto o verso il basso per altri caratteri. | Apple IT uses "scorri" for swipe |
+| it | keyboard:returnKey.default / go / search / send | invio / vai / cerca / invia | Fairly sure |
+| it | keyboard:returnKey.done / next / continue | fine / avanti / continua | Medium; check whether iOS shows "fine" in lower case |
+| it | keyboard:returnKey.join | accedi | Unsure; "connetti" is an alternative |
+| it | keyboard:returnKey.route | percorso | Medium; "itinerario" is an alternative |
+| it | keyboard:returnKey.emergencyCall | emergenza | Unsure; shortened from "chiamata d’emergenza" (20) |
