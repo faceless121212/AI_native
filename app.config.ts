@@ -28,7 +28,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       // Set APPLE_TEAM_ID in .env; without it `expo prebuild --clean` drops the team every time.
       appleTeamId: process.env.APPLE_TEAM_ID,
       supportsTablet: false,
-      deploymentTarget: '16.0',
+      deploymentTarget: '16.4',
       entitlements: {
         'com.apple.security.application-groups': [APP_GROUP],
         'keychain-access-groups': [APP_KEYCHAIN_GROUP, KEYCHAIN_GROUP],
