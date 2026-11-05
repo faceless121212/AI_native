@@ -58,35 +58,60 @@ final class AutoCapitalizationTests: XCTestCase {
 }
 
 final class DoubleSpacePeriodTests: XCTestCase {
-    private func period(_ context: String?, previousSpace: Bool = true, kind: TextFieldKind = .text) -> Bool {
-        DoubleSpacePeriod.shouldInsertPeriod(contextBefore: context, previousKeyWasSpace: previousSpace, fieldKind: kind)
+    /// Simulates: the user typed `before`, tapped space (mark taken), the host now shows `now`,
+    /// and space is tapped again.
+    private func period(
+        typed before: String?,
+        now: String? = nil,
+        previousSpace: Bool = true,
+        kind: TextFieldKind = .text
+    ) -> Bool {
+        let mark = previousSpace ? SpaceMark(contextBeforeSpace: before) : nil
+        let current = now ?? ((before ?? "") + " ")
+        return DoubleSpacePeriod.shouldInsertPeriod(contextBefore: current, previousSpace: mark, fieldKind: kind)
     }
 
     func testAfterAWordAndOneSpace() {
-        XCTAssertTrue(period("See you "))
-        XCTAssertTrue(period("Ciao 2 "))
-        XCTAssertTrue(period("Schön "))
-        XCTAssertTrue(period("(ok) "))
-        XCTAssertTrue(period("“ok” "))
+        XCTAssertTrue(period(typed: "See you"))
+        XCTAssertTrue(period(typed: "Ciao 2"))
+        XCTAssertTrue(period(typed: "Schön"))
+        XCTAssertTrue(period(typed: "(ok)"))
+        XCTAssertTrue(period(typed: "“ok”"))
     }
 
     func testNeedsTheSpaceKeyJustBefore() {
-        XCTAssertFalse(period("See you ", previousSpace: false))
+        XCTAssertFalse(period(typed: "See you", previousSpace: false))
     }
 
     func testNotAfterPunctuationOrSecondSpace() {
-        XCTAssertFalse(period("See you. "))
-        XCTAssertFalse(period("See you, "))
-        XCTAssertFalse(period("See you  "))
-        XCTAssertFalse(period(" "))
-        XCTAssertFalse(period(""))
-        XCTAssertFalse(period(nil))
-        XCTAssertFalse(period("See you"))
+        XCTAssertFalse(period(typed: "See you."))
+        XCTAssertFalse(period(typed: "See you,"))
+        XCTAssertFalse(period(typed: "See you "))
+        XCTAssertFalse(period(typed: ""))
+        XCTAssertFalse(period(typed: nil))
+        XCTAssertFalse(DoubleSpacePeriod.shouldInsertPeriod(contextBefore: nil, previousSpace: SpaceMark(contextBeforeSpace: "Hi"), fieldKind: .text))
+    }
+
+    /// Code review #3: space, cursor moved elsewhere, space again → just a space.
+    func testNotAfterTheCursorMoved() {
+        // Cursor moved back into the middle of the text, right after another "word ".
+        XCTAssertFalse(period(typed: "Hello world", now: "Hello "))
+        // Cursor moved to the end of a different line that also ends in "you ".
+        XCTAssertFalse(period(typed: "See you", now: "Thank you "))
+        // Same tail but a different length (same words earlier in the text).
+        XCTAssertFalse(period(typed: "ok ok", now: "ok ok ok ok "))
+    }
+
+    func testLongTextWhoseContextWindowSlides() {
+        // Hosts may return only the last part of a long text; then only the tail is compared.
+        let long = String(repeating: "word ", count: 40) + "end"
+        let window = String((long + " ").suffix(120))
+        XCTAssertTrue(period(typed: long, now: window))
     }
 
     func testOffInAddressEmailSearchAndNumberFields() {
         for kind in [TextFieldKind.url, .email, .webSearch, .numeric] {
-            XCTAssertFalse(period("example ", kind: kind), "\(kind)")
+            XCTAssertFalse(period(typed: "example", kind: kind), "\(kind)")
             XCTAssertFalse(DoubleSpacePeriod.isEnabled(for: kind))
         }
         XCTAssertTrue(DoubleSpacePeriod.isEnabled(for: .text))

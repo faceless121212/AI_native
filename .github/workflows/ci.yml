@@ -35,32 +35,69 @@ jobs:
       - run: swift --version
       - run: swift test --package-path targets/keyboard
 
+  ios-changes:
+    # Decides whether the (slow, macOS) iOS build runs: only when something that ends up in the
+    # iOS project changed. Skipped jobs count as passed for required checks.
+    name: iOS build needed?
+    runs-on: ubuntu-latest
+    outputs:
+      ios: ${{ steps.diff.outputs.ios }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - id: diff
+        env:
+          BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          # New branch (no "before") or unknown base: build.
+          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            echo "ios=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          CHANGED="$(git diff --name-only "$BASE" HEAD)"
+          echo "$CHANGED"
+          if echo "$CHANGED" | grep -qE '^(targets/|modules/|plugins/|config/|app\.config\.ts$|package(-lock)?\.json$|eas\.json$|\.github/workflows/ci\.yml$)'; then
+            echo "ios=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ios=false" >> "$GITHUB_OUTPUT"
+          fi
+
   ios-build:
     # Compiles every Swift file of the keyboard extension (targets/keyboard, minus Package.swift and
     # Tests/) and of the local Expo modules (modules/keyboard-bridge) inside the real Xcode project.
     # Simulator, Debug, unsigned: no Apple team or certificates needed.
     name: iOS build (app + keyboard extension, simulator, unsigned)
+    needs: ios-changes
+    if: needs.ios-changes.outputs.ios == 'true'
     runs-on: macos-26
     timeout-minutes: 75
     env:
       CI: 1
+      # Pinned. Expo SDK 58 is built against Xcode 27 (Swift 6.4), which GitHub doesn't offer yet;
+      # Xcode 26.3 failed to compile expo-modules-jsi ("sending ... risks causing data races"),
+      # 26.6 works. Move to Xcode_27.x.app when the runner image has a non-beta one.
+      XCODE_APP: /Applications/Xcode_26.6.app
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
-      - name: Select the newest installed Xcode
+      - name: Select Xcode (pinned, never a beta)
         run: |
-          XCODE="$(ls -d /Applications/Xcode_*.app | sort -V | tail -n 1)"
-          sudo xcode-select -s "$XCODE"
-          xcodebuild -version
-          # Expo SDK 58 is built against Xcode 27 (Swift 6.4); Xcode 26.3 failed to compile
-          # expo-modules-jsi ("sending ... risks causing data races"). GitHub's newest is 26.6.
-          MAJOR="$(xcodebuild -version | sed -n 's/^Xcode \([0-9]*\).*/\1/p')"
-          if [ "${MAJOR:-0}" -lt 27 ]; then
-            echo "::warning::Expo SDK 58 targets Xcode 27; this runner's newest is $(xcodebuild -version | head -1). Xcode 26.3 failed to compile expo-modules-jsi; trying the newest available."
+          case "$XCODE_APP" in *beta*|*Beta*) echo "::error::Pinned Xcode must not be a beta: $XCODE_APP"; exit 1 ;; esac
+          if [ ! -d "$XCODE_APP" ]; then
+            echo "::error::$XCODE_APP is not installed on this runner. Installed (non-beta):"
+            ls -d /Applications/Xcode_*.app | grep -vi beta || true
+            exit 1
           fi
+          sudo xcode-select -s "$XCODE_APP"
+          xcodebuild -version
+          NEWEST="$(ls -d /Applications/Xcode_*.app | grep -vi beta | sort -V | tail -n 1)"
+          if [ "$NEWEST" != "$XCODE_APP" ]; then
+            echo "::notice::A newer non-beta Xcode is installed: $NEWEST (pinned: $XCODE_APP)."
+          fi
+          case "$NEWEST" in */Xcode_2[7-9]*) echo "::notice::Xcode 27+ is available ($NEWEST): Expo SDK 58's target. Consider pinning it." ;; esac
       - run: npm ci
       # APP_VARIANT unset = production names; APPLE_TEAM_ID unset is fine (unsigned build).
       - name: Prebuild iOS
@@ -74,8 +111,15 @@ jobs:
           path: |
             ios/Pods
             ~/Library/Caches/CocoaPods
-          key: pods-${{ runner.os }}-${{ hashFiles('package-lock.json', 'app.config.ts', 'modules/*/ios/*.podspec') }}
-          restore-keys: pods-${{ runner.os }}-
+          key: pods-${{ runner.os }}-${{ env.XCODE_APP }}-${{ hashFiles('package-lock.json', 'app.config.ts', 'modules/*/ios/*.podspec') }}
+          restore-keys: pods-${{ runner.os }}-${{ env.XCODE_APP }}-
+      # DerivedData's module cache (Clang/Swift modules of the SDK and pods) is reusable between
+      # runs with the same Xcode and lockfile; the project itself is rebuilt by prebuild anyway.
+      - uses: actions/cache@v4
+        with:
+          path: build/DerivedData/ModuleCache.noindex
+          key: modulecache-${{ runner.os }}-${{ env.XCODE_APP }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: modulecache-${{ runner.os }}-${{ env.XCODE_APP }}-
       - name: Install pods
         working-directory: ios
         run: pod install
@@ -92,8 +136,17 @@ jobs:
             -derivedDataPath build/DerivedData \
             CODE_SIGNING_ALLOWED=NO \
             COMPILER_INDEX_STORE_ENABLE=NO \
-            build 2>&1 | tee build/xcodebuild.log | grep -E "error:|warning: .*targets/keyboard|warning: .*keyboard-bridge|BUILD (SUCCEEDED|FAILED)" || true
+            build 2>&1 | tee build/xcodebuild.log | grep -E "error:|warning: |BUILD (SUCCEEDED|FAILED)" | grep -E "error:|targets/keyboard|keyboard-bridge|BUILD " || true
           grep -q "BUILD SUCCEEDED" build/xcodebuild.log
+      - name: No compiler warnings in our Swift
+        run: |
+          # Any warning in the keyboard extension or the keyboard-bridge module fails the job.
+          OURS="$(grep -E "(targets/keyboard|modules/keyboard-bridge)/[^:]+:[0-9]+(:[0-9]+)?: warning:" build/xcodebuild.log | sort -u || true)"
+          if [ -n "$OURS" ]; then
+            echo "$OURS" | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          echo "No warnings in targets/keyboard or modules/keyboard-bridge."
       - name: Check the keyboard extension is built and embedded
         run: |
           APP=build/DerivedData/Build/Products/Debug-iphonesimulator/Replywise.app
@@ -103,6 +156,11 @@ jobs:
           test "$(plutil -extract NSExtension.NSExtensionAttributes.RequestsOpenAccess raw "$APPEX/Info.plist")" = "true"
           test "$(plutil -extract NSExtension.NSExtensionPointIdentifier raw "$APPEX/Info.plist")" = "com.apple.keyboard-service"
           test "$(plutil -extract CFBundleIdentifier raw "$APPEX/Info.plist")" = "app.replywise.keyboard"
+          # App Store requires the extension's version to match the app's.
+          APP_VERSION="$(plutil -extract CFBundleShortVersionString raw "$APP/Info.plist")"
+          APPEX_VERSION="$(plutil -extract CFBundleShortVersionString raw "$APPEX/Info.plist")"
+          echo "app $APP_VERSION, keyboard $APPEX_VERSION"
+          test "$APP_VERSION" = "$APPEX_VERSION"
           # The app carries the team prefix key for keyboard-bridge (empty in an unsigned build).
           plutil -extract AppIdentifierPrefix raw "$APP/Info.plist" || true
           plutil -p "$APP/Info.plist" | grep -q AppIdentifierPrefix

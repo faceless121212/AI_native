@@ -115,36 +115,49 @@ public enum AccentPopupAlignment: Sendable {
     }
 }
 
-public enum AccentSelection {
-    /// Index of the cell under `touchX` (in the key's own coordinates, 0 = key's left edge).
-    /// Always a valid index: moving past either end keeps the outermost cell selected.
-    public static func index(
-        touchX: Double,
-        keyWidth: Double,
-        cellWidth: Double,
-        count: Int,
-        alignment: AccentPopupAlignment
-    ) -> Int {
-        guard count > 0, cellWidth > 0 else { return 0 }
-        let popupLeft: Double
+/// The long-press popup: the key's own character sits right above the finger and is selected
+/// when the popup opens, so holding a key and lifting still types that key (code review #1).
+/// Alternatives continue away from the screen edge, most used first. Sliding moves the selection
+/// one cell per cell width; moving well off the popup cancels (nothing is inserted).
+public enum AccentPopupLayout {
+    /// Cells left to right. Leading: [base, a1, a2, …]; trailing: […, a2, a1, base].
+    public static func items(base: String, alternatives: [String], alignment: AccentPopupAlignment) -> [String] {
+        let others = alternatives.filter { $0 != base }
         switch alignment {
-        case .leading: popupLeft = 0
-        case .trailing: popupLeft = keyWidth - Double(count) * cellWidth
+        case .leading: return [base] + others
+        case .trailing: return Array(others.reversed()) + [base]
         }
-        let raw = Int(((touchX - popupLeft) / cellWidth).rounded(.down))
-        return min(max(raw, 0), count - 1)
     }
 
-    /// Where the popup starts, relative to the key's left edge.
-    public static func popupOffsetX(
-        keyWidth: Double,
+    public static func baseIndex(count: Int, alignment: AccentPopupAlignment) -> Int {
+        guard count > 0 else { return 0 }
+        return alignment == .leading ? 0 : count - 1
+    }
+
+    /// Popup's left edge relative to the key's left edge: the base cell is centred on the key.
+    public static func offsetX(keyWidth: Double, cellWidth: Double, count: Int, alignment: AccentPopupAlignment) -> Double {
+        let baseLeft = (keyWidth - cellWidth) / 2
+        switch alignment {
+        case .leading: return baseLeft
+        case .trailing: return baseLeft - Double(max(count - 1, 0)) * cellWidth
+        }
+    }
+
+    /// Selected cell for a finger that moved by (dx, dy) since the popup opened, or nil when
+    /// it left the popup: more than one cell beyond either end, more than two rows up, or
+    /// below the key.
+    public static func selection(
+        dx: Double,
+        dy: Double,
         cellWidth: Double,
+        rowHeight: Double,
         count: Int,
         alignment: AccentPopupAlignment
-    ) -> Double {
-        switch alignment {
-        case .leading: return 0
-        case .trailing: return keyWidth - Double(count) * cellWidth
-        }
+    ) -> Int? {
+        guard count > 0, cellWidth > 0 else { return nil }
+        if dy < -2 * rowHeight || dy > rowHeight { return nil }
+        let raw = baseIndex(count: count, alignment: alignment) + Int((dx / cellWidth).rounded())
+        if raw < -1 || raw > count { return nil }
+        return min(max(raw, 0), count - 1)
     }
 }

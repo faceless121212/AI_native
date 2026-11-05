@@ -4,13 +4,19 @@ import UIKit
 
 /// One key. Touch handling: a zero-distance drag gesture gives finger down (feedback, shift,
 /// delete repeat) and finger up (commit), like the system keyboard which inserts on lift.
-/// Holding a key with alternatives for 0.4 s opens the accent popup; sliding picks one and
-/// lifting inserts it. VoiceOver gets a default action and one custom action per alternative.
+/// The key under the finger at touch-down is the one committed: sliding to another key is not
+/// supported (docs/keyboard-manual-test.md).
+///
+/// Holding a key with alternatives for 0.4 s opens the popup. The key's own character sits under
+/// the finger and is selected, so lifting without sliding still types it; sliding picks an
+/// accent; sliding well off the popup cancels (Core/AccentMap.swift, AccentPopupLayout).
+/// VoiceOver: default action types the key; accents are custom actions ("Actions available").
 @MainActor
 struct KeyView: View {
     let action: KeyAction
     let face: KeyFace
-    let hint: String
+    /// BCP-47 tag of the keyboard's UI language, for VoiceOver announcements.
+    let speechLanguage: String
     weak var handler: KeyboardActionHandler?
     let width: CGFloat
     let height: CGFloat
@@ -21,12 +27,18 @@ struct KeyView: View {
     static let verticalGap: CGFloat = 5
 
     @State private var isPressed = false
+    /// Popup cells, base character included; empty when no popup is open.
     @State private var popup: [String] = []
-    @State private var selected = 0
-    @State private var lastTouchX: CGFloat = 0
+    /// Selected cell, nil when the finger left the popup (lifting then inserts nothing).
+    @State private var selected: Int?
+    @State private var lastTouch: CGPoint = .zero
+    @State private var popupOrigin: CGPoint = .zero
     @State private var longPressTask: Task<Void, Never>?
     /// Resets to false when the system cancels the touch (onEnded is not called then).
     @GestureState private var isTouching = false
+
+    @Environment(\.legibilityWeight) private var legibilityWeight
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
 
     private var cellWidth: CGFloat { min(max(width - 2 * Self.horizontalGap, 28), 40) }
 
@@ -48,13 +60,18 @@ struct KeyView: View {
                     cancelPress()
                 }
             }
+            // Disabled return key: no touches, no click, and VoiceOver says "dimmed".
+            .disabled(!face.isEnabled)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(Text(face.accessibilityLabel))
+            .accessibilityValue(Text(face.accessibilityValue ?? ""))
             .accessibilityAddTraits(.isKeyboardKey)
             .accessibilityAddTraits(face.isSelected ? .isSelected : [])
-            .accessibilityHint(Text(face.alternatives.isEmpty ? "" : hint))
             .accessibilityAction { handler?.activate(action) }
             .accessibilityActions {
+                if let capsLockLabel = face.capsLockActionLabel {
+                    Button(capsLockLabel) { handler?.toggleCapsLock() }
+                }
                 ForEach(face.alternatives, id: \.self) { alternative in
                     Button(alternative) { handler?.insertAlternative(alternative) }
                 }
@@ -63,11 +80,20 @@ struct KeyView: View {
 
     // MARK: - Drawing
 
+    private var symbolWeight: Font.Weight {
+        legibilityWeight == .bold ? .semibold : .regular
+    }
+
     private var keyFace: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 5, style: .continuous)
                 .fill(background)
                 .shadow(color: Color.black.opacity(0.3), radius: 0, x: 0, y: 1)
+            if colorSchemeContrast == .increased {
+                // Increase Contrast: every key gets a visible edge.
+                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                    .strokeBorder(KeyboardTheme.borderStrong, lineWidth: 1)
+            }
             label
         }
         .opacity(face.isEnabled ? 1 : 0.5)
@@ -77,11 +103,11 @@ struct KeyView: View {
     private var label: some View {
         if let systemImage = face.systemImage {
             Image(systemName: systemImage)
-                .font(.system(size: 18, weight: .regular))
+                .font(.system(size: 18, weight: symbolWeight))
                 .foregroundStyle(foreground)
         } else if let title = face.title {
             Text(title)
-                .font(.system(size: title.count == 1 ? 23 : 15))
+                .font(.system(size: title.count == 1 ? 23 : 15, weight: legibilityWeight == .bold ? .semibold : .regular))
                 .foregroundStyle(foreground)
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
@@ -105,7 +131,7 @@ struct KeyView: View {
             HStack(spacing: 0) {
                 ForEach(Array(popup.enumerated()), id: \.offset) { index, text in
                     Text(text)
-                        .font(.system(size: 22))
+                        .font(.system(size: 22, weight: legibilityWeight == .bold ? .semibold : .regular))
                         .foregroundStyle(index == selected ? KeyboardTheme.onAccent : KeyboardTheme.text)
                         .frame(width: cellWidth, height: height - Self.verticalGap)
                         .background(
@@ -120,7 +146,7 @@ struct KeyView: View {
                     .shadow(color: Color.black.opacity(0.3), radius: 3, x: 0, y: 1)
             )
             .offset(
-                x: CGFloat(AccentSelection.popupOffsetX(
+                x: CGFloat(AccentPopupLayout.offsetX(
                     keyWidth: Double(width),
                     cellWidth: Double(cellWidth),
                     count: popup.count,
@@ -141,13 +167,24 @@ struct KeyView: View {
                 state = true
             }
             .onChanged { value in
-                lastTouchX = value.location.x
+                lastTouch = value.location
                 if !isPressed {
                     isPressed = true
                     handler?.keyDown(action)
                     scheduleLongPress()
                 } else if !popup.isEmpty {
-                    selected = selectionIndex(for: value.location.x, count: popup.count)
+                    let next = AccentPopupLayout.selection(
+                        dx: Double(value.location.x - popupOrigin.x),
+                        dy: Double(value.location.y - popupOrigin.y),
+                        cellWidth: Double(cellWidth),
+                        rowHeight: Double(height),
+                        count: popup.count,
+                        alignment: alignment
+                    )
+                    if next != selected {
+                        selected = next
+                        announceSelection()
+                    }
                 }
             }
             .onEnded { _ in
@@ -158,34 +195,38 @@ struct KeyView: View {
                 if popup.isEmpty {
                     handler?.keyUp(action)
                 } else {
-                    let index = min(max(selected, 0), popup.count - 1)
-                    let text = popup[index]
+                    let items = popup
+                    let choice = selected
                     popup = []
-                    handler?.insertAlternative(text)
+                    selected = nil
+                    if let choice, items.indices.contains(choice) {
+                        handler?.insertAlternative(items[choice])
+                    }
                 }
             }
     }
 
     private func scheduleLongPress() {
-        guard !face.alternatives.isEmpty else { return }
+        guard !face.alternatives.isEmpty, let base = face.title else { return }
         longPressTask?.cancel()
         longPressTask = Task { @MainActor in
             try? await Task.sleep(nanoseconds: Self.longPressNanoseconds)
             guard !Task.isCancelled, isPressed, handler?.shouldShowAlternatives(for: action) ?? false else { return }
-            let alternatives = face.alternatives
-            selected = selectionIndex(for: lastTouchX, count: alternatives.count)
-            popup = alternatives
+            let items = AccentPopupLayout.items(base: base, alternatives: face.alternatives, alignment: alignment)
+            popupOrigin = lastTouch
+            selected = AccentPopupLayout.baseIndex(count: items.count, alignment: alignment)
+            popup = items
         }
     }
 
-    private func selectionIndex(for x: CGFloat, count: Int) -> Int {
-        AccentSelection.index(
-            touchX: Double(x),
-            keyWidth: Double(width),
-            cellWidth: Double(cellWidth),
-            count: count,
-            alignment: alignment
+    /// VoiceOver users sliding in the popup hear the selected character.
+    private func announceSelection() {
+        guard UIAccessibility.isVoiceOverRunning, let selected, popup.indices.contains(selected) else { return }
+        let text = NSAttributedString(
+            string: popup[selected],
+            attributes: [.accessibilitySpeechLanguage: speechLanguage]
         )
+        UIAccessibility.post(notification: .announcement, argument: text)
     }
 
     private func cancelPress() {
@@ -193,6 +234,7 @@ struct KeyView: View {
         longPressTask?.cancel()
         longPressTask = nil
         popup = []
+        selected = nil
         handler?.keyCancelled(action)
     }
 }
@@ -203,13 +245,13 @@ struct KeyView: View {
 struct NextKeyboardKey: UIViewRepresentable {
     weak var controller: UIInputViewController?
     let label: String
+    let speechLanguage: String
+    /// Bold Text is on (Settings → Accessibility → Display & Text Size).
+    let bold: Bool
 
     func makeUIView(context: Context) -> UIButton {
         let button = UIButton(type: .system)
-        let symbol = UIImage.SymbolConfiguration(pointSize: 18, weight: .regular)
-        button.setImage(UIImage(systemName: "globe", withConfiguration: symbol), for: .normal)
         button.tintColor = .label
-        button.accessibilityLabel = label
         button.accessibilityTraits = [.keyboardKey]
         if let controller {
             button.addTarget(
@@ -218,12 +260,18 @@ struct NextKeyboardKey: UIViewRepresentable {
                 for: .allTouchEvents
             )
         }
+        configure(button)
         return button
     }
 
     func updateUIView(_ button: UIButton, context: Context) {
-        if button.accessibilityLabel != label {
-            button.accessibilityLabel = label
-        }
+        configure(button)
+    }
+
+    private func configure(_ button: UIButton) {
+        let symbol = UIImage.SymbolConfiguration(pointSize: 18, weight: bold ? .semibold : .regular)
+        button.setImage(UIImage(systemName: "globe", withConfiguration: symbol), for: .normal)
+        if button.accessibilityLabel != label { button.accessibilityLabel = label }
+        if button.accessibilityLanguage != speechLanguage { button.accessibilityLanguage = speechLanguage }
     }
 }

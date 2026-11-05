@@ -134,6 +134,26 @@ final class KeyboardLayoutTests: XCTestCase {
         XCTAssertEqual(KeyboardLayouts.pageAfterInserting("a", on: .letters), .letters)
     }
 
+    /// Code review #2: no automatic page switch while another key is still under a finger.
+    func testNoAutomaticPageSwitchWhileAnotherKeyIsHeld() {
+        XCTAssertEqual(KeyboardLayouts.pageAfterInserting("'", on: .numbers, otherKeyHeld: true), .numbers)
+        XCTAssertEqual(KeyboardLayouts.pageAfterInserting(" ", on: .symbols, otherKeyHeld: true), .symbols)
+        XCTAssertEqual(KeyboardLayouts.pageAfterInserting(" ", on: .letters, otherKeyHeld: true), .letters)
+    }
+
+    /// Accessibility audit #13: the page key and the third row's left key keep their identity
+    /// across pages, so VoiceOver focus stays on them.
+    func testPageKeysKeepTheirSlotIDsAcrossPages() {
+        for language in SupportedLanguage.allCases {
+            for page in KeyboardPage.allCases {
+                let layout = KeyboardLayouts.layout(language: language, page: page, showsNextKeyboard: true)
+                XCTAssertEqual(layout.rows[3].first?.id, KeyDefinition.pageKeySlot, "\(language) \(page)")
+                XCTAssertEqual(layout.rows[2].first?.id, KeyDefinition.thirdRowLeftSlot, "\(language) \(page)")
+            }
+        }
+        XCTAssertEqual(KeyDefinition(.shift).id, "shift")
+    }
+
     func testKeyCase() {
         XCTAssertEqual(KeyCase.apply("a", shifted: true), "A")
         XCTAssertEqual(KeyCase.apply("ñ", shifted: true), "Ñ")

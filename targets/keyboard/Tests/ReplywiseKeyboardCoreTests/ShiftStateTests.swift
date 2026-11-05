@@ -73,6 +73,43 @@ final class ShiftStateTests: XCTestCase {
         XCTAssertEqual(shift.state, .off)
     }
 
+    /// Accessibility audit #9: VoiceOver / Switch Control get a wider double-tap window.
+    func testWiderWindowForAssistiveTechnology() {
+        XCTAssertEqual(ShiftStateMachine.window(assistiveTechnologyRunning: false), ShiftStateMachine.doubleTapWindow)
+        let wide = ShiftStateMachine.window(assistiveTechnologyRunning: true)
+        XCTAssertGreaterThan(wide, ShiftStateMachine.doubleTapWindow)
+
+        var normal = ShiftStateMachine()
+        normal.tapShift(at: 1)
+        normal.tapShift(at: 1.8)
+        XCTAssertEqual(normal.state, .off)
+
+        var assisted = ShiftStateMachine()
+        assisted.tapShift(at: 1, window: wide)
+        assisted.tapShift(at: 1.8, window: wide)
+        XCTAssertEqual(assisted.state, .capsLock)
+    }
+
+    func testCapsLockActionSetsAndClearsDirectly() {
+        var shift = ShiftStateMachine()
+        shift.setCapsLock(true)
+        XCTAssertEqual(shift.state, .capsLock)
+        shift.didInsertCharacter()
+        XCTAssertEqual(shift.state, .capsLock)
+        shift.setCapsLock(false)
+        XCTAssertEqual(shift.state, .off)
+        // A tap right after the action is a plain tap, not a double tap.
+        shift.tapShift(at: 3)
+        XCTAssertEqual(shift.state, .on)
+    }
+
+    func testShiftAccessibilityValue() {
+        let en = KeyboardStrings.en
+        XCTAssertEqual(ShiftState.off.accessibilityValue(en), "off")
+        XCTAssertEqual(ShiftState.on.accessibilityValue(en), "on")
+        XCTAssertEqual(ShiftState.capsLock.accessibilityValue(en), "Caps lock")
+    }
+
     func testUppercaseFlag() {
         XCTAssertFalse(ShiftState.off.isUppercase)
         XCTAssertTrue(ShiftState.on.isUppercase)

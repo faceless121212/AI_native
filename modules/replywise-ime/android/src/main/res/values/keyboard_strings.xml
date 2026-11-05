@@ -50,12 +50,13 @@
     <string name="kb_formality_formal">Formal</string>
     <string name="kb_keys_shift">Shift</string>
     <string name="kb_keys_caps_lock">Caps lock</string>
+    <string name="kb_keys_shift_on">on</string>
+    <string name="kb_keys_shift_off">off</string>
     <string name="kb_keys_delete">Delete</string>
     <string name="kb_keys_space">space</string>
     <string name="kb_keys_numbers">Numbers</string>
     <string name="kb_keys_letters">Letters</string>
     <string name="kb_keys_more_symbols">More symbols</string>
-    <string name="kb_keys_alternatives_hint">Swipe up or down for more characters.</string>
     <string name="kb_return_key_default">return</string>
     <string name="kb_return_key_go">go</string>
     <string name="kb_return_key_search">search</string>

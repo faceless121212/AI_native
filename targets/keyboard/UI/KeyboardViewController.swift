@@ -9,7 +9,7 @@ import UIKit
 /// network, and the App Group / keychain are only read when `hasFullAccess` is true.
 /// Nothing typed is stored or logged: text goes straight to `textDocumentProxy`, and the only
 /// reads of `documentContextBeforeInput` are the last characters for autocapitalise,
-/// double-space and word delete, kept in local variables.
+/// double-space (kept as a hash, `SpaceMark`) and word delete, in local variables.
 ///
 /// Memory (docs/architecture.md §10): one `UIHostingController` and one `KeyboardModel`, created
 /// once in `viewDidLoad`; key presses only change published values. No images except SF Symbols.
@@ -19,21 +19,27 @@ final class KeyboardViewController: UIInputViewController, KeyboardActionHandler
     private var heightConstraint: NSLayoutConstraint?
 
     private var shiftMachine = ShiftStateMachine()
-    private var previousKeyWasSpace = false
+    /// Set right after our own space; nil after any other edit. See DoubleSpacePeriod.
+    private var lastSpaceMark: SpaceMark?
     private var fieldKind: TextFieldKind = .text
     private var fullAccess = false
+    /// PrimaryLanguage from Info.plist, read before we start setting `primaryLanguage`.
+    private var infoPlistPrimaryLanguage: String?
     /// Values read from the App Group and keychain on open (so cursor moves don't re-read them).
     private var aiEnabled: Bool?
     private var hasDeviceKey = false
+    /// Last bar message VoiceOver actually announced in this open.
     private var announcedMessage: BarMessage?
 
     private var deleteTask: Task<Void, Never>?
-    /// Rolling typing: a letter still under one finger is committed when the next goes down,
-    /// so fast two-thumb typing keeps its order.
-    private var pendingCharacter: KeyAction?
-    private var committedEarly: Set<KeyAction> = []
+    /// Rolling typing bookkeeping (Core/KeyPressTracker.swift).
+    private var tracker = KeyPressTracker()
 
     private lazy var haptics = UIImpactFeedbackGenerator(style: .light)
+
+    private var assistiveTechnologyRunning: Bool {
+        UIAccessibility.isVoiceOverRunning || UIAccessibility.isSwitchControlRunning
+    }
 
     // MARK: - Lifecycle
 
@@ -47,10 +53,11 @@ final class KeyboardViewController: UIInputViewController, KeyboardActionHandler
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        infoPlistPrimaryLanguage = primaryLanguage
 
         let deviceLanguage = KeyboardLanguageResolver.deviceLanguage(
             preferredLanguages: Locale.preferredLanguages,
-            primaryLanguage: primaryLanguage
+            primaryLanguage: infoPlistPrimaryLanguage
         )
         let model = KeyboardModel(language: deviceLanguage, strings: KeyboardStrings.forLanguage(deviceLanguage))
         model.handler = self
@@ -92,13 +99,22 @@ final class KeyboardViewController: UIInputViewController, KeyboardActionHandler
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         stopDeleting()
-        pendingCharacter = nil
-        committedEarly.removeAll()
+        tracker.reset()
+        lastSpaceMark = nil
+        // The next open announces its bar message again.
+        announcedMessage = nil
     }
 
     override func viewWillLayoutSubviews() {
         super.viewWillLayoutSubviews()
         model?.setShowsNextKeyboard(needsInputModeSwitchKey)
+        updateHeight()
+    }
+
+    /// Text size or orientation changed while the keyboard is open: recompute the bar height.
+    /// (Not deprecated for the iOS 16.4 deployment target; still called on iOS 17+.)
+    override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+        super.traitCollectionDidChange(previousTraitCollection)
         updateHeight()
     }
 
@@ -111,8 +127,14 @@ final class KeyboardViewController: UIInputViewController, KeyboardActionHandler
     override func textDidChange(_ textInput: UITextInput?) {
         super.textDidChange(textInput)
         // The host moved the cursor, changed the text or focused another field.
+        // lastSpaceMark is deliberately NOT reset here: the mark itself detects cursor moves.
+        let previousKind = fieldKind
         updateHostTraits()
+        if fieldKind != previousKind {
+            changePage(to: fieldKind == .numeric ? .numbers : .letters)
+        }
         updateBar()
+        updateHeight()
         updateAutocapitalization()
     }
 
@@ -128,14 +150,19 @@ final class KeyboardViewController: UIInputViewController, KeyboardActionHandler
         let language = KeyboardLanguageResolver.keyboardLanguage(
             appGroupDefaultsJSON: store?.string(.defaults),
             preferredLanguages: preferred,
-            primaryLanguage: primaryLanguage
+            primaryLanguage: infoPlistPrimaryLanguage
         )
         let uiLanguage = KeyboardLanguageResolver.uiLanguage(
             appGroupUILang: store?.string(.uiLang),
             preferredLanguages: preferred,
-            primaryLanguage: primaryLanguage
+            primaryLanguage: infoPlistPrimaryLanguage
         )
         model.configure(language: language, strings: KeyboardStrings.forLanguage(uiLanguage))
+        // Hosts use this for spell check and dictation (code review #5).
+        primaryLanguage = language.rawValue
+        // VoiceOver language for elements that don't set their own.
+        view.accessibilityLanguage = uiLanguage.rawValue
+        hostingController?.view.accessibilityLanguage = uiLanguage.rawValue
 
         aiEnabled = store?.bool(.aiEnabled)
         hasDeviceKey = fullAccess && SharedKeychainReader.hasDeviceKey()
@@ -150,10 +177,11 @@ final class KeyboardViewController: UIInputViewController, KeyboardActionHandler
             haptics.prepare()
         }
 
-        previousKeyWasSpace = false
+        tracker.reset()
+        lastSpaceMark = nil
         shiftMachine = ShiftStateMachine()
         updateHostTraits()
-        model.setPage(fieldKind == .numeric ? .numbers : .letters)
+        changePage(to: fieldKind == .numeric ? .numbers : .letters)
         updateBar()
         updateAutocapitalization()
         updateHeight()
@@ -204,17 +232,40 @@ final class KeyboardViewController: UIInputViewController, KeyboardActionHandler
         announceIfNeeded(message)
     }
 
-    /// VoiceOver reads a bar message once when it appears (not on every cursor move).
+    // MARK: - VoiceOver announcements
+
+    /// VoiceOver reads a bar message once per open when it appears (not on every cursor move).
     private func announceIfNeeded(_ message: BarMessage?) {
-        defer { announcedMessage = message }
         guard let message, message != announcedMessage, UIAccessibility.isVoiceOverRunning else { return }
-        let text = [message.text, message.detail].compactMap { $0 }.joined(separator: " ")
-        Task { @MainActor in
+        Task { @MainActor [weak self] in
             // Let VoiceOver finish announcing the keyboard switch first.
             try? await Task.sleep(nanoseconds: 600_000_000)
-            UIAccessibility.post(notification: .announcement, argument: text)
+            guard let self, let model = self.model, model.barMessage == message, self.announcedMessage != message else { return }
+            self.announce(message.spokenText)
+            self.announcedMessage = message
         }
     }
+
+    /// Queued behind what VoiceOver is saying, in the keyboard's UI language.
+    private func announce(_ text: String) {
+        guard UIAccessibility.isVoiceOverRunning else { return }
+        let language = model?.speechLanguage ?? SupportedLanguage.fallback.rawValue
+        let attributed = NSAttributedString(
+            string: text,
+            attributes: [
+                .accessibilitySpeechQueueAnnouncement: true,
+                .accessibilitySpeechLanguage: language,
+            ]
+        )
+        UIAccessibility.post(notification: .announcement, argument: attributed)
+    }
+
+    private func announceShiftState() {
+        guard let model, UIAccessibility.isVoiceOverRunning else { return }
+        announce(shiftMachine.state.accessibilityValue(model.strings))
+    }
+
+    // MARK: - Layout state
 
     private func updateAutocapitalization() {
         guard let model else { return }
@@ -240,109 +291,146 @@ final class KeyboardViewController: UIInputViewController, KeyboardActionHandler
         )
     }
 
+    /// Every page change goes through here: a key held on the old page is committed there first
+    /// (its view is about to go away), stale bookkeeping is dropped, VoiceOver re-reads the layout.
+    private func changePage(to page: KeyboardPage) {
+        guard let model, page != model.page else { return }
+        if let held = tracker.pageWillChange() {
+            commit(held, autoSwitchPage: false)
+        }
+        if model.setPage(page) {
+            if page == .letters { updateAutocapitalization() }
+            if UIAccessibility.isVoiceOverRunning {
+                UIAccessibility.post(notification: .layoutChanged, argument: nil)
+            }
+        }
+    }
+
     private func updateHeight() {
         guard let model else { return }
         let compact = traitCollection.verticalSizeClass == .compact
-        let footnote = UIFontMetrics(forTextStyle: .footnote)
-        let scale = footnote.scaledValue(for: 13, compatibleWith: traitCollection) / 13
-        let bar = KeyboardMetrics.barHeight(
-            lines: model.barMessage?.lineCount ?? 2,
-            fontScale: Double(scale),
-            compactHeight: compact
-        )
+        model.setCompactHeight(compact)
+        let bar = barHeight(for: model.barMessage, compact: compact)
+        model.setBarTextMayShrink(bar.capped)
         let total = KeyboardMetrics.keyboardHeight(
             rowCount: model.layout.rows.count,
             compactHeight: compact,
-            barHeight: bar
+            barHeight: Double(bar.height)
         )
-        model.setHeights(bar: CGFloat(bar), keys: CGFloat(total - bar))
+        model.setHeights(bar: bar.height, keys: CGFloat(total) - bar.height)
         if let heightConstraint, heightConstraint.constant != CGFloat(total) {
             heightConstraint.constant = CGFloat(total)
         }
     }
 
+    /// Portrait with a message: measure the bar's own (localised) strings at the bar's width with
+    /// Dynamic Type capped at AX1, like BarView. Otherwise the line-count estimate.
+    private func barHeight(for message: BarMessage?, compact: Bool) -> (height: CGFloat, capped: Bool) {
+        let category = traitCollection.preferredContentSizeCategory
+        let capped: UIContentSizeCategory = category > .accessibilityMedium ? .accessibilityMedium : category
+        let traits = UITraitCollection(preferredContentSizeCategory: capped)
+        let width = view.bounds.width - 2 * CGFloat(KeyboardMetrics.barHorizontalPadding)
+
+        guard let message, !compact, width > 100 else {
+            let defaultTraits = UITraitCollection(preferredContentSizeCategory: .large)
+            let current = UIFont.preferredFont(forTextStyle: .footnote, compatibleWith: traits).pointSize
+            let standard = UIFont.preferredFont(forTextStyle: .footnote, compatibleWith: defaultTraits).pointSize
+            let scale = standard > 0 ? current / standard : 1
+            let lines = message?.lineCount ?? 2
+            let height = KeyboardMetrics.barHeight(lines: lines, fontScale: Double(scale), compactHeight: compact)
+            return (CGFloat(height), compact)
+        }
+
+        var textHeight = Self.height(
+            of: message.text,
+            font: UIFont.preferredFont(forTextStyle: .footnote, compatibleWith: traits),
+            width: width
+        )
+        if message.showsDetail(compactHeight: compact), let detail = message.detail {
+            textHeight += CGFloat(KeyboardMetrics.barLineSpacing) + Self.height(
+                of: detail,
+                font: UIFont.preferredFont(forTextStyle: .caption1, compatibleWith: traits),
+                width: width
+            )
+        }
+        let result = KeyboardMetrics.barHeight(measuredTextHeight: Double(textHeight))
+        return (CGFloat(result.height), result.capped)
+    }
+
+    private static func height(of text: String, font: UIFont, width: CGFloat) -> CGFloat {
+        let rect = (text as NSString).boundingRect(
+            with: CGSize(width: width, height: .greatestFiniteMagnitude),
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            attributes: [.font: font],
+            context: nil
+        )
+        return ceil(rect.height)
+    }
+
     // MARK: - KeyboardActionHandler
 
     func keyDown(_ action: KeyAction) {
+        if case .returnKey = action, !(model?.returnEnabled ?? true) { return }
         playFeedback()
-        // Any new key commits a letter still held by the other thumb first, like the system keyboard.
-        if let pending = pendingCharacter, pending != action {
-            commitCharacter(pending)
-            committedEarly.insert(pending)
-            pendingCharacter = nil
+        // A key still held by the other thumb is committed first, like the system keyboard.
+        // No automatic page switch for it: this key is still under a finger.
+        if let early = tracker.keyDown(action) {
+            commit(early, autoSwitchPage: false)
         }
         switch action {
-        case .character:
-            pendingCharacter = action
         case .delete:
             startDeleting()
         case .shift:
-            shiftMachine.tapShift(at: ProcessInfo.processInfo.systemUptime)
-            model?.setShift(shiftMachine.state)
-        case .space, .returnKey, .nextKeyboard, .switchPage:
+            tapShift()
+        case .character, .space, .returnKey, .nextKeyboard, .switchPage:
             break
         }
     }
 
     func keyUp(_ action: KeyAction) {
+        let shouldCommit = tracker.keyUp(action)
         switch action {
-        case .character:
-            if pendingCharacter == action { pendingCharacter = nil }
-            if committedEarly.remove(action) != nil { return }
-            commitCharacter(action)
+        case .character, .space, .returnKey:
+            if shouldCommit { commit(action, autoSwitchPage: true) }
         case .delete:
             stopDeleting()
-        case .space:
-            insertSpace()
-        case .returnKey:
-            insertReturn()
         case .switchPage(let page):
-            model?.setPage(page)
-            if page == .letters { updateAutocapitalization() }
+            changePage(to: page)
         case .shift, .nextKeyboard:
             break
         }
     }
 
     func keyCancelled(_ action: KeyAction) {
-        switch action {
-        case .character:
-            if pendingCharacter == action { pendingCharacter = nil }
-            committedEarly.remove(action)
-        case .delete:
-            stopDeleting()
-        default:
-            break
-        }
+        tracker.keyCancelled(action)
+        if case .delete = action { stopDeleting() }
     }
 
     func shouldShowAlternatives(for action: KeyAction) -> Bool {
-        guard !committedEarly.contains(action) else { return false }
-        if pendingCharacter == action { pendingCharacter = nil }
-        return true
+        tracker.shouldShowAlternatives(for: action)
     }
 
     func insertAlternative(_ text: String) {
-        insert(text)
+        insert(text, autoSwitchPage: true)
+    }
+
+    func toggleCapsLock() {
+        shiftMachine.setCapsLock(shiftMachine.state != .capsLock)
+        model?.setShift(shiftMachine.state)
+        announceShiftState()
     }
 
     func activate(_ action: KeyAction) {
         playFeedback()
         switch action {
-        case .character:
-            commitCharacter(action)
+        case .character, .space, .returnKey:
+            commit(action, autoSwitchPage: true)
         case .delete:
             deleteOnce(unit: .character)
         case .shift:
-            shiftMachine.tapShift(at: ProcessInfo.processInfo.systemUptime)
-            model?.setShift(shiftMachine.state)
-        case .space:
-            insertSpace()
-        case .returnKey:
-            insertReturn()
+            tapShift()
         case .switchPage(let page):
-            model?.setPage(page)
-            if page == .letters { updateAutocapitalization() }
+            changePage(to: page)
         case .nextKeyboard:
             advanceToNextInputMode()
         }
@@ -350,46 +438,68 @@ final class KeyboardViewController: UIInputViewController, KeyboardActionHandler
 
     // MARK: - Editing
 
-    private func commitCharacter(_ action: KeyAction) {
-        guard case .character(let base) = action else { return }
-        let shifted = (model?.page ?? .letters) == .letters && shiftMachine.state.isUppercase
-        insert(KeyCase.apply(base, shifted: shifted))
+    private func tapShift() {
+        shiftMachine.tapShift(
+            at: ProcessInfo.processInfo.systemUptime,
+            window: ShiftStateMachine.window(assistiveTechnologyRunning: assistiveTechnologyRunning)
+        )
+        model?.setShift(shiftMachine.state)
+        announceShiftState()
     }
 
-    private func insert(_ text: String) {
-        textDocumentProxy.insertText(text)
-        previousKeyWasSpace = false
-        shiftMachine.didInsertCharacter()
-        if let model {
-            model.setPage(KeyboardLayouts.pageAfterInserting(text, on: model.page))
+    /// Commits a key that inserts on release.
+    private func commit(_ action: KeyAction, autoSwitchPage: Bool) {
+        switch action {
+        case .character(let base):
+            let shifted = (model?.page ?? .letters) == .letters && shiftMachine.state.isUppercase
+            insert(KeyCase.apply(base, shifted: shifted), autoSwitchPage: autoSwitchPage)
+        case .space:
+            insertSpace(autoSwitchPage: autoSwitchPage)
+        case .returnKey:
+            insertReturn()
+        case .shift, .delete, .nextKeyboard, .switchPage:
+            break
         }
+    }
+
+    private func insert(_ text: String, autoSwitchPage: Bool) {
+        textDocumentProxy.insertText(text)
+        lastSpaceMark = nil
+        shiftMachine.didInsertCharacter()
+        switchPageAfterInserting(text, allowed: autoSwitchPage)
         updateAutocapitalization()
     }
 
-    private func insertSpace() {
+    private func insertSpace(autoSwitchPage: Bool) {
         let proxy = textDocumentProxy
+        let context = proxy.documentContextBeforeInput
         if DoubleSpacePeriod.shouldInsertPeriod(
-            contextBefore: proxy.documentContextBeforeInput,
-            previousKeyWasSpace: previousKeyWasSpace,
+            contextBefore: context,
+            previousSpace: lastSpaceMark,
             fieldKind: fieldKind
         ) {
             proxy.deleteBackward()
             proxy.insertText(". ")
-            previousKeyWasSpace = false
+            lastSpaceMark = nil
         } else {
+            let mark = SpaceMark(contextBeforeSpace: context)
             proxy.insertText(" ")
-            previousKeyWasSpace = true
+            lastSpaceMark = mark
         }
-        if let model {
-            model.setPage(KeyboardLayouts.pageAfterInserting(" ", on: model.page))
-        }
+        switchPageAfterInserting(" ", allowed: autoSwitchPage)
         updateAutocapitalization()
+    }
+
+    private func switchPageAfterInserting(_ text: String, allowed: Bool) {
+        guard allowed, let model else { return }
+        let next = KeyboardLayouts.pageAfterInserting(text, on: model.page, otherKeyHeld: tracker.isKeyPending)
+        changePage(to: next)
     }
 
     private func insertReturn() {
         guard model?.returnEnabled ?? true else { return }
         textDocumentProxy.insertText("\n")
-        previousKeyWasSpace = false
+        lastSpaceMark = nil
         updateAutocapitalization()
     }
 
@@ -402,7 +512,7 @@ final class KeyboardViewController: UIInputViewController, KeyboardActionHandler
         for _ in 0..<count {
             proxy.deleteBackward()
         }
-        previousKeyWasSpace = false
+        lastSpaceMark = nil
         updateAutocapitalization()
     }
 

@@ -51,6 +51,13 @@ Do every row twice on iOS: once with Full Access off, once in airplane mode with
 | £ on the en-GB numbers page, € on de/fr/es/it | | | |
 | Globe key shown on iPhones with a Home button; tap switches, long-press shows the keyboard list | | n/a | |
 | Fast two-thumb typing keeps the letter order (type "the quick brown fox" quickly) | | | |
+| Rolling across a page switch: on the numbers page hold ', tap 5, release ': "'5" typed, no extra character on the next key | | | |
+| Long-press a, e, o: the popup shows the letter itself selected; lifting without sliding types the plain letter | | | |
+| Long-press, slide to an accent, lift: the accent is typed; slide far off the popup, lift: nothing is typed | | | |
+| Double space after moving the cursor (type "Hi", space, tap elsewhere in the text, space): no ". " | | | |
+| Slide to correct is NOT supported: the key under the finger at touch-down is the one typed, even if the finger slides onto another key (by design, like a tap) | | | |
+| Bottom row (123, space, return): no extra delay on touch-down. iOS delays touches near the screen bottom edge for system gestures; check fast taps on space register every time | | | |
+| Switching into a number field (e.g. a PIN or postcode field that uses numbers and punctuation) opens the numbers page; back in a text field, letters | | | |
 | Key click plays only when Settings → Sounds & Haptics → Keyboard Feedback → Sound is on | | | |
 | Light haptic on key press with Full Access on; none with Full Access off (iOS can't read the system Haptic switch; see note) | | n/a | |
 
@@ -77,12 +84,22 @@ Password field: iOS usually swaps to the system keyboard; if Replywise shows, th
 |---|---|---|
 | Dark mode: keys, bar text and popups readable | | |
 | Host asks for a dark keyboard in light mode (e.g. some apps' dark search bars) | | n/a |
-| Largest text (Settings → Accessibility → Display & Text Size → Larger Text, max slider): bar text grows and is not cut off; keys unchanged | | |
-| Landscape: keys fit, bar is at most two lines, globe key reachable | | |
-| VoiceOver / TalkBack: every key reads its label (Shift, Caps lock, Delete, space, return label, Numbers, Letters, More symbols, Next keyboard) | | |
+| Larger Text (Settings → Accessibility → Display & Text Size → Larger Text): bar text grows up to the first accessibility size (AX1) and is never cut off in portrait; larger sizes look like AX1; keys unchanged | | |
+| Change the text size while the keyboard is open (Control Centre text size): bar height follows | | |
+| Landscape: keys fit, bar shows the message line only (VoiceOver still reads the Settings path), globe key reachable | | |
+| Landscape on a Face ID iPhone: keys stay inside the safe area (nothing under the rounded corners or the sensor housing side) | | n/a |
+| Increase Contrast (Settings → Accessibility → Display & Text Size): keys get a visible edge, the Settings path in the bar is full-contrast text | | |
+| Bold Text: key letters and symbols (including the globe) are heavier | | |
+| VoiceOver / TalkBack: every key reads its label (Shift, Delete, space, return label, Numbers, Letters, More symbols, Next keyboard) in the keyboard's language | | |
+| VoiceOver: shift reads "Shift, off / on / Caps lock"; after each tap the new state is announced | | |
+| VoiceOver: shift's actions (swipe up/down) include "Caps lock"; double-tapping shift twice within about a second also turns caps lock on | | |
+| Switch Control: caps lock reachable (shift's "Caps lock" action, or two shift activations within about a second) | | n/a |
 | VoiceOver: double-tap types the key; touch typing mode types on lift | | |
-| VoiceOver: on a, e, o… swipe up/down offers the accents as actions, double-tap inserts | | |
-| VoiceOver: bar message is announced once when the keyboard opens | | |
+| VoiceOver: on a, e, o… VoiceOver says "Actions available"; swipe up/down offers the accents, double-tap inserts | | |
+| VoiceOver: while sliding in an accent popup (double-tap and hold), the selected character is spoken | | |
+| VoiceOver: after 123 / ABC / #+= focus stays on that key | | |
+| VoiceOver: return key in an empty field that disables it reads "dimmed" and does nothing | | |
+| VoiceOver: bar message is announced once per open, after VoiceOver has announced the keyboard, in the keyboard's language; not repeated on cursor moves | | |
 | Voice Control: "tap Shift", "tap Delete" work | | |
 
 ## 5. Numbers
@@ -92,6 +109,8 @@ Password field: iOS usually swaps to the system keyboard; if Replywise shows, th
 | Memory peak, 50 open/close cycles (typing only) | < 40 MB (iOS) | | | Xcode memory gauge, see below |
 | Memory after the 50th close, compared with the 1st | no growth | | | Instruments Allocations, see below |
 | Leaks after 50 cycles | 0 | | | Instruments Leaks |
+| MetricKit diagnostics delivered to the App Group (Full Access on) | file appears in `Diagnostics/` | | n/a | see below |
+| Keyboard CFBundleShortVersionString equals the app's (CI also checks) | equal | | n/a | `plutil -p` on the built .app and .appex |
 | Memory peak during 20 streamed replies **(P6)** | < 40 MB | | | memory gauge |
 | First frame after switching to the keyboard | < 250 ms | | | see below |
 | Key press to character | < 16 ms | | | see below |
@@ -120,6 +139,16 @@ Measure on an older iPhone if you have one (iPhone SE 2nd gen or iPhone 11); wri
 
 - First frame: Instruments → **App Launch** is not available for extensions; use the **Time Profiler** template with "Record Waiting Threads" on, switch to the keyboard, and measure from the `viewDidLoad` of `KeyboardViewController` to the first `CA::Transaction::commit` in the keyboard process (signposts if available). Simpler alternative: record the screen at 60 fps (Control Centre → Screen Recording) and count frames between the globe tap and the first visible keys (1 frame ≈ 16.7 ms).
 - Key latency: Time Profiler while typing fast for 10 s; the main thread time per touch (from the touch event to `insertText`) must stay under 16 ms. A slow-motion camera recording (240 fps) of finger and screen is an independent check.
+
+### iOS: MetricKit delivery
+
+MetricKit delivers diagnostics at most once a day, so this is a check across days. Xcode can deliver a test payload at once: run the **ReplywiseKeyboard** scheme on the phone (attached to Notes, as above), open the keyboard with Full Access on, then Debug → Simulate MetricKit Payloads. The App Group isn't part of Xcode's "Download Container", so check from the debugger: pause the keyboard process (Debug → Pause) and run in the console
+
+```
+po try FileManager.default.contentsOfDirectory(atPath: FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.app.replywise.shared")!.appendingPathComponent("Diagnostics").path)
+```
+
+A `keyboard-diagnostic-*.json` file must be listed. Open one the same way (`po String(contentsOfFile: …)`) and check it holds no typed text (only call stacks and metadata).
 
 ### Android
 

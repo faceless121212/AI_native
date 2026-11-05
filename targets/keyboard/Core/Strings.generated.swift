@@ -52,12 +52,13 @@ public struct KeyboardStrings: Sendable {
     public let formalityFormal: String
     public let keysShift: String
     public let keysCapsLock: String
+    public let keysShiftOn: String
+    public let keysShiftOff: String
     public let keysDelete: String
     public let keysSpace: String
     public let keysNumbers: String
     public let keysLetters: String
     public let keysMoreSymbols: String
-    public let keysAlternativesHint: String
     public let returnKeyDefault: String
     public let returnKeyGo: String
     public let returnKeySearch: String
@@ -138,12 +139,13 @@ extension KeyboardStrings {
         formalityFormal: "Formal",
         keysShift: "Shift",
         keysCapsLock: "Caps lock",
+        keysShiftOn: "on",
+        keysShiftOff: "off",
         keysDelete: "Delete",
         keysSpace: "space",
         keysNumbers: "Numbers",
         keysLetters: "Letters",
         keysMoreSymbols: "More symbols",
-        keysAlternativesHint: "Swipe up or down for more characters.",
         returnKeyDefault: "return",
         returnKeyGo: "go",
         returnKeySearch: "search",
@@ -205,12 +207,13 @@ extension KeyboardStrings {
         formalityFormal: "Förmlich",
         keysShift: "Umschalt",
         keysCapsLock: "Feststelltaste",
+        keysShiftOn: "ein",
+        keysShiftOff: "aus",
         keysDelete: "Löschen",
         keysSpace: "Leerzeichen",
         keysNumbers: "Zahlen",
         keysLetters: "Buchstaben",
         keysMoreSymbols: "Weitere Symbole",
-        keysAlternativesHint: "Streiche nach oben oder unten für weitere Zeichen.",
         returnKeyDefault: "Return",
         returnKeyGo: "Öffnen",
         returnKeySearch: "Suchen",
@@ -272,12 +275,13 @@ extension KeyboardStrings {
         formalityFormal: "Formel",
         keysShift: "Majuscule",
         keysCapsLock: "Verrouillage des majuscules",
+        keysShiftOn: "activé",
+        keysShiftOff: "désactivé",
         keysDelete: "Supprimer",
         keysSpace: "espace",
         keysNumbers: "Chiffres",
         keysLetters: "Lettres",
         keysMoreSymbols: "Plus de symboles",
-        keysAlternativesHint: "Balaie vers le haut ou le bas pour plus de caractères.",
         returnKeyDefault: "retour",
         returnKeyGo: "aller",
         returnKeySearch: "rechercher",
@@ -339,12 +343,13 @@ extension KeyboardStrings {
         formalityFormal: "Formal",
         keysShift: "Mayúsculas",
         keysCapsLock: "Bloqueo de mayúsculas",
+        keysShiftOn: "activado",
+        keysShiftOff: "desactivado",
         keysDelete: "Borrar",
         keysSpace: "espacio",
         keysNumbers: "Números",
         keysLetters: "Letras",
         keysMoreSymbols: "Más símbolos",
-        keysAlternativesHint: "Desliza hacia arriba o hacia abajo para ver más caracteres.",
         returnKeyDefault: "intro",
         returnKeyGo: "ir",
         returnKeySearch: "buscar",
@@ -406,12 +411,13 @@ extension KeyboardStrings {
         formalityFormal: "Formale",
         keysShift: "Maiuscole",
         keysCapsLock: "Blocco maiuscole",
+        keysShiftOn: "attivo",
+        keysShiftOff: "disattivato",
         keysDelete: "Elimina",
         keysSpace: "spazio",
         keysNumbers: "Numeri",
         keysLetters: "Lettere",
         keysMoreSymbols: "Altri simboli",
-        keysAlternativesHint: "Scorri verso l’alto o verso il basso per altri caratteri.",
         returnKeyDefault: "invio",
         returnKeyGo: "vai",
         returnKeySearch: "cerca",

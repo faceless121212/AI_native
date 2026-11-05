@@ -19,22 +19,40 @@ export function androidColorName(name: string): string {
   return `rw_${name.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase()}`;
 }
 
+/**
+ * iOS Increase Contrast (traits.accessibilityContrast == .high): these tokens switch to a stronger
+ * existing token. Derived from tokens.ts, no new values. Key outlines use borderStrong directly.
+ */
+export const HIGH_CONTRAST: Partial<Record<Name, Name>> = {
+  textSecondary: 'text',
+};
+
 export function generateSwiftTheme(): string {
-  const lines = names.map(
-    (n) =>
-      `    static let ${n} = dynamic(light: ${hex(colors.light[n])}, dark: ${hex(colors.dark[n])})`,
-  );
+  const lines = names.map((n) => {
+    const strong = HIGH_CONTRAST[n] ?? n;
+    return (
+      `    static let ${n} = dynamic(light: ${hex(colors.light[n])}, dark: ${hex(colors.dark[n])}, ` +
+      `lightHighContrast: ${hex(colors.light[strong])}, darkHighContrast: ${hex(colors.dark[strong])})`
+    );
+  });
   return `// ${HEADER}
 
 import SwiftUI
 import UIKit
 
-/// Keyboard colours, identical to the app's tokens. Each one follows light/dark mode.
+/// Keyboard colours, identical to the app's tokens. Each one follows light/dark mode and
+/// Increase Contrast (Settings → Accessibility → Display & Text Size).
 enum KeyboardTheme {
 ${lines.join('\n')}
 
-    private static func dynamic(light: UInt32, dark: UInt32) -> Color {
-        Color(UIColor { traits in rgb(traits.userInterfaceStyle == .dark ? dark : light) })
+    private static func dynamic(light: UInt32, dark: UInt32, lightHighContrast: UInt32, darkHighContrast: UInt32) -> Color {
+        Color(UIColor { traits in
+            let high = traits.accessibilityContrast == .high
+            if traits.userInterfaceStyle == .dark {
+                return rgb(high ? darkHighContrast : dark)
+            }
+            return rgb(high ? lightHighContrast : light)
+        })
     }
 
     private static func rgb(_ value: UInt32) -> UIColor {

@@ -30,7 +30,7 @@ final class KeyboardStringsTests: XCTestCase {
         for language in SupportedLanguage.allCases {
             let s = KeyboardStrings.forLanguage(language)
             for value in [s.keysShift, s.keysCapsLock, s.keysDelete, s.keysSpace, s.keysNumbers,
-                          s.keysLetters, s.keysMoreSymbols, s.keysAlternativesHint, s.nextKeyboard] {
+                          s.keysLetters, s.keysMoreSymbols, s.keysShiftOn, s.keysShiftOff, s.nextKeyboard] {
                 XCTAssertFalse(value.trimmingCharacters(in: .whitespaces).isEmpty, "\(language)")
             }
         }

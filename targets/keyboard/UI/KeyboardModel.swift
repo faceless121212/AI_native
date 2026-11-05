@@ -12,6 +12,8 @@ protocol KeyboardActionHandler: AnyObject {
     func keyUp(_ action: KeyAction)
     /// The touch was cancelled (e.g. the keyboard went away): nothing is inserted.
     func keyCancelled(_ action: KeyAction)
+    /// VoiceOver / Switch Control action on the shift key: caps lock on, or off if it is on.
+    func toggleCapsLock()
     /// The long-press popup wants to open. True: open it, and the key's own character will not be
     /// inserted. False: the character was already committed (rolling typing), so no popup.
     func shouldShowAlternatives(for action: KeyAction) -> Bool
@@ -26,6 +28,10 @@ struct KeyFace: Equatable {
     var title: String?
     var systemImage: String?
     var accessibilityLabel: String
+    /// VoiceOver value, e.g. the shift state ("on", "off", "Caps lock").
+    var accessibilityValue: String?
+    /// Name of the shift key's custom "Caps lock" action (nil on other keys).
+    var capsLockActionLabel: String?
     var isSpecial = false
     var isProminent = false
     var isSelected = false
@@ -45,6 +51,10 @@ final class KeyboardModel: ObservableObject {
     @Published private(set) var barMessage: BarMessage?
     @Published private(set) var barHeight: CGFloat = CGFloat(KeyboardMetrics.barMinHeight)
     @Published private(set) var keysHeight: CGFloat = CGFloat(4 * KeyboardMetrics.rowHeightRegular)
+    /// Landscape iPhone: the bar shows only its message line.
+    @Published private(set) var compactHeight = false
+    /// The bar hit its height cap, so its text may shrink to fit.
+    @Published private(set) var barTextMayShrink = false
 
     weak var handler: KeyboardActionHandler?
     /// Target of the globe key's `handleInputModeList(from:with:)`.
@@ -70,10 +80,13 @@ final class KeyboardModel: ObservableObject {
         }
     }
 
-    func setPage(_ page: KeyboardPage) {
-        guard page != self.page else { return }
+    /// True when the page actually changed.
+    @discardableResult
+    func setPage(_ page: KeyboardPage) -> Bool {
+        guard page != self.page else { return false }
         self.page = page
         rebuildLayout()
+        return true
     }
 
     func setShowsNextKeyboard(_ shows: Bool) {
@@ -93,6 +106,17 @@ final class KeyboardModel: ObservableObject {
 
     func setBarMessage(_ message: BarMessage?) {
         if message != barMessage { barMessage = message }
+    }
+
+    func setCompactHeight(_ compact: Bool) {
+        if compact != compactHeight { compactHeight = compact }
+    }
+
+    /// BCP-47 tag VoiceOver should speak key labels and bar messages in.
+    var speechLanguage: String { strings.language.rawValue }
+
+    func setBarTextMayShrink(_ shrink: Bool) {
+        if shrink != barTextMayShrink { barTextMayShrink = shrink }
     }
 
     func setHeights(bar: CGFloat, keys: CGFloat) {
@@ -128,7 +152,9 @@ final class KeyboardModel: ObservableObject {
             }
             return KeyFace(
                 systemImage: image,
-                accessibilityLabel: shift == .capsLock ? strings.keysCapsLock : strings.keysShift,
+                accessibilityLabel: strings.keysShift,
+                accessibilityValue: shift.accessibilityValue(strings),
+                capsLockActionLabel: strings.keysCapsLock,
                 isSpecial: true,
                 isSelected: shift != .off
             )

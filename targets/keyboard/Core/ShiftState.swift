@@ -11,6 +11,15 @@ public enum ShiftState: Sendable, Equatable {
     case capsLock
 
     public var isUppercase: Bool { self != .off }
+
+    /// VoiceOver value of the shift key ("Shift, on"), accessibility audit #10.
+    public func accessibilityValue(_ strings: KeyboardStrings) -> String {
+        switch self {
+        case .off: return strings.keysShiftOff
+        case .on: return strings.keysShiftOn
+        case .capsLock: return strings.keysCapsLock
+        }
+    }
 }
 
 /// Shift key state machine. Times are seconds on a monotonic clock (the caller passes
@@ -18,6 +27,13 @@ public enum ShiftState: Sendable, Equatable {
 public struct ShiftStateMachine: Sendable, Equatable {
     /// Two taps closer than this turn caps lock on (the system keyboard feels like ~0.3 s).
     public static let doubleTapWindow: TimeInterval = 0.35
+    /// With VoiceOver or Switch Control each activation takes longer (double-tap to activate,
+    /// or a scan cycle), so two shift activations need more time (accessibility audit #9).
+    public static let assistiveDoubleTapWindow: TimeInterval = 1.0
+
+    public static func window(assistiveTechnologyRunning: Bool) -> TimeInterval {
+        assistiveTechnologyRunning ? assistiveDoubleTapWindow : doubleTapWindow
+    }
 
     public private(set) var state: ShiftState
     /// When shift was last tapped; a second tap inside the window means caps lock.
@@ -29,19 +45,25 @@ public struct ShiftStateMachine: Sendable, Equatable {
 
     /// Single tap toggles shift. Two taps inside `doubleTapWindow` turn caps lock on, whether
     /// shift started off or was switched on by autocapitalise. A tap in caps lock turns it off.
-    public mutating func tapShift(at time: TimeInterval) {
+    public mutating func tapShift(at time: TimeInterval, window: TimeInterval = ShiftStateMachine.doubleTapWindow) {
         if state == .capsLock {
             state = .off
             lastTapAt = nil
             return
         }
-        if let previous = lastTapAt, time >= previous, time - previous <= Self.doubleTapWindow {
+        if let previous = lastTapAt, time >= previous, time - previous <= window {
             state = .capsLock
             lastTapAt = nil
             return
         }
         state = state == .on ? .off : .on
         lastTapAt = time
+    }
+
+    /// Caps lock on or off directly (the shift key's "Caps lock" accessibility action).
+    public mutating func setCapsLock(_ on: Bool) {
+        state = on ? .capsLock : .off
+        lastTapAt = nil
     }
 
     /// After a letter (or any character) is typed: a one-shot shift goes off; caps lock stays.

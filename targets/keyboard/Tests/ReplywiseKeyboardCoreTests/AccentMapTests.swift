@@ -85,16 +85,70 @@ final class AccentMapTests: XCTestCase {
         XCTAssertEqual(AccentPopupAlignment.forKey(at: 9, rowCount: 10), .trailing)
     }
 
-    func testSelectionUnderTheFinger() {
-        // Leading popup: cells start at the key's left edge.
-        XCTAssertEqual(AccentSelection.index(touchX: 5, keyWidth: 36, cellWidth: 30, count: 4, alignment: .leading), 0)
-        XCTAssertEqual(AccentSelection.index(touchX: 65, keyWidth: 36, cellWidth: 30, count: 4, alignment: .leading), 2)
-        XCTAssertEqual(AccentSelection.index(touchX: 500, keyWidth: 36, cellWidth: 30, count: 4, alignment: .leading), 3)
-        XCTAssertEqual(AccentSelection.index(touchX: -40, keyWidth: 36, cellWidth: 30, count: 4, alignment: .leading), 0)
-        // Trailing popup: the last cell ends at the key's right edge.
-        XCTAssertEqual(AccentSelection.popupOffsetX(keyWidth: 36, cellWidth: 30, count: 4, alignment: .trailing), -84)
-        XCTAssertEqual(AccentSelection.index(touchX: 30, keyWidth: 36, cellWidth: 30, count: 4, alignment: .trailing), 3)
-        XCTAssertEqual(AccentSelection.index(touchX: -80, keyWidth: 36, cellWidth: 30, count: 4, alignment: .trailing), 0)
-        XCTAssertEqual(AccentSelection.index(touchX: 10, keyWidth: 36, cellWidth: 0, count: 4, alignment: .leading), 0)
+    func testPopupStartsOnTheBaseCharacter() {
+        let leading = AccentPopupLayout.items(base: "e", alternatives: ["é", "è", "ê"], alignment: .leading)
+        XCTAssertEqual(leading, ["e", "é", "è", "ê"])
+        XCTAssertEqual(AccentPopupLayout.baseIndex(count: leading.count, alignment: .leading), 0)
+        let trailing = AccentPopupLayout.items(base: "o", alternatives: ["ó", "ò"], alignment: .trailing)
+        XCTAssertEqual(trailing, ["ò", "ó", "o"])
+        XCTAssertEqual(AccentPopupLayout.baseIndex(count: trailing.count, alignment: .trailing), 2)
+        // Never twice.
+        XCTAssertEqual(AccentPopupLayout.items(base: "a", alternatives: ["a", "à"], alignment: .leading), ["a", "à"])
+    }
+
+    /// Code review #1: holding any key with a popup and lifting without sliding types the key itself.
+    func testBaseLetterIsAlwaysReachable() {
+        for language in SupportedLanguage.allCases {
+            for page in KeyboardPage.allCases {
+                let layout = KeyboardLayouts.layout(language: language, page: page, showsNextKeyboard: false)
+                for row in layout.rows {
+                    for (index, key) in row.enumerated() {
+                        guard let base = key.character else { continue }
+                        let alternatives = AccentMap.alternatives(for: base, language: language)
+                        guard !alternatives.isEmpty else { continue }
+                        let alignment = AccentPopupAlignment.forKey(at: index, rowCount: row.count)
+                        let items = AccentPopupLayout.items(base: base, alternatives: alternatives, alignment: alignment)
+                        let selection = AccentPopupLayout.selection(
+                            dx: 0, dy: 0, cellWidth: 32, rowHeight: 54, count: items.count, alignment: alignment
+                        )
+                        XCTAssertEqual(selection.map { items[$0] }, base, "\(language) \(page) \(base)")
+                        // A small wobble stays on the base.
+                        let wobble = AccentPopupLayout.selection(
+                            dx: 10, dy: -8, cellWidth: 32, rowHeight: 54, count: items.count, alignment: alignment
+                        )
+                        let expectedWobble = alignment == .leading ? 0 : items.count - 1
+                        XCTAssertEqual(wobble, expectedWobble, "\(language) \(base)")
+                    }
+                }
+            }
+        }
+    }
+
+    func testSlidingPicksAccentsAwayFromTheEdge() {
+        // Leading: slide right.
+        XCTAssertEqual(AccentPopupLayout.selection(dx: 32, dy: -20, cellWidth: 32, rowHeight: 54, count: 4, alignment: .leading), 1)
+        XCTAssertEqual(AccentPopupLayout.selection(dx: 100, dy: -20, cellWidth: 32, rowHeight: 54, count: 4, alignment: .leading), 3)
+        // Half a cell past the last one still selects it.
+        XCTAssertEqual(AccentPopupLayout.selection(dx: 4 * 32 - 10, dy: 0, cellWidth: 32, rowHeight: 54, count: 4, alignment: .leading), 3)
+        // Trailing: slide left.
+        XCTAssertEqual(AccentPopupLayout.selection(dx: -32, dy: 0, cellWidth: 32, rowHeight: 54, count: 4, alignment: .trailing), 2)
+        XCTAssertEqual(AccentPopupLayout.selection(dx: -96, dy: 0, cellWidth: 32, rowHeight: 54, count: 4, alignment: .trailing), 0)
+    }
+
+    func testLeavingThePopupCancels() {
+        // Far past the ends.
+        XCTAssertNil(AccentPopupLayout.selection(dx: 7 * 32, dy: 0, cellWidth: 32, rowHeight: 54, count: 4, alignment: .leading))
+        XCTAssertNil(AccentPopupLayout.selection(dx: -2 * 32, dy: 0, cellWidth: 32, rowHeight: 54, count: 4, alignment: .leading))
+        XCTAssertNil(AccentPopupLayout.selection(dx: 2 * 32, dy: 0, cellWidth: 32, rowHeight: 54, count: 4, alignment: .trailing))
+        // Too far up or below the key.
+        XCTAssertNil(AccentPopupLayout.selection(dx: 0, dy: -120, cellWidth: 32, rowHeight: 54, count: 4, alignment: .leading))
+        XCTAssertNil(AccentPopupLayout.selection(dx: 0, dy: 60, cellWidth: 32, rowHeight: 54, count: 4, alignment: .leading))
+        XCTAssertNil(AccentPopupLayout.selection(dx: 0, dy: 0, cellWidth: 0, rowHeight: 54, count: 4, alignment: .leading))
+    }
+
+    func testBaseCellIsCentredOnTheKey() {
+        XCTAssertEqual(AccentPopupLayout.offsetX(keyWidth: 36, cellWidth: 30, count: 4, alignment: .leading), 3)
+        // Trailing: the last (base) cell is over the key, the others extend to the left.
+        XCTAssertEqual(AccentPopupLayout.offsetX(keyWidth: 36, cellWidth: 30, count: 4, alignment: .trailing), 3 - 90)
     }
 }

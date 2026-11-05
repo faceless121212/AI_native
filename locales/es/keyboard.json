@@ -65,12 +65,13 @@
   "keys": {
     "shift": "Mayúsculas",
     "capsLock": "Bloqueo de mayúsculas",
+    "shiftOn": "activado",
+    "shiftOff": "desactivado",
     "delete": "Borrar",
     "space": "espacio",
     "numbers": "Números",
     "letters": "Letras",
-    "moreSymbols": "Más símbolos",
-    "alternativesHint": "Desliza hacia arriba o hacia abajo para ver más caracteres."
+    "moreSymbols": "Más símbolos"
   },
   "returnKey": {
     "default": "intro",

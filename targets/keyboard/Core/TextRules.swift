@@ -75,17 +75,54 @@ public enum DoubleSpacePeriod {
     }
 
     /// Called when space is tapped, before inserting it. True means: delete the space before the
-    /// cursor and insert ". " instead. Needs the previous key to have been space too, and a word
-    /// (letter, digit or closing quote/bracket) right before that space.
+    /// cursor and insert ". " instead. Needs a word (letter, digit or closing quote/bracket) right
+    /// before that space, and `previousSpace` must still describe the text before the cursor: the
+    /// previous key was space AND the cursor hasn't moved since (code review #3). Moving the
+    /// cursor (or the host changing the text) gives a different `SpaceMark`, so no ". ".
     public static func shouldInsertPeriod(
         contextBefore: String?,
-        previousKeyWasSpace: Bool,
+        previousSpace: SpaceMark?,
         fieldKind: TextFieldKind
     ) -> Bool {
-        guard isEnabled(for: fieldKind), previousKeyWasSpace, let text = contextBefore else { return false }
+        guard isEnabled(for: fieldKind), let previousSpace, let text = contextBefore else { return false }
+        guard previousSpace.matches(SpaceMark(contextAfterSpace: text)) else { return false }
         let tail = Array(text.suffix(2))
         guard tail.count == 2, tail[1] == " " else { return false }
         let previous = tail[0]
         return previous.isLetter || previous.isNumber || closers.contains(previous)
+    }
+}
+
+/// What the text before the cursor looked like right after our space was inserted. Holds only a
+/// hash of the last characters and the length, never the text itself, and lives in memory for
+/// one key press.
+public struct SpaceMark: Sendable, Equatable {
+    static let tailLength = 16
+    /// Hosts may return only part of a long text; above this length the lengths aren't compared
+    /// (the window can slide), only the tail.
+    static let reliableLength = 100
+
+    let tailHash: Int
+    let length: Int
+
+    /// `contextBeforeSpace` is documentContextBeforeInput read just BEFORE inserting the space
+    /// (nil = empty field); the mark describes that text plus the space.
+    public init(contextBeforeSpace: String?) {
+        self.init(contextAfterSpace: (contextBeforeSpace ?? "") + " ")
+    }
+
+    init(contextAfterSpace text: String) {
+        var hasher = Hasher()
+        hasher.combine(String(text.suffix(Self.tailLength)))
+        tailHash = hasher.finalize()
+        length = text.count
+    }
+
+    func matches(_ other: SpaceMark) -> Bool {
+        guard tailHash == other.tailHash else { return false }
+        if length < Self.reliableLength && other.length < Self.reliableLength {
+            return length == other.length
+        }
+        return true
     }
 }

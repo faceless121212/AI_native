@@ -145,3 +145,12 @@ Casing: German capitalises its nouns and verbs on keys. fr, es and it use lower 
 | it | keyboard:returnKey.join | accedi | Unsure; "connetti" is an alternative |
 | it | keyboard:returnKey.route | percorso | Medium; "itinerario" is an alternative |
 | it | keyboard:returnKey.emergencyCall | emergenza | Unsure; shortened from "chiamata d’emergenza" (20) |
+
+## Shift state for VoiceOver (main session, 2026-11-05)
+
+| Language | Key | Translation | Why check |
+|---|---|---|---|
+| de | keyboard:keys.shiftOn / shiftOff | ein / aus | VoiceOver value of the shift key; Apple uses ein/aus for switches |
+| fr | keyboard:keys.shiftOn / shiftOff | activé / désactivé | Same; masculine agrees with « le Maj » |
+| es | keyboard:keys.shiftOn / shiftOff | activado / desactivado | Same |
+| it | keyboard:keys.shiftOn / shiftOff | attivo / disattivato | Same; check whether VoiceOver says "attivato" |

@@ -1,3 +1,4 @@
+import Foundation
 import SwiftUI
 import UIKit
 
@@ -9,37 +10,53 @@ struct KeyboardRootView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            BarView(message: model.barMessage, appName: model.strings.appName)
-                .frame(height: model.barHeight)
+            BarView(
+                message: model.barMessage,
+                appName: model.strings.appName,
+                compactHeight: model.compactHeight,
+                textMayShrink: model.barTextMayShrink
+            )
+            .frame(height: model.barHeight)
             KeysView(model: model)
                 .frame(height: model.keysHeight)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        // Lets SwiftUI speak labels in the keyboard's UI language (best effort; the controller
+        // also sets accessibilityLanguage on the hosting view and on announcements).
+        .environment(\.locale, Locale(identifier: model.speechLanguage))
     }
 }
 
 /// The reply bar above the keys. Prompt 5: only the state message (spec §3.5). Reply and Polish
-/// arrive in Prompt 6. Follows Dynamic Type up to .accessibility1, then shrinks to fit.
+/// arrive in Prompt 6.
+/// - Opaque `surface` background, so the tested token pairs (text and textSecondary on surface,
+///   src/theme/__tests__/tokens.test.ts) apply instead of the translucent keyboard material.
+/// - Follows Dynamic Type up to .accessibility1 (AX1); the controller measures the text and sizes
+///   the bar to fit. Text only shrinks in landscape or when the bar hit its height cap.
+/// - Landscape (compact height): message line only; VoiceOver still reads the Settings path.
 @MainActor
 struct BarView: View {
     let message: BarMessage?
     let appName: String
+    let compactHeight: Bool
+    let textMayShrink: Bool
 
     var body: some View {
         Group {
             if let message {
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: KeyboardMetrics.barLineSpacing) {
                     Text(message.text)
                         .font(.footnote)
                         .foregroundStyle(KeyboardTheme.text)
-                    if let detail = message.detail {
+                    if message.showsDetail(compactHeight: compactHeight), let detail = message.detail {
                         Text(detail)
                             .font(.caption)
                             .foregroundStyle(KeyboardTheme.textSecondary)
                     }
                 }
-                .minimumScaleFactor(0.6)
-                .accessibilityElement(children: .combine)
+                .minimumScaleFactor(compactHeight || textMayShrink ? 0.6 : 1)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(Text(message.spokenText))
             } else {
                 Text(appName)
                     .font(.footnote.weight(.semibold))
@@ -51,7 +68,8 @@ struct BarView: View {
         .dynamicTypeSize(...DynamicTypeSize.accessibility1)
         .multilineTextAlignment(.leading)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .padding(.horizontal, 10)
+        .padding(.horizontal, KeyboardMetrics.barHorizontalPadding)
+        .background(KeyboardTheme.surface)
         .clipped()
     }
 }
@@ -63,6 +81,8 @@ struct KeysView: View {
 
     /// Space left and right of the rows.
     static let sidePadding: CGFloat = 3
+
+    @Environment(\.legibilityWeight) private var legibilityWeight
 
     var body: some View {
         GeometryReader { proxy in
@@ -105,7 +125,12 @@ struct KeysView: View {
     @ViewBuilder
     private func keyView(_ key: KeyDefinition, width: CGFloat, height: CGFloat, alignment: AccentPopupAlignment) -> some View {
         if case .nextKeyboard = key.action {
-            NextKeyboardKey(controller: model.inputModeController, label: model.strings.nextKeyboard)
+            NextKeyboardKey(
+                controller: model.inputModeController,
+                label: model.strings.nextKeyboard,
+                speechLanguage: model.speechLanguage,
+                bold: legibilityWeight == .bold
+            )
                 .background(
                     RoundedRectangle(cornerRadius: 5, style: .continuous)
                         .fill(KeyboardTheme.border)
@@ -118,7 +143,7 @@ struct KeysView: View {
             KeyView(
                 action: key.action,
                 face: model.face(for: key),
-                hint: model.strings.keysAlternativesHint,
+                speechLanguage: model.speechLanguage,
                 handler: model.handler,
                 width: width,
                 height: height,

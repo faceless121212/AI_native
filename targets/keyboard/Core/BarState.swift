@@ -48,6 +48,17 @@ public struct BarMessage: Sendable, Equatable {
     /// Lines of footnote text the bar reserves (spec §3.5: the long messages wrap to two lines;
     /// No Full Access shows its two-line Settings path under the message).
     public var lineCount: Int { detail == nil ? 2 : 4 }
+
+    /// Landscape iPhone (compact height) has room for the message only; the Settings path is
+    /// still read by VoiceOver (`spokenText`).
+    public func showsDetail(compactHeight: Bool) -> Bool {
+        detail != nil && !compactHeight
+    }
+
+    /// Message and detail as one sentence for VoiceOver and announcements.
+    public var spokenText: String {
+        [text, detail].compactMap { $0 }.joined(separator: " ")
+    }
 }
 
 extension BarState {

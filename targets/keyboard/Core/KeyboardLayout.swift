@@ -32,14 +32,24 @@ public enum KeyWidth: Hashable, Sendable {
 }
 
 public struct KeyDefinition: Hashable, Sendable, Identifiable {
-    /// Unique within one page.
+    /// Unique within one page. Keys that change meaning between pages but stay in the same place
+    /// (the bottom-left page key, the left key of the third row) get a fixed slot ID instead, so
+    /// SwiftUI keeps the same view and VoiceOver keeps its focus when the page changes.
     public let id: String
     public let action: KeyAction
     public let width: KeyWidth
 
-    public init(_ action: KeyAction, width: KeyWidth = .units(1)) {
+    /// Slot IDs used by `KeyboardLayouts.layout`.
+    public static let pageKeySlot = "slot:pageKey"
+    public static let thirdRowLeftSlot = "slot:thirdRowLeft"
+
+    public init(_ action: KeyAction, width: KeyWidth = .units(1), slot: String? = nil) {
         self.action = action
         self.width = width
+        if let slot {
+            id = slot
+            return
+        }
         switch action {
         case .character(let text): id = "char:\(text)"
         case .shift: id = "shift"
@@ -165,13 +175,13 @@ public enum KeyboardLayouts {
         var third: [KeyDefinition] = []
         switch page {
         case .letters:
-            third.append(KeyDefinition(.shift, width: .units(sideKeyUnits)))
+            third.append(KeyDefinition(.shift, width: .units(sideKeyUnits), slot: KeyDefinition.thirdRowLeftSlot))
             for character in last {
                 third.append(KeyDefinition(.character(character)))
             }
         case .numbers, .symbols:
             let toggle: KeyboardPage = page == .numbers ? .symbols : .numbers
-            third.append(KeyDefinition(.switchPage(toggle), width: .units(sideKeyUnits)))
+            third.append(KeyDefinition(.switchPage(toggle), width: .units(sideKeyUnits), slot: KeyDefinition.thirdRowLeftSlot))
             for character in last {
                 third.append(KeyDefinition(.character(character), width: .units(punctuationUnits)))
             }
@@ -180,7 +190,11 @@ public enum KeyboardLayouts {
         rows.append(third)
 
         var bottom: [KeyDefinition] = [
-            KeyDefinition(.switchPage(page == .letters ? .numbers : .letters), width: .units(pageKeyUnits)),
+            KeyDefinition(
+                .switchPage(page == .letters ? .numbers : .letters),
+                width: .units(pageKeyUnits),
+                slot: KeyDefinition.pageKeySlot
+            ),
         ]
         if showsNextKeyboard {
             bottom.append(KeyDefinition(.nextKeyboard, width: .units(nextKeyboardUnits)))
@@ -204,8 +218,14 @@ public enum KeyboardLayouts {
 
     /// iOS goes back to the letters after a space or an apostrophe typed on the numbers or
     /// symbols page, so "it's 5 pm" needs no extra page switch.
-    public static func pageAfterInserting(_ text: String, on page: KeyboardPage) -> KeyboardPage {
-        guard page != .letters else { return .letters }
+    /// Never while another key is still held (`otherKeyHeld`): switching would remove that key's
+    /// view under the finger, so its release would never arrive (rolling typing, code review #2).
+    public static func pageAfterInserting(
+        _ text: String,
+        on page: KeyboardPage,
+        otherKeyHeld: Bool = false
+    ) -> KeyboardPage {
+        guard page != .letters, !otherKeyHeld else { return page }
         return (text == " " || text == "'") ? .letters : page
     }
 }

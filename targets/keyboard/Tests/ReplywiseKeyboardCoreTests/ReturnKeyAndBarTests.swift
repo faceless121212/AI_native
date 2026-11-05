@@ -92,6 +92,15 @@ final class BarStateTests: XCTestCase {
         XCTAssertEqual(BarState.noAccess.message(en)?.lineCount, 4)
         XCTAssertEqual(BarState.aiOff.message(en)?.lineCount, 2)
     }
+
+    func testLandscapeShowsTheMessageOnlyButVoiceOverReadsBoth() {
+        let message = BarMessage(text: "Turn it on.", detail: "Settings → Keyboards")
+        XCTAssertTrue(message.showsDetail(compactHeight: false))
+        XCTAssertFalse(message.showsDetail(compactHeight: true))
+        XCTAssertEqual(message.spokenText, "Turn it on. Settings → Keyboards")
+        XCTAssertEqual(BarMessage(text: "Off.", detail: nil).spokenText, "Off.")
+        XCTAssertFalse(BarMessage(text: "Off.", detail: nil).showsDetail(compactHeight: false))
+    }
 }
 
 final class KeyboardMetricsTests: XCTestCase {
@@ -115,6 +124,15 @@ final class KeyboardMetricsTests: XCTestCase {
         let fourLines = KeyboardMetrics.barHeight(lines: 4, fontScale: 1, compactHeight: false)
         XCTAssertEqual(fourLines, 74)
         XCTAssertEqual(KeyboardMetrics.barHeight(lines: 4, fontScale: 1, compactHeight: true), 44)
+    }
+
+    func testMeasuredBarHeight() {
+        XCTAssertEqual(KeyboardMetrics.barHeight(measuredTextHeight: 16).height, 44)
+        XCTAssertFalse(KeyboardMetrics.barHeight(measuredTextHeight: 16).capped)
+        XCTAssertEqual(KeyboardMetrics.barHeight(measuredTextHeight: 99.2).height, 110)
+        let capped = KeyboardMetrics.barHeight(measuredTextHeight: 400)
+        XCTAssertEqual(capped.height, KeyboardMetrics.barMaxHeightRegular)
+        XCTAssertTrue(capped.capped)
     }
 
     func testHapticsOnlyWithFullAccess() {

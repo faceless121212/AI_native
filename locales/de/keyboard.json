@@ -65,12 +65,13 @@
   "keys": {
     "shift": "Umschalt",
     "capsLock": "Feststelltaste",
+    "shiftOn": "ein",
+    "shiftOff": "aus",
     "delete": "Löschen",
     "space": "Leerzeichen",
     "numbers": "Zahlen",
     "letters": "Buchstaben",
-    "moreSymbols": "Weitere Symbole",
-    "alternativesHint": "Streiche nach oben oder unten für weitere Zeichen."
+    "moreSymbols": "Weitere Symbole"
   },
   "returnKey": {
     "default": "Return",

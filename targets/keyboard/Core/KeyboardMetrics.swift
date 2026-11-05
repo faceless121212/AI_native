@@ -34,6 +34,21 @@ public enum KeyboardMetrics {
         return max(height, barMinHeight).rounded(.up)
     }
 
+    /// Horizontal padding of the bar text, and the gap between message and Settings path.
+    public static let barHorizontalPadding = 10.0
+    public static let barLineSpacing = 2.0
+    /// The bar never takes more than this in portrait, even at AX1 with the longest German
+    /// message; beyond it the text shrinks to fit.
+    public static let barMaxHeightRegular = 180.0
+
+    /// Bar height from the measured height of its text (message + detail, already laid out at
+    /// the bar's width, Dynamic Type capped at AX1). `capped` tells the view to let text shrink.
+    public static func barHeight(measuredTextHeight: Double) -> (height: Double, capped: Bool) {
+        let needed = (measuredTextHeight + barPadding).rounded(.up)
+        if needed > barMaxHeightRegular { return (barMaxHeightRegular, true) }
+        return (max(needed, barMinHeight), false)
+    }
+
     public static func keyboardHeight(rowCount: Int, compactHeight: Bool, barHeight: Double) -> Double {
         Double(max(rowCount, 0)) * rowHeight(compactHeight: compactHeight) + barHeight
     }

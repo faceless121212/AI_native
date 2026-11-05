@@ -50,12 +50,13 @@
     <string name="kb_formality_formal">Förmlich</string>
     <string name="kb_keys_shift">Umschalt</string>
     <string name="kb_keys_caps_lock">Feststelltaste</string>
+    <string name="kb_keys_shift_on">ein</string>
+    <string name="kb_keys_shift_off">aus</string>
     <string name="kb_keys_delete">Löschen</string>
     <string name="kb_keys_space">Leerzeichen</string>
     <string name="kb_keys_numbers">Zahlen</string>
     <string name="kb_keys_letters">Buchstaben</string>
     <string name="kb_keys_more_symbols">Weitere Symbole</string>
-    <string name="kb_keys_alternatives_hint">Streiche nach oben oder unten für weitere Zeichen.</string>
     <string name="kb_return_key_default">Return</string>
     <string name="kb_return_key_go">Öffnen</string>
     <string name="kb_return_key_search">Suchen</string>
