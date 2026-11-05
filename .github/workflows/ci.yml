@@ -40,7 +40,7 @@ jobs:
     # Tests/) and of the local Expo modules (modules/keyboard-bridge) inside the real Xcode project.
     # Simulator, Debug, unsigned: no Apple team or certificates needed.
     name: iOS build (app + keyboard extension, simulator, unsigned)
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 75
     env:
       CI: 1
@@ -55,6 +55,13 @@ jobs:
           XCODE="$(ls -d /Applications/Xcode_*.app | sort -V | tail -n 1)"
           sudo xcode-select -s "$XCODE"
           xcodebuild -version
+          # Expo SDK 58 is built against Xcode 27 (Swift 6.4); Xcode 26.x fails to compile
+          # expo-modules-jsi ("sending ... risks causing data races").
+          MAJOR="$(xcodebuild -version | sed -n 's/^Xcode \([0-9]*\).*/\1/p')"
+          if [ "${MAJOR:-0}" -lt 27 ]; then
+            echo "::error::Expo SDK 58 needs Xcode 27 or newer; this runner's newest is $(xcodebuild -version | head -1). Installed: $(ls /Applications | grep Xcode | tr '\n' ' ')"
+            exit 1
+          fi
       - run: npm ci
       # APP_VARIANT unset = production names; APPLE_TEAM_ID unset is fine (unsigned build).
       - name: Prebuild iOS

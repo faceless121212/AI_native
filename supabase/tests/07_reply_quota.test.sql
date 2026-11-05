@@ -3,7 +3,7 @@
 -- supabase/functions/_shared/repo-supabase.integration.test.ts (pgTAP runs in one transaction).
 begin;
 \ir _helpers.psql
-select plan(64);
+select plan(65);
 
 -- Consumes one reply for p_user at p_now; returns the jsonb result.
 create function tests.consume(p_user uuid, p_now timestamptz default now(), p_kind text default 'reply')
@@ -98,7 +98,13 @@ select isnt((select refunded_at from public.ai_requests where id = :'daily_id'),
 update public.usage_days set used = 3 where user_id = :'a_u' and local_date = '2026-11-03';
 select (tests.consume(:'a_u', '2026-11-03T09:00:00Z')) ->> 'request_id' as id \gset bonus_
 select is((select charge from public.ai_requests where id = :'bonus_id'), 'bonus', 'charged a bonus credit');
-select is((public.refund_reply(:'bonus_id') -> 'quota' ->> 'left_today')::int, 9, 'refund of a bonus credit returns the new quota');
+-- refund_reply reports the quota as of the real clock (now()), not the test's fixed dates, so
+-- compare it with quota_state at now(); the bonus balance itself is checked at the fixed time.
+select (public.refund_reply(:'bonus_id') -> 'quota' ->> 'left_today')::int as left_after \gset bonus_refund_
+select is(:bonus_refund_left_after, (public.quota_state(:'a_u', now()) ->> 'left_today')::int,
+  'refund of a bonus credit returns the current quota');
+select is((public.quota_state(:'a_u', '2026-11-03T09:00:01Z') ->> 'left_today')::int, 9,
+  'refund of a bonus credit gives the bonus credit back (9 left on 2026-11-03, daily used up)');
 select results_eq(format($$ select delta from public.credit_ledger where request_id = %L order by id $$, :'bonus_id'),
   $$ values (-1), (1) $$, 'bonus refund is a +1 refund row linked to the request');
 select is(public.refund_reply(gen_random_uuid()) ->> 'status', 'not_found', 'unknown request → not_found');
