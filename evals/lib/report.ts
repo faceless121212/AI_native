@@ -53,6 +53,8 @@ export const MEANINGFUL_WITH_FAKE: Record<CheckName, string> = {
   emoji: 'no (canned lines)',
   punctuation: 'no (canned lines)',
   format: 'no (canned lines)',
+  linebreaks:
+    'plumbing only: the "multiline" scenario checks that escaped \\n breaks survive the parser, post-check and SSE as real newlines (Polish) and are flattened in replies; checker itself is unit-tested',
   distinct: 'no (canned lines)',
   placeholders:
     'skipped with the fake (canned lines cannot keep placeholders); real check for live providers',
@@ -67,6 +69,7 @@ export const PLUMBING_CHECKS: readonly CheckName[] = [
   'crisis',
   'cards',
   'lang',
+  'linebreaks',
   'refund',
   'privacy',
 ];

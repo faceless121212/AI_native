@@ -115,13 +115,33 @@ export function validateIdentifiers(keys: string[]): void {
   }
 }
 
-export function buildEntries(byLang: Record<Lang, FlatStrings>): Entry[] {
+export type BuildOptions = {
+  /**
+   * Draft mode (`npm run gen:keyboard-strings -- --allow-missing`): a key missing in a language
+   * gets the English text and is listed in `missing`, so native code can use new keys before the
+   * translations land. Never for release: `npm run i18n:check` still fails on every missing key.
+   */
+  allowMissing?: boolean;
+  /** Filled with "lang:key" for every fallback used in draft mode. */
+  missing?: string[];
+};
+
+export function buildEntries(
+  byLang: Record<Lang, FlatStrings>,
+  options: BuildOptions = {},
+): Entry[] {
   const source = byLang[SOURCE_LANG];
   const valuesFor = (key: string) =>
     Object.fromEntries(
       LANGUAGES.map((lang) => {
         const value = byLang[lang].get(key);
-        if (value === undefined) throw new Error(`keyboard.json (${lang}) is missing "${key}"`);
+        if (value === undefined) {
+          const fallback = source.get(key);
+          if (!options.allowMissing || fallback === undefined)
+            throw new Error(`keyboard.json (${lang}) is missing "${key}"`);
+          options.missing?.push(`${lang}:${key}`);
+          return [lang, fallback];
+        }
         return [lang, value];
       }),
     ) as Record<Lang, string>;
@@ -265,11 +285,14 @@ ${lines.join('\n')}
 }
 
 /** Every generated file: repo-relative path → contents. */
-export function generateKeyboardStringFiles(root: string): Map<string, string> {
+export function generateKeyboardStringFiles(
+  root: string,
+  options: BuildOptions = {},
+): Map<string, string> {
   const byLang = Object.fromEntries(
     LANGUAGES.map((lang) => [lang, loadNamespace(root, lang, 'keyboard')]),
   ) as Record<Lang, FlatStrings>;
-  const entries = buildEntries(byLang);
+  const entries = buildEntries(byLang, options);
   const files = new Map<string, string>([[SWIFT_OUT, generateSwift(entries)]]);
   for (const lang of LANGUAGES) files.set(androidOut(lang), generateAndroid(entries, lang));
   return files;

@@ -48,4 +48,23 @@
     <string name="kb_flirt_playful">Juguetón</string>
     <string name="kb_formality_casual">Informal</string>
     <string name="kb_formality_formal">Formal</string>
+    <string name="kb_keys_shift">Mayúsculas</string>
+    <string name="kb_keys_caps_lock">Bloqueo de mayúsculas</string>
+    <string name="kb_keys_shift_on">activado</string>
+    <string name="kb_keys_shift_off">desactivado</string>
+    <string name="kb_keys_delete">Borrar</string>
+    <string name="kb_keys_space">espacio</string>
+    <string name="kb_keys_numbers">Números</string>
+    <string name="kb_keys_letters">Letras</string>
+    <string name="kb_keys_more_symbols">Más símbolos</string>
+    <string name="kb_return_key_default">intro</string>
+    <string name="kb_return_key_go">ir</string>
+    <string name="kb_return_key_search">buscar</string>
+    <string name="kb_return_key_send">enviar</string>
+    <string name="kb_return_key_done">OK</string>
+    <string name="kb_return_key_next">siguiente</string>
+    <string name="kb_return_key_join">conectarse</string>
+    <string name="kb_return_key_route">ruta</string>
+    <string name="kb_return_key_continue">continuar</string>
+    <string name="kb_return_key_emergency_call">emergencia</string>
 </resources>

@@ -109,4 +109,19 @@ describe('generated files', () => {
     const broken = { ...byLang, it: flatten({ appName: 'Replywise' }) };
     expect(() => buildEntries(broken)).toThrow('keyboard.json (it) is missing "bar.lastTrialDay"');
   });
+
+  it('draft mode falls back to English only when asked, and lists every fallback', () => {
+    const broken = { ...byLang, it: flatten({ appName: 'Replywise' }) };
+    const missing: string[] = [];
+    const entries = buildEntries(broken, { allowMissing: true, missing });
+    expect(entries.find((e) => e.key === 'bar.lastTrialDay')).toMatchObject({
+      values: { it: 'Ends tomorrow: {{price}}/week' },
+    });
+    expect(missing).toEqual([
+      'it:bar.lastTrialDay',
+      'it:counter.leftToday_one',
+      'it:counter.leftToday_other',
+      'it:tone.sayNoKindly',
+    ]);
+  });
 });

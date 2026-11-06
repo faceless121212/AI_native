@@ -290,7 +290,39 @@ export function formatProblems(text: string): string[] {
   if (/(?<![\p{L}\p{N}&])#\p{L}/u.test(text)) problems.push('hashtag');
   if (/^\s*["“„«']/.test(text) && /["”“»']\s*$/.test(text)) problems.push('wrapped in quotes');
   if (/\b(?:R[1-3]|META|L|W)\|/.test(text)) problems.push('format tag inside text');
-  if (/\n/.test(text)) problems.push('line break');
+  return problems;
+}
+
+/** Non-empty lines of a text (blank lines between paragraphs don't count). */
+export function textLines(text: string): string[] {
+  return text
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+}
+
+/**
+ * Line breaks (spec decision 2026-11-03: Polish keeps the draft's line breaks; reply cards are
+ * one line). Reply: any newline is a problem. Polish light edit: the same number of non-empty
+ * lines and of paragraphs as the draft. Polish rewrite: free to reword, but a multi-line draft
+ * keeps at least one break. A one-line draft gets one-line Polish cards.
+ */
+export function lineBreakProblems(
+  variant: 'reply' | 'light' | 'rewrite',
+  card: string,
+  draft: string,
+): string[] {
+  const hasBreak = /\n/.test(card);
+  if (variant === 'reply') return hasBreak ? ['line break in a reply card'] : [];
+  const draftLines = textLines(draft).length;
+  const cardLines = textLines(card).length;
+  if (draftLines <= 1) return cardLines > 1 ? ['line break added to a one-line draft'] : [];
+  if (variant === 'rewrite') return hasBreak ? [] : ['line breaks of the draft lost'];
+  const paragraphs = (t: string) => t.split(/\n\s*\n/).filter((p) => p.trim()).length;
+  const problems: string[] = [];
+  if (cardLines !== draftLines) problems.push(`${cardLines} lines, draft has ${draftLines}`);
+  if (paragraphs(card) !== paragraphs(draft))
+    problems.push(`${paragraphs(card)} paragraphs, draft has ${paragraphs(draft)}`);
   return problems;
 }
 

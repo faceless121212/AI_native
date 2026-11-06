@@ -50,3 +50,21 @@ Deno.test('postCheckCard honours a larger limit for long Polish rewrites', async
   assertEquals(postCheckCard(long, null).ok, false);
   assertEquals(postCheckCard(long, null, 600).ok, true);
 });
+
+Deno.test('postcheck: Polish newlines are kept and count as one character each', () => {
+  const card = 'Hi Sam,\n\nthanks for today.\nSee you soon!';
+  assertEquals(cleanCardText(card), card);
+  assertEquals(cleanCardText(`  "${card}"\n`), card);
+  assertEquals(postCheckCard(card, 'en'), { ok: true, text: card });
+  // 299 letters + 1 newline = 300: kept; one more letter: too long.
+  const at = 'a'.repeat(150) + '\n' + 'a'.repeat(149);
+  assertEquals(postCheckCard(at, 'en'), { ok: true, text: at });
+  assertEquals(postCheckCard(at + 'a', 'en'), { ok: false, reason: 'too_long' });
+});
+
+Deno.test('postcheck: a banned phrase split over two lines is still caught', () => {
+  assertEquals(postCheckCard('Thanks!\nAs an\nAI, I think so', 'en'), {
+    ok: false,
+    reason: 'banned',
+  });
+});

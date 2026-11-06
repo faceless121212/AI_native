@@ -29,7 +29,7 @@ Picking rule: TypeScript for the app and server, Swift and Kotlin only where the
 | Need | Use | Why | Notes |
 |---|---|---|---|
 | iOS keyboard target | **`@bacons/apple-targets`** (expo-apple-targets, Evan Bacon) target type `keyboard` | Adds a native Keyboard Extension target during `expo prebuild`; code lives in `targets/keyboard/` outside `ios/` | Its docs say the keyboard target does **not** auto-sync the App Group entitlement; set `com.apple.security.application-groups` and `keychain-access-groups` explicitly in `targets/keyboard/expo-target.config.js` and in the app's entitlements |
-| iOS keyboard UI | **Swift + SwiftUI** hosted in `UIInputViewController` via `UIHostingController` | Native, low memory | iOS 16+ minimum (to confirm against current Expo SDK minimum) |
+| iOS keyboard UI | **Swift + SwiftUI** hosted in `UIInputViewController` via `UIHostingController` | Native, low memory | iOS 16.4 minimum (Expo SDK 58's minimum; app and keyboard use the same deployment target) |
 | iOS language detection | **NaturalLanguage** `NLLanguageRecognizer` | On device, no network | |
 | iOS networking | `URLSession` with `bytes(for:)` for server-sent events | No extra library | Only with Full Access (`RequestsOpenAccess = YES` in the extension's Info.plist) |
 | iOS crash data for the extension | **MetricKit** diagnostics written to the App Group, uploaded by the app to Sentry | No SDK inside the extension | |

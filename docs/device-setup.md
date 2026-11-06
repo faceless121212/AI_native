@@ -39,9 +39,10 @@ Pick your iPhone from the list. The first build asks Xcode for signing:
 Turn the keyboard on:
 
 1. Settings → General → Keyboard → Keyboards → Add New Keyboard…
-2. Under "Third-Party Keyboards", tap **Replywise**. Don't turn on Full Access; it isn't needed yet.
+2. Under "Third-Party Keyboards", tap **Replywise**. Typing works without Full Access. To test the Full Access states, tap **Replywise** in the keyboard list and turn on **Allow Full Access**.
 3. Open Notes (or any text field), tap and hold the globe key under the keyboard (or the 🌐 key on the keyboard), and choose **Replywise**.
-4. You should see a row with "Replywise". On iPhones with a Home button there's also a globe key in the row; on Face ID iPhones the system globe sits below the keyboard instead. Tap the globe key to go back to your normal keyboard; tap and hold it to see the keyboard list.
+4. You should see the full keyboard in your device language (en, de, fr, es or it) with a message bar above it. On iPhones with a Home button there's also a globe key in the bottom row; on Face ID iPhones the system globe sits below the keyboard instead. Tap the globe key to go back to your normal keyboard; tap and hold it to see the keyboard list.
+5. The checklist for testing the keyboard on the phone is docs/keyboard-manual-test.md.
 
 ## Android phone
 

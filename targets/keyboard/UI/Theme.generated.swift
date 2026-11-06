@@ -3,29 +3,36 @@
 import SwiftUI
 import UIKit
 
-/// Keyboard colours, identical to the app's tokens. Each one follows light/dark mode.
+/// Keyboard colours, identical to the app's tokens. Each one follows light/dark mode and
+/// Increase Contrast (Settings → Accessibility → Display & Text Size).
 enum KeyboardTheme {
-    static let background = dynamic(light: 0xFFFFFF, dark: 0x0F1115)
-    static let surface = dynamic(light: 0xF4F5F7, dark: 0x181B21)
-    static let surfaceRaised = dynamic(light: 0xFFFFFF, dark: 0x20242C)
-    static let border = dynamic(light: 0xD5D9E0, dark: 0x353B47)
-    static let borderStrong = dynamic(light: 0x7C8494, dark: 0x7D8596)
-    static let text = dynamic(light: 0x14161A, dark: 0xF2F4F7)
-    static let textSecondary = dynamic(light: 0x5A6170, dark: 0xA8AFBD)
-    static let accent = dynamic(light: 0x4338CA, dark: 0x9AA2FF)
-    static let onAccent = dynamic(light: 0xFFFFFF, dark: 0x0F1115)
-    static let accentSoft = dynamic(light: 0xE8E7FB, dark: 0x272B52)
-    static let onAccentSoft = dynamic(light: 0x2E2591, dark: 0xD4D7FF)
-    static let success = dynamic(light: 0x1E7A46, dark: 0x5BD38A)
-    static let successSoft = dynamic(light: 0xE5F4EC, dark: 0x13291D)
-    static let warning = dynamic(light: 0x8A5300, dark: 0xF5C04A)
-    static let warningSoft = dynamic(light: 0xFDF1DC, dark: 0x2E2410)
-    static let danger = dynamic(light: 0xB42318, dark: 0xFF8A80)
-    static let dangerSoft = dynamic(light: 0xFDECEA, dark: 0x341614)
-    static let focus = dynamic(light: 0x4338CA, dark: 0x9AA2FF)
+    static let background = dynamic(light: 0xFFFFFF, dark: 0x0F1115, lightHighContrast: 0xFFFFFF, darkHighContrast: 0x0F1115)
+    static let surface = dynamic(light: 0xF4F5F7, dark: 0x181B21, lightHighContrast: 0xF4F5F7, darkHighContrast: 0x181B21)
+    static let surfaceRaised = dynamic(light: 0xFFFFFF, dark: 0x20242C, lightHighContrast: 0xFFFFFF, darkHighContrast: 0x20242C)
+    static let border = dynamic(light: 0xD5D9E0, dark: 0x353B47, lightHighContrast: 0xD5D9E0, darkHighContrast: 0x353B47)
+    static let borderStrong = dynamic(light: 0x7C8494, dark: 0x7D8596, lightHighContrast: 0x7C8494, darkHighContrast: 0x7D8596)
+    static let text = dynamic(light: 0x14161A, dark: 0xF2F4F7, lightHighContrast: 0x14161A, darkHighContrast: 0xF2F4F7)
+    static let textSecondary = dynamic(light: 0x5A6170, dark: 0xA8AFBD, lightHighContrast: 0x14161A, darkHighContrast: 0xF2F4F7)
+    static let accent = dynamic(light: 0x4338CA, dark: 0x9AA2FF, lightHighContrast: 0x4338CA, darkHighContrast: 0x9AA2FF)
+    static let onAccent = dynamic(light: 0xFFFFFF, dark: 0x0F1115, lightHighContrast: 0xFFFFFF, darkHighContrast: 0x0F1115)
+    static let accentSoft = dynamic(light: 0xE8E7FB, dark: 0x272B52, lightHighContrast: 0xE8E7FB, darkHighContrast: 0x272B52)
+    static let onAccentSoft = dynamic(light: 0x2E2591, dark: 0xD4D7FF, lightHighContrast: 0x2E2591, darkHighContrast: 0xD4D7FF)
+    static let success = dynamic(light: 0x1E7A46, dark: 0x5BD38A, lightHighContrast: 0x1E7A46, darkHighContrast: 0x5BD38A)
+    static let successSoft = dynamic(light: 0xE5F4EC, dark: 0x13291D, lightHighContrast: 0xE5F4EC, darkHighContrast: 0x13291D)
+    static let warning = dynamic(light: 0x8A5300, dark: 0xF5C04A, lightHighContrast: 0x8A5300, darkHighContrast: 0xF5C04A)
+    static let warningSoft = dynamic(light: 0xFDF1DC, dark: 0x2E2410, lightHighContrast: 0xFDF1DC, darkHighContrast: 0x2E2410)
+    static let danger = dynamic(light: 0xB42318, dark: 0xFF8A80, lightHighContrast: 0xB42318, darkHighContrast: 0xFF8A80)
+    static let dangerSoft = dynamic(light: 0xFDECEA, dark: 0x341614, lightHighContrast: 0xFDECEA, darkHighContrast: 0x341614)
+    static let focus = dynamic(light: 0x4338CA, dark: 0x9AA2FF, lightHighContrast: 0x4338CA, darkHighContrast: 0x9AA2FF)
 
-    private static func dynamic(light: UInt32, dark: UInt32) -> Color {
-        Color(UIColor { traits in rgb(traits.userInterfaceStyle == .dark ? dark : light) })
+    private static func dynamic(light: UInt32, dark: UInt32, lightHighContrast: UInt32, darkHighContrast: UInt32) -> Color {
+        Color(UIColor { traits in
+            let high = traits.accessibilityContrast == .high
+            if traits.userInterfaceStyle == .dark {
+                return rgb(high ? darkHighContrast : dark)
+            }
+            return rgb(high ? lightHighContrast : light)
+        })
     }
 
     private static func rgb(_ value: UInt32) -> UIColor {

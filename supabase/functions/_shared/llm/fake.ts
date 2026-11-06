@@ -8,7 +8,10 @@
 //   wronglang · long · truncated · metafirst (v1 prompt order: META line first) · crisis-nometa
 //   (supportive crisis lines but the META line is lost: exercises the crisis keyword backstop) ·
 //   lang-en|de|fr|es|it (META first and cards in that language whatever the hint said: the
-//   on-device hint was wrong and the model followed the message)
+//   on-device hint was wrong and the model followed the message) · multiline (META first; Polish
+//   cards keep a three-paragraph draft's breaks, written as `\n` the way the polish prompt asks,
+//   the casual rewrite with an escaped backslash `\\`; reply cards contain a stray `\n` the parser
+//   flattens to a space)
 import type { Lang, ReplyKind } from '../schemas.ts';
 import {
   emptyOutcome,
@@ -40,6 +43,7 @@ export const FAKE_SCENARIOS = [
   'lang-fr',
   'lang-es',
   'lang-it',
+  'multiline',
 ] as const;
 export type FakeScenario = (typeof FAKE_SCENARIOS)[number];
 
@@ -190,6 +194,35 @@ const CRISIS: Record<Lang, Lines> = {
   ],
 };
 
+/** Greeting and sign-off around the Polish body for 'multiline' (three paragraphs; formal sign-offs put the name on its own line). */
+const MULTILINE: Record<Lang, Record<Formality, readonly [string, string]>> = {
+  en: {
+    casual: ['Hi Sam,', 'See you soon, Alex'],
+    formal: ['Dear Ms Taylor,', 'Kind regards,\nAlex Morgan'],
+  },
+  de: {
+    casual: ['Hallo Sam,', 'Bis bald, Alex'],
+    formal: ['Sehr geehrte Frau Weber,', 'Mit freundlichen Grüßen\nAlex Morgan'],
+  },
+  fr: {
+    casual: ['Salut Sam,', 'À bientôt, Alex'],
+    formal: ['Madame Martin,', 'Bien cordialement,\nAlex Morgan'],
+  },
+  es: {
+    casual: ['Hola, Sam:', 'Hasta pronto, Alex'],
+    formal: ['Estimada señora García:', 'Un cordial saludo,\nAlex Morgan'],
+  },
+  it: {
+    casual: ['Ciao Sam,', 'A presto, Alex'],
+    formal: ['Gentile signora Rossi,', 'Cordiali saluti,\nAlex Morgan'],
+  },
+};
+
+/** Escapes a card for one output line the way the polish prompt asks (`\\` first, then `\n`). */
+export function escapeCardLine(text: string): string {
+  return text.replaceAll('\\', '\\\\').replaceAll('\n', '\\n');
+}
+
 const OTHER_LANG: Record<Lang, Lang> = { en: 'de', de: 'fr', fr: 'es', es: 'it', it: 'en' };
 
 const MARKER = /\[\[fake:([a-z-]+)\]\]/;
@@ -255,6 +288,22 @@ export function fakeOutput(scenario: FakeScenario, prompt: LlmPrompt): string {
     case 'lang-it': {
       const actual = scenario.slice(5) as Lang;
       return `${meta(actual)}\n${cardLines(kind, actual, formality).join('\n')}\n`;
+    }
+    case 'multiline': {
+      if (kind === 'polish') {
+        const [hello, bye] = MULTILINE[lang][formality];
+        const [light, rewrite] = POLISH[lang][formality];
+        return [
+          meta(lang),
+          `L|${escapeCardLine(`${hello}\n\n${light}\n\n${bye}`)}`,
+          // The rewrite keeps the breaks too; casual adds a backslash (an emoticon), sent as \\.
+          `W|${escapeCardLine(`${hello}\n\n${rewrite}${formality === 'casual' ? ' ¯\\_(ツ)_/¯' : ''}\n\n${bye}`)}`,
+          '',
+        ].join('\n');
+      }
+      const [first, ...others] = REPLIES[lang][formality];
+      const split = first.replace(/([!?.,]) /, '$1\\n');
+      return [meta(lang), `R1|${split}`, ...others.map((t, i) => `R${i + 2}|${t}`), ''].join('\n');
     }
     case 'crisis-nometa':
       return `${(kind === 'polish'
