@@ -103,14 +103,16 @@ public class KeyboardBridgeModule: Module {
   }
 }
 
-final class InvalidAppGroupKeyException: GenericException<String> {
+// The Expo base classes are @unchecked Sendable; these subclasses add no state, so restating it
+// is safe (Swift 6.2 warns otherwise, and CI fails on warnings in our code).
+final class InvalidAppGroupKeyException: GenericException<String>, @unchecked Sendable {
   override var reason: String { "Not a v1 App Group key of this type: \(param)" }
 }
 
-final class AppGroupUnavailableException: Exception {
+final class AppGroupUnavailableException: Exception, @unchecked Sendable {
   override var reason: String { "App Group container unavailable (check the App Group entitlement)" }
 }
 
-final class KeychainException: GenericException<String> {
+final class KeychainException: GenericException<String>, @unchecked Sendable {
   override var reason: String { "Device key keychain error: \(param)" }
 }
