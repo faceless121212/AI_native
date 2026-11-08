@@ -7,7 +7,7 @@ import {
 } from '../_shared/llm/runner.ts';
 import { PROMPT_SETS, PROMPT_VERSION } from '../_shared/prompts/index.ts';
 import { RateLimiter } from '../_shared/rate-limit.ts';
-import { device, jsonRequest } from '../_shared/testing/helpers.ts';
+import { captureConsole, device, jsonRequest } from '../_shared/testing/helpers.ts';
 import {
   aiUser,
   cardTexts,
@@ -538,10 +538,18 @@ Deno.test('reply: only one retry; still too few cards → partial', async () => 
   const fake = new FakeProvider({ script: ['explicit', 'explicit'] });
   const { store, handler } = setupReply({ providers: [fake] });
   const { token } = await aiUser(store);
-  const res = await handler(replyRequest(token));
-  const events = await readEvents(res);
+  const { result: res, lines: before } = await captureConsole(() => handler(replyRequest(token)));
+  const { result: events, lines } = await captureConsole(() => readEvents(res));
   assertEquals(fake.calls.length, 2);
-  assertEquals(cardTexts(events).length, 2);
+  // The retry's only clean card repeats the first one word for word: dropped as a duplicate
+  // (before the repeat rule, the user got the same card twice).
+  assertEquals(cardTexts(events).length, 1);
+  assertEquals(
+    [...before, ...lines]
+      .filter((l) => l.includes('"card_dropped"'))
+      .map((l) => (JSON.parse(l) as { reason: string }).reason),
+    ['explicit', 'explicit', 'duplicate', 'explicit', 'explicit'],
+  );
   assertEquals(store.requests.get(res.headers.get('x-request-id')!)!.status, 'partial');
 });
 

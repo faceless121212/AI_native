@@ -48,6 +48,7 @@ import { text as deV4 } from './lang/de.v4.ts';
 import { text as frV4 } from './lang/fr.v4.ts';
 import { text as esV4 } from './lang/es.v4.ts';
 import { text as itV4 } from './lang/it.v4.ts';
+import { emojiAllowed } from '../emoji.ts';
 import type { LlmPrompt } from '../llm/provider.ts';
 import { MAX_OUTPUT_TOKENS } from '../llm/settings.ts';
 import type {
@@ -192,8 +193,6 @@ const ADDRESS: Readonly<Record<Lang, Record<Formality, string>>> = {
   it: { casual: 'tu', formal: 'Lei' },
 };
 
-const EMOJI = /\p{Extended_Pictographic}/u;
-
 function safetyRules(version: PromptVersion, md: string): Record<ReplyKind, string> {
   const s = sections(md);
   if (s.size === 0) return { reply: strip(md), polish: strip(md) };
@@ -302,7 +301,7 @@ export function buildPrompt(
     `they_are=${input.theyAre}`,
     `language_hint=${input.langHint}`,
     `reply_language=${lang}`,
-    `emoji=${EMOJI.test(input.text) ? 'at most one per reply' : 'none'}`,
+    `emoji=${emojiAllowed(input.text) ? 'at most one per reply' : 'none'}`,
   ].join('; ');
 
   // The text can't close the block: the tag is random per request, and any copy of it is removed.

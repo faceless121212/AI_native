@@ -49,7 +49,12 @@ export interface StoredCredit {
 export interface StoredRequest {
   id: string;
   userId: string;
-  input: ConsumeInput;
+  /** relationship, tone and flirt are null after a server refusal (FinishInput.clearChips). */
+  input: Omit<ConsumeInput, 'relationship' | 'tone' | 'flirt'> & {
+    relationship: ConsumeInput['relationship'] | null;
+    tone: ConsumeInput['tone'] | null;
+    flirt: ConsumeInput['flirt'] | null;
+  };
   createdAt: number;
   charge: 'starter' | 'daily' | 'bonus' | 'paid';
   chargeDate: string;
@@ -455,6 +460,11 @@ export class MemoryStore implements AuthDeps, ConsentRepo, ProfileRepo, DeviceKe
     }
     req.status = input.status;
     req.finish = structuredClone(input);
+    if (input.clearChips) {
+      req.input.relationship = null;
+      req.input.tone = null;
+      req.input.flirt = null;
+    }
     return Promise.resolve();
   }
 

@@ -122,6 +122,12 @@ export interface FinishInput {
   cards: number;
   /** Indexes of the cards sent (feedback is accepted only for these). */
   deliveredCards: number[];
+  /**
+   * Set NULL on relationship, tone and flirt (a request refused on the server before the model,
+   * after its refund): the row must not say whose message was refused. Charge, refund and
+   * created_at stay, so refund_reply and the rate limit work as for any row.
+   */
+  clearChips?: boolean;
 }
 
 export type ReplyEventResult = 'ok' | 'duplicate' | 'not_found';

@@ -366,6 +366,7 @@ export class SupabaseReplyRepo implements ReplyRepo {
         safety_flags: input.safetyFlags,
         cards: input.cards,
         delivered_cards: input.deliveredCards,
+        ...(input.clearChips ? { relationship: null, tone: null, flirt: null } : {}),
       })
       .eq('id', requestId);
     if (error)

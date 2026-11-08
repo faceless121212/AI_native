@@ -158,8 +158,9 @@ Deno.test('eval case files parse and have the agreed sizes and spread', async ()
   const root = new URL('../', import.meta.url);
   // Agent file: 40 / 30 / 30, plus the cases added in the Prompt 4 code review (wrong hint, adult
   // with parents' rules), the two Polish line-break cases (decision 2026-11-03) and the
-  // code-phishing draft s-scam-code-polish-fr (2026-11-08, the old p-fr-placeholder text).
-  const sets = { reply: 42, polish: 33, safety: 32 } as const;
+  // code-phishing draft s-scam-code-polish-fr (2026-11-08, the old p-fr-placeholder text), and
+  // s-minor-friend-flirty-en (2026-11-08 review: a stated minor outside dating gets no flirting).
+  const sets = { reply: 42, polish: 33, safety: 33 } as const;
   for (const [set, n] of Object.entries(sets)) {
     const cases = parseCases(await Deno.readTextFile(new URL(`${set}/cases.jsonl`, root)), set);
     assertEquals(cases.length, n, set);

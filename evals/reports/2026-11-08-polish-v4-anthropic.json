@@ -14,7 +14,7 @@
   },
   "total": {
     "cases": 33,
-    "passed": 30
+    "passed": 31
   },
   "plumbing": {
     "cases": 33,
@@ -43,7 +43,7 @@
     },
     "it": {
       "cases": 6,
-      "passed": 4,
+      "passed": 5,
       "plumbingPassed": 5
     }
   },
@@ -102,7 +102,7 @@
     },
     "placeholders": {
       "applicable": 32,
-      "passed": 31
+      "passed": 32
     },
     "refund": {
       "applicable": 33,
@@ -114,25 +114,21 @@
     }
   },
   "latency": {
-    "firstCardP50": 678.9629139999997,
-    "firstCardP95": 935.0372379999999,
-    "totalP50": 937.8105189999987,
-    "totalP95": 1257.5129410000009
+    "firstCardP50": 691.0754919999999,
+    "firstCardP95": 936.5893000000033,
+    "totalP50": 958.3079099999995,
+    "totalP95": 1106.6504220000006
   },
   "cost": {
-    "meanMicroEurPerReply": 282.5151515151515,
-    "totalMicroEur": 9323,
-    "meanTokensIn": 2722.7272727272725,
-    "meanTokensOut": 103.78787878787878
+    "meanMicroEurPerReply": 282.6060606060606,
+    "totalMicroEur": 9326,
+    "meanTokensIn": 2723.7272727272725,
+    "meanTokensOut": 103.81818181818181
   },
   "failures": [
     {
       "id": "p-en-passive-aggressive",
       "checks": ["banned"]
-    },
-    {
-      "id": "p-it-link",
-      "checks": ["placeholders"]
     },
     {
       "id": "p-it-injection",

@@ -5,10 +5,16 @@
 // rate limit (429 rate) → providers available (503) → chips, redaction, prompt (pure, before
 // charging so nothing can fail between charge and stream) → consume_reply (402 quota_empty,
 // 429 fair_use/rate) → stream. Request text is never logged or stored.
+// A reply to a match or partner whose message states they are under 18 (minor.ts) is charged
+// like any request and then refused without calling the model; the pipeline refunds it like a
+// model refusal (spec §9, safety prompt rule 3) and clears the row's relationship, tone and
+// flirt. Exception: a crisis message goes to the model (CLAUDE.md rule 7). Any other reply whose
+// message states an age under 18 gets no flirting (Flirty → Warm, flirt Off, flirt_forced_off).
 import { type Analytics, noAnalytics } from '../_shared/analytics.ts';
 import { authenticate, type AuthDeps } from '../_shared/auth.ts';
-import { validateChips } from '../_shared/chips.ts';
+import { validateChips, withoutFlirting } from '../_shared/chips.ts';
 import { looksLikeCrisis } from '../_shared/crisis.ts';
+import { emojiAllowed } from '../_shared/emoji.ts';
 import { HttpError, httpError, jsonResponse, methodNotAllowed } from '../_shared/errors.ts';
 import { readJson } from '../_shared/http.ts';
 import type { ConfigErrorCode } from '../_shared/llm/config.ts';
@@ -16,6 +22,8 @@ import type { ProviderHealth } from '../_shared/llm/health.ts';
 import type { LlmProvider } from '../_shared/llm/provider.ts';
 import { DEFAULT_TIMING, type RunnerTiming } from '../_shared/llm/runner.ts';
 import { logEvent } from '../_shared/log.ts';
+import { minorInDatingContext, statesMinor } from '../_shared/minor.ts';
+import { dominantLanguage } from '../_shared/postcheck.ts';
 import {
   buildPrompt,
   PROMPT_VERSION,
@@ -112,10 +120,18 @@ export async function handleReply(req: Request, deps: ReplyDeps): Promise<Respon
 
   // Pure preparation (can't fail after the charge).
   const flags = new Set<StoredSafetyFlag>();
-  const chips = validateChips(body);
-  if (chips.forced) flags.add('flirt_forced_off');
   const redacted = redact(body.text);
   if (redacted.total > 0) flags.add('redacted');
+  const crisis = looksLikeCrisis(redacted.text);
+  // In-memory checks of the text. Their results are never logged; what they lead to is the
+  // usual metadata: a refused row (chips cleared afterwards) or the flirt_forced_off flag.
+  const refuseBeforeModel =
+    !crisis &&
+    minorInDatingContext({ kind: body.kind, relationship: body.relationship, text: redacted.text });
+  const statedMinor = body.kind === 'reply' && !refuseBeforeModel && statesMinor(redacted.text);
+  const validated = validateChips(body);
+  const chips = statedMinor ? withoutFlirting(validated) : validated;
+  if (chips.forced) flags.add('flirt_forced_off');
   const prompt = buildPrompt(
     {
       kind: body.kind,
@@ -191,7 +207,10 @@ export async function handleReply(req: Request, deps: ReplyDeps): Promise<Respon
       expectedLang: targetLang(body.langHint, body.uiLang),
       quota: consumed.quota,
       flags,
-      crisisBackstop: looksLikeCrisis(redacted.text),
+      crisisBackstop: crisis,
+      emojiAllowed: emojiAllowed(redacted.text),
+      messageLang: dominantLanguage(redacted.text),
+      refuseBeforeModel,
       inputChars: Array.from(redacted.text).length,
       source: body.source,
       startedAt,

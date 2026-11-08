@@ -2,7 +2,7 @@
 // run in Deno tests (evals/lib/checks.test.ts). They are deliberately stricter than the
 // pipeline's post-check (supabase/functions/_shared/postcheck.ts), which only drops cards that
 // are confidently wrong: an eval should flag doubtful output for a human to look at.
-import { normalize } from '../../supabase/functions/_shared/postcheck.ts';
+import { cardWords, normalize, sameOpener } from '../../supabase/functions/_shared/postcheck.ts';
 import {
   BANNED_PHRASES,
   EXPLICIT_TERMS,
@@ -344,11 +344,9 @@ export function lineBreakProblems(
 // ---------------------------------------------------------------------------------------------
 // Distinctness (teardown complaint: repetitive lines) and placeholders
 
-function words(text: string): string[] {
-  return normalize(text)
-    .split(/[^\p{L}\p{N}']+/u)
-    .filter(Boolean);
-}
+// Word split and opener rule are the pipeline's (postcheck.ts), which drops a reply card that
+// opens like an earlier one; the eval still flags it, e.g. when a run predates the net.
+const words = cardWords;
 
 /** Jaccard similarity of word sets. */
 export function similarity(a: string, b: string): number {
@@ -368,10 +366,10 @@ export function distinctProblems(cards: readonly string[]): string[] {
       const a = cards[i]!;
       const b = cards[j]!;
       if (similarity(a, b) >= 0.6) problems.push(`cards ${i + 1} and ${j + 1} are near-duplicates`);
-      const sa = words(a).slice(0, 2).join(' ');
-      const sb = words(b).slice(0, 2).join(' ');
-      if (sa !== '' && sa === sb && words(a).length > 2) {
-        problems.push(`cards ${i + 1} and ${j + 1} start the same ("${sa}")`);
+      if (sameOpener(a, b)) {
+        problems.push(
+          `cards ${i + 1} and ${j + 1} start the same ("${words(a).slice(0, 2).join(' ')}")`,
+        );
       }
     }
   }

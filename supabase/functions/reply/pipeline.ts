@@ -3,8 +3,12 @@
 //   card* / meta (as they arrive) → quota → done        on success
 //   [meta] → quota → error                              when no card could be sent (refunded),
 //                                                       or AI was turned off mid-request
-// Cards are post-checked and flushed as soon as their line is complete. Fewer than 2 surviving
-// cards → one retry. Before a retry or a fallback, consent (and the device key) is checked again.
+// Cards are post-checked and flushed as soon as their line is complete: emoji stripped to the
+// spec §4 rule first (logged as `card_fixed`), then length, lists and language; a reply card that
+// repeats an earlier one (same first three words, or the same words) is dropped. Fewer than 2 surviving cards → one retry. A request the
+// handler refused before the model (minor in a dating context) skips the model and ends like a
+// model refusal (meta refused, refund, status refused). Before a retry or a fallback, consent
+// (and the device key) is checked again.
 // Client disconnect aborts the provider call. Generation is wrapped so that, whatever throws, the
 // refund (no card sent), the closing events and the request metadata still happen; on Supabase
 // the work is registered with EdgeRuntime.waitUntil so it survives the client going away. A
@@ -20,8 +24,9 @@ import {
   type RunnerTiming,
   type RunResult,
 } from '../_shared/llm/runner.ts';
+import { emojiPolicy } from '../_shared/emoji.ts';
 import { logError, logEvent } from '../_shared/log.ts';
-import { postCheckCard } from '../_shared/postcheck.ts';
+import { type DropReason, postCheckCard, repeatsCard } from '../_shared/postcheck.ts';
 import type { QuotaSnapshot, ReplyRepo, RequestStatus, StoredSafetyFlag } from '../_shared/repo.ts';
 import {
   type CardEvent,
@@ -69,6 +74,20 @@ export interface PipelineInput {
    * early. Never stored, logged or sent to analytics.
    */
   crisisBackstop: boolean;
+  /**
+   * postcheck.ts dominantLanguage of the (redacted) input: a card in this language is never
+   * dropped as wrong_lang, whatever the hint or META said. Null when not confident.
+   */
+  messageLang: Lang | null;
+  /** emoji.ts emojiAllowed of the (redacted) input: the same rule the prompt was built with. */
+  emojiAllowed: boolean;
+  /**
+   * Refused on the server before any model call (minor.ts minorInDatingContext). No provider is
+   * called; the stream ends like a model refusal (meta refused, refund, status refused, flag
+   * refused, lang as expected). After the refund the row's relationship, tone and flirt are
+   * cleared, so it can't be read as "this user's match said they're a minor". Nothing logs why.
+   */
+  refuseBeforeModel?: boolean;
   /** Code points of the (redacted) copied message or draft; sets the Polish card length limit. */
   inputChars: number;
   /** For the anonymous crisis_daily count only. */
@@ -155,6 +174,7 @@ async function run(input: PipelineInput, deps: PipelineDeps, signal: AbortSignal
   let lastResult: RunResult | null = null;
   let lastStop: StopKind | null = null;
   let providerRefused = false;
+  const serverRefused = input.refuseBeforeModel === true;
   let fallbackUsed = false;
   let stoppedAiOff = false;
   let internalError = false;
@@ -212,13 +232,24 @@ async function run(input: PipelineInput, deps: PipelineDeps, signal: AbortSignal
         variant = item.tag === 'L' ? 'light' : 'rewrite';
         if (delivered.has(index)) continue;
       }
-      const checked = postCheckCard(item.text, expectedLang(), maxCardChars);
-      if (!checked.ok) {
+      const checked = postCheckCard(item.text, expectedLang(), maxCardChars, {
+        emoji: emojiPolicy(input.emojiAllowed, variant),
+        messageLang: input.messageLang,
+      });
+      let reason: DropReason | null = checked.ok ? null : checked.reason;
+      if (checked.ok && kind === 'reply') {
+        for (const earlier of delivered.values()) {
+          reason = repeatsCard(earlier.text, checked.text);
+          if (reason !== null) break;
+        }
+      }
+      if (!checked.ok || reason !== null) {
         dropped++;
         flags.add('card_dropped');
-        logEvent(FN, 'card_dropped', { reason: checked.reason });
+        logEvent(FN, 'card_dropped', { reason });
         continue;
       }
+      if (checked.fixed) logEvent(FN, 'card_fixed', { reason: checked.fixed });
       const card: CardEvent = { index, variant, text: checked.text };
       if (!send('card', card)) continue;
       delivered.set(index, card);
@@ -235,60 +266,63 @@ async function run(input: PipelineInput, deps: PipelineDeps, signal: AbortSignal
 
   // ---- generation (anything thrown here still gets the finalisation below)
   try {
-    for (let attempt = 0; attempt < 2; attempt++) {
-      if (attempt > 0 && !(await stillAllowed())) {
-        stoppedAiOff = true;
-        break;
-      }
-      parser = new LineParser(kind);
-      deliveredThisProvider = 0;
-      const result = await runChain(deps.providers, prompt, {
-        signal,
-        health: deps.health,
-        timing: deps.timing,
-        consume: (chunk) => handle(parser.push(chunk)),
-        committed: () => deliveredThisProvider > 0,
-        restart: () => {
-          parser = new LineParser(kind);
-        },
-        mayContinue: stillAllowed,
-        onFallback: (from, to, reason) => {
-          if (!to) return;
-          fallbackUsed = true;
-          currentProvider = to;
-          deps.analytics.track(input.userId, { name: 'provider_fallback', props: { from, to } });
-          logEvent(FN, 'provider_fallback', { from, to, reason });
-        },
-        onProviderError: (provider, code) => logEvent(FN, 'provider_error', { provider, code }),
-      });
-      calls.push(...result.calls);
-      lastResult = result;
-
-      if (result.status === 'stopped') {
-        stoppedAiOff = true;
-        break;
-      }
-      if (result.status === 'consumer_failed') {
-        internalError = true;
-        break;
-      }
-      if (result.status !== 'completed') break;
-
-      currentProvider = result.provider.name;
-      const stop = result.outcome.stop;
-      lastStop = stop;
-      handle(parser.end(stop === 'end' ? 'complete' : 'truncated'));
-      if (stop === 'refusal') {
-        providerRefused = true;
-        logEvent(FN, 'provider_refusal', {
-          provider: result.provider.name,
-          category: result.outcome.refusalCategory,
+    // A server refusal skips the model; the `done` line and the row record it as refused.
+    if (!serverRefused) {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        if (attempt > 0 && !(await stillAllowed())) {
+          stoppedAiOff = true;
+          break;
+        }
+        parser = new LineParser(kind);
+        deliveredThisProvider = 0;
+        const result = await runChain(deps.providers, prompt, {
+          signal,
+          health: deps.health,
+          timing: deps.timing,
+          consume: (chunk) => handle(parser.push(chunk)),
+          committed: () => deliveredThisProvider > 0,
+          restart: () => {
+            parser = new LineParser(kind);
+          },
+          mayContinue: stillAllowed,
+          onFallback: (from, to, reason) => {
+            if (!to) return;
+            fallbackUsed = true;
+            currentProvider = to;
+            deps.analytics.track(input.userId, { name: 'provider_fallback', props: { from, to } });
+            logEvent(FN, 'provider_fallback', { from, to, reason });
+          },
+          onProviderError: (provider, code) => logEvent(FN, 'provider_error', { provider, code }),
         });
-        break;
+        calls.push(...result.calls);
+        lastResult = result;
+
+        if (result.status === 'stopped') {
+          stoppedAiOff = true;
+          break;
+        }
+        if (result.status === 'consumer_failed') {
+          internalError = true;
+          break;
+        }
+        if (result.status !== 'completed') break;
+
+        currentProvider = result.provider.name;
+        const stop = result.outcome.stop;
+        lastStop = stop;
+        handle(parser.end(stop === 'end' ? 'complete' : 'truncated'));
+        if (stop === 'refusal') {
+          providerRefused = true;
+          logEvent(FN, 'provider_refusal', {
+            provider: result.provider.name,
+            category: result.outcome.refusalCategory,
+          });
+          break;
+        }
+        if (modelMeta()?.refused) break;
+        if (delivered.size >= 2) break;
+        if (attempt === 0) logEvent(FN, 'retry', { cards: delivered.size, dropped, invalid });
       }
-      if (modelMeta()?.refused) break;
-      if (delivered.size >= 2) break;
-      if (attempt === 0) logEvent(FN, 'retry', { cards: delivered.size, dropped, invalid });
     }
   } catch (err) {
     internalError = true;
@@ -296,7 +330,7 @@ async function run(input: PipelineInput, deps: PipelineDeps, signal: AbortSignal
   }
 
   // ---- finalisation: never throws
-  const refused = providerRefused || (modelMeta()?.refused ?? false);
+  const refused = serverRefused || providerRefused || (modelMeta()?.refused ?? false);
   let status: RequestStatus;
   let errorCode: ErrorCode | null = null;
   if (signal.aborted) status = 'cancelled';
@@ -317,6 +351,7 @@ async function run(input: PipelineInput, deps: PipelineDeps, signal: AbortSignal
 
   // Crisis backstop: only when the model's own signal is missing or the answer was cut short.
   const endedEarly =
+    serverRefused ||
     internalError ||
     stoppedAiOff ||
     lastResult?.status !== 'completed' ||
@@ -373,7 +408,9 @@ async function run(input: PipelineInput, deps: PipelineDeps, signal: AbortSignal
   const msTotal = deps.now() - input.startedAt;
   const msFirst = firstCardAt === null ? null : firstCardAt - input.startedAt;
   const storedFlags = [...flags];
-  const lang: LangHint | null = modelMeta()?.lang ?? (delivered.size > 0 ? expectedLang() : null);
+  // A server refusal stores the expected language, as a model refusal stores META's.
+  const lang: LangHint | null =
+    modelMeta()?.lang ?? (delivered.size > 0 || serverRefused ? expectedLang() : null);
 
   try {
     await deps.repo.finishRequest(requestId, {
@@ -390,6 +427,7 @@ async function run(input: PipelineInput, deps: PipelineDeps, signal: AbortSignal
       safetyFlags: storedFlags,
       cards: delivered.size,
       deliveredCards: [...delivered.keys()].sort((a, b) => a - b),
+      ...(serverRefused ? { clearChips: true } : {}),
     });
   } catch (err) {
     logError(FN, 'finish', err);

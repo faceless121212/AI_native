@@ -13,18 +13,18 @@
     }
   },
   "total": {
-    "cases": 32,
-    "passed": 32
+    "cases": 33,
+    "passed": 33
   },
   "plumbing": {
-    "cases": 32,
-    "passed": 32
+    "cases": 33,
+    "passed": 33
   },
   "perLang": {
     "en": {
-      "cases": 10,
-      "passed": 10,
-      "plumbingPassed": 10
+      "cases": 11,
+      "passed": 11,
+      "plumbingPassed": 11
     },
     "de": {
       "cases": 6,
@@ -49,81 +49,81 @@
   },
   "perCheck": {
     "refused": {
-      "applicable": 32,
-      "passed": 32
+      "applicable": 33,
+      "passed": 33
     },
     "crisis": {
-      "applicable": 32,
-      "passed": 32
+      "applicable": 33,
+      "passed": 33
     },
     "cards": {
-      "applicable": 32,
-      "passed": 32
+      "applicable": 33,
+      "passed": 33
     },
     "length": {
-      "applicable": 16,
-      "passed": 16
+      "applicable": 17,
+      "passed": 17
     },
     "lang": {
-      "applicable": 16,
-      "passed": 16
+      "applicable": 17,
+      "passed": 17
     },
     "formality": {
-      "applicable": 16,
-      "passed": 16
+      "applicable": 17,
+      "passed": 17
     },
     "banned": {
-      "applicable": 16,
-      "passed": 16
+      "applicable": 17,
+      "passed": 17
     },
     "explicit": {
-      "applicable": 16,
-      "passed": 16
+      "applicable": 17,
+      "passed": 17
     },
     "emoji": {
-      "applicable": 16,
-      "passed": 16
+      "applicable": 17,
+      "passed": 17
     },
     "punctuation": {
       "applicable": 5,
       "passed": 5
     },
     "format": {
-      "applicable": 16,
-      "passed": 16
+      "applicable": 17,
+      "passed": 17
     },
     "linebreaks": {
-      "applicable": 16,
-      "passed": 16
+      "applicable": 17,
+      "passed": 17
     },
     "distinct": {
-      "applicable": 14,
-      "passed": 14
+      "applicable": 15,
+      "passed": 15
     },
     "placeholders": {
       "applicable": 2,
       "passed": 2
     },
     "refund": {
-      "applicable": 32,
-      "passed": 32
+      "applicable": 33,
+      "passed": 33
     },
     "privacy": {
-      "applicable": 32,
-      "passed": 32
+      "applicable": 33,
+      "passed": 33
     }
   },
   "latency": {
-    "firstCardP50": 808.1179860000011,
-    "firstCardP95": 1371.2444560000004,
-    "totalP50": 1223.2554130000026,
-    "totalP95": 2091.08375
+    "firstCardP50": 855.0526839999948,
+    "firstCardP95": 1349.6270059999988,
+    "totalP50": 1368.6920580000005,
+    "totalP95": 2232.4854020000002
   },
   "cost": {
-    "meanMicroEurPerReply": 279.6875,
-    "totalMicroEur": 8950,
-    "meanTokensIn": 2772.1875,
-    "meanTokensOut": 87.59375
+    "meanMicroEurPerReply": 282.6774193548387,
+    "totalMicroEur": 8763,
+    "meanTokensIn": 2761.4193548387098,
+    "meanTokensOut": 96.48387096774194
   },
   "failures": []
 }
