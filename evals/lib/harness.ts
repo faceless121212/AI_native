@@ -19,6 +19,10 @@ import type {
   LlmProvider,
 } from '../../supabase/functions/_shared/llm/provider.ts';
 import { DEFAULT_TIMING } from '../../supabase/functions/_shared/llm/runner.ts';
+import {
+  PROMPT_VERSION,
+  type PromptVersion,
+} from '../../supabase/functions/_shared/prompts/index.ts';
 import { CURRENT_AI_POLICY_VERSION } from '../../supabase/functions/_shared/policy.ts';
 import { RateLimiter } from '../../supabase/functions/_shared/rate-limit.ts';
 import { redact } from '../../supabase/functions/_shared/redact.ts';
@@ -96,6 +100,7 @@ export class Harness {
   constructor(
     providers: readonly LlmProvider[],
     private readonly provider: EvalProvider,
+    promptVersion: PromptVersion = PROMPT_VERSION,
   ) {
     this.store.rateLimit = 1000;
     this.deps = {
@@ -105,6 +110,7 @@ export class Harness {
       health: new MemoryProviderHealth(),
       rateLimiter: new RateLimiter(1000),
       timing: DEFAULT_TIMING,
+      promptVersion,
     };
     this.handler = withErrors('reply', (req) => handleReplyRoute(req, this.deps));
   }

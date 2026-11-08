@@ -59,6 +59,36 @@ Deno.test("formality: French tu vs vous, including elided t'", () => {
   assertEquals(formalityViolations('Merci pour ton message !', 'fr', 'casual'), []);
 });
 
+Deno.test('formality: plural to a group (casual vous is not formal; singular tu is wrong)', () => {
+  // French: casual group plural and formal are the same word.
+  assertEquals(
+    formalityViolations('Commencez sans moi, je vous rejoins !', 'fr', 'casual', true),
+    [],
+  );
+  assertEquals(formalityViolations('Commence sans moi, je te rejoins !', 'fr', 'casual', true), [
+    'te',
+  ]);
+  // Without plural, casual vous stays a violation.
+  assertEquals(formalityViolations('Je vous rejoins !', 'fr', 'casual'), ['vous']);
+  // German, Spanish, Italian: the group plural differs from the formal form.
+  assertEquals(
+    formalityViolations('Fangt ohne mich an, ich komme gleich zu euch.', 'de', 'casual', true),
+    [],
+  );
+  assertEquals(
+    formalityViolations('Fangen Sie ohne mich an, ich komme zu Ihnen.', 'de', 'casual', true),
+    ['Ihnen', 'Sie'],
+  );
+  assertEquals(formalityViolations('Empezad sin mí, ahora os veo.', 'es', 'casual', true), []);
+  assertEquals(formalityViolations('Empezad sin mí, ¿vale? Te veo ahora.', 'es', 'casual', true), [
+    'Te',
+  ]);
+  assertEquals(
+    formalityViolations('Iniziate senza di me, vi raggiungo.', 'it', 'casual', true),
+    [],
+  );
+});
+
 Deno.test('formality: Spanish tú vs usted', () => {
   assertEquals(formalityViolations('¿Le viene bien el jueves?', 'es', 'formal'), []);
   assertEquals(formalityViolations('¿Te viene bien el jueves?', 'es', 'formal'), ['Te']);

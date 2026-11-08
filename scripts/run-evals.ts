@@ -3,7 +3,11 @@
 //   evals/reports/<date>-<set>-<prompt version>-<provider>.md  (+ .json summary for comparisons)
 //
 //   npm run evals -- --prompt reply|polish|safety [--provider fake|anthropic|bedrock|mistral]
-//                    [--case <id>] [--lang <en|de|fr|es|it>] [--baseline <report.json>] [--no-write]
+//                    [--version <one of PROMPT_VERSIONS>] [--case <id>] [--lang <en|de|fr|es|it>]
+//                    [--baseline <report.json>] [--no-write]
+//
+// --version builds an older prompt version through the same handler (default PROMPT_VERSION),
+// so a live run can compare versions on the same day and model.
 //
 // which is:
 //   deno run --no-lock --config supabase/functions/deno.json --allow-env --allow-read
@@ -15,7 +19,12 @@
 // function's own config code with staging rules (Bedrock EU-only, unsafe SDK env refused).
 // Inputs are synthetic eval cases only. Exit code 1 when any case fails (safety: must be 100%).
 import { parseArgs } from 'node:util';
-import { buildPrompt, PROMPT_VERSION } from '../supabase/functions/_shared/prompts/index.ts';
+import {
+  buildPrompt,
+  isPromptVersion,
+  PROMPT_VERSION,
+  PROMPT_VERSIONS,
+} from '../supabase/functions/_shared/prompts/index.ts';
 import { redact } from '../supabase/functions/_shared/redact.ts';
 import { validateChips } from '../supabase/functions/_shared/chips.ts';
 import { EVAL_SETS, type EvalCase, type EvalSet, parseCases } from '../evals/lib/cases.ts';
@@ -29,6 +38,7 @@ const { values: args } = parseArgs({
   options: {
     prompt: { type: 'string' },
     provider: { type: 'string', default: 'fake' },
+    version: { type: 'string', default: PROMPT_VERSION },
     case: { type: 'string' },
     lang: { type: 'string' },
     baseline: { type: 'string' },
@@ -39,7 +49,7 @@ const { values: args } = parseArgs({
 
 if (args.help || !args.prompt) {
   console.log(
-    'Usage: npm run evals -- --prompt reply|polish|safety [--provider fake|anthropic|bedrock|mistral] [--case id] [--lang de] [--baseline evals/reports/….json] [--no-write]',
+    `Usage: npm run evals -- --prompt ${EVAL_SETS.join('|')} [--provider ${EVAL_PROVIDERS.join('|')}] [--version ${PROMPT_VERSIONS.join('|')}] [--case id] [--lang de] [--baseline evals/reports/….json] [--no-write]`,
   );
   Deno.exit(args.help ? 0 : 2);
 }
@@ -51,6 +61,11 @@ if (!(EVAL_PROVIDERS as readonly string[]).includes(args.provider)) {
   console.error(`--provider must be one of ${EVAL_PROVIDERS.join(', ')}`);
   Deno.exit(2);
 }
+if (!isPromptVersion(args.version)) {
+  console.error(`--version must be one of ${PROMPT_VERSIONS.join(', ')}`);
+  Deno.exit(2);
+}
+const version = args.version;
 const set = args.prompt as EvalSet;
 const provider = args.provider as EvalProvider;
 
@@ -69,28 +84,32 @@ const providers = await makeProviders(provider, (name) => Deno.env.get(name)).ca
   );
   Deno.exit(2);
 });
-const harness = new Harness(providers, provider);
+const harness = new Harness(providers, provider, version);
 
 // System prompt size for these cases (the same assembly the function uses).
 const sizes = cases.map((c) => {
   const chips = validateChips(c.chips);
-  return buildPrompt({
-    kind: c.kind,
-    text: redact(c.text).text,
-    langHint: c.lang,
-    uiLang: c.chips.uiLang,
-    relationship: c.chips.relationship,
-    closeness: c.chips.closeness,
-    tone: chips.tone,
-    flirt: chips.flirt,
-    formality: c.chips.formality,
-    iAm: c.chips.iAm,
-    theyAre: c.chips.theyAre,
-  }).system.length;
+  return buildPrompt(
+    {
+      kind: c.kind,
+      text: redact(c.text).text,
+      langHint: c.lang,
+      uiLang: c.chips.uiLang,
+      relationship: c.chips.relationship,
+      closeness: c.chips.closeness,
+      tone: chips.tone,
+      flirt: chips.flirt,
+      formality: c.chips.formality,
+      iAm: c.chips.iAm,
+      theyAre: c.chips.theyAre,
+    },
+    undefined,
+    version,
+  ).system.length;
 });
 
 console.log(
-  `Running ${cases.length} ${set} cases with ${provider} (${providers[0]!.model}), prompt ${PROMPT_VERSION}…`,
+  `Running ${cases.length} ${set} cases with ${provider} (${providers[0]!.model}), prompt ${version}…`,
 );
 const results: CaseResult[] = [];
 for (const c of cases) {
@@ -110,7 +129,7 @@ const summary = summarise(
   {
     date,
     set,
-    promptVersion: PROMPT_VERSION,
+    promptVersion: version,
     provider,
     model: providers[0]!.model,
     systemPrompt: {
@@ -129,7 +148,7 @@ const markdown = renderReport(summary, results, baseline);
 
 const partial = Boolean(args.case || args.lang);
 if (!args['no-write'] && !partial) {
-  const base = `evals/reports/${date}-${set}-${PROMPT_VERSION}-${provider}`;
+  const base = `evals/reports/${date}-${set}-${version}-${provider}`;
   await Deno.mkdir(new URL('evals/reports/', root), { recursive: true });
   await Deno.writeTextFile(new URL(`${base}.md`, root), markdown);
   await Deno.writeTextFile(new URL(`${base}.json`, root), `${prettyJson(summary)}\n`);

@@ -162,8 +162,9 @@ export function evaluate(c: EvalCase, run: CaseRun, opts: EvaluateOptions): Case
         verdict(
           'formality',
           subject.flatMap((x) =>
-            formalityViolations(x.text, lang, e.formality!).map(
-              (m) => `${x.variant} card: "${m}" in a ${e.formality} reply`,
+            formalityViolations(x.text, lang, e.formality!, e.plural).map(
+              (m) =>
+                `${x.variant} card: "${m}" in a ${e.formality}${e.plural ? ' plural' : ''} reply`,
             ),
           ),
         ),

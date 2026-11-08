@@ -203,10 +203,25 @@ const MARKERS: Record<Lang, Markers> = {
   },
 };
 
-/** Markers in `text` that belong to the register opposite to `expected`. */
-export function formalityViolations(text: string, lang: Lang, expected: Formality): string[] {
+/**
+ * Markers in `text` that belong to the register opposite to `expected`.
+ *
+ * `plural`: the text speaks to a group. Singular casual forms (tu, du, tú, tu) are then wrong in
+ * both registers, because the address must stay plural. In French, casual plural and formal are
+ * the same word (vous, votre, vos), so vous is never a violation for a group; in German, Spanish
+ * and Italian the group plural (ihr/euch, vosotros/os, voi/vi) differs from the formal one, so
+ * Sie, usted(es) and Lei still count as formal in a casual group reply.
+ */
+export function formalityViolations(
+  text: string,
+  lang: Lang,
+  expected: Formality,
+  plural = false,
+): string[] {
   if (lang === 'en') return expected === 'formal' ? MARKERS.en.formal(text) : [];
-  return expected === 'casual' ? MARKERS[lang].formal(text) : MARKERS[lang].casual(text);
+  if (expected === 'formal') return MARKERS[lang].casual(text);
+  if (!plural) return MARKERS[lang].formal(text);
+  return [...MARKERS[lang].casual(text), ...(lang === 'fr' ? [] : MARKERS[lang].formal(text))];
 }
 
 /** Markers of the expected register (info only: neutral cards are fine). */

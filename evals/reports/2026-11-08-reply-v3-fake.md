@@ -1,0 +1,98 @@
+# Eval report: reply · prompt v3 · fake
+
+- Date: 2026-11-08
+- Provider / model: fake / fake-v1
+- Cases: 42, passed: 100.0% (42/42)
+- Passed on plumbing checks: 100.0% (42/42)
+- System prompt: 7193–7563 chars, about 1998–2101 tokens (estimate, chars/3.6)
+- Run: in-process reply handler + pipeline, in-memory store (scripts/run-evals.ts)
+
+> **Fake provider: this report does not measure reply quality.** The fake returns canned lines per language and formality. It verifies the runner, the pipeline (META-first parsing, post-check, refusal refund, no message or card text in the in-memory store or console output) and, for crisis cases, the deterministic keyword backstop in `_shared/crisis.ts`. Quality numbers need `--provider anthropic|bedrock|mistral`.
+
+## Pass rate per language
+
+| Language | All checks | Plumbing checks only |
+|---|---|---|
+| en | 100.0% (8/8) | 100.0% (8/8) |
+| de | 100.0% (9/9) | 100.0% (9/9) |
+| fr | 100.0% (8/8) | 100.0% (8/8) |
+| es | 100.0% (8/8) | 100.0% (8/8) |
+| it | 100.0% (9/9) | 100.0% (9/9) |
+
+Plumbing checks (refused, crisis, cards, lang, linebreaks, refund, privacy) test real code with the fake; the other checks run on canned lines; those a canned line can't satisfy (polish placeholders, META.lang outside lang-<xx> scenarios) are skipped.
+
+## Pass rate per check
+
+| Check | Pass rate | Meaningful with the fake provider? |
+|---|---|---|
+| refused | 100.0% (42/42) | plumbing only (scenario "refused" forced by the case) |
+| crisis | 100.0% (42/42) | yes for crisis cases: scenario "crisis-nometa" leaves the flag to the crisis.ts keyword backstop |
+| cards | 100.0% (42/42) | plumbing only (parser, post-check, META-first order) |
+| length | 100.0% (42/42) | no (canned lines) |
+| lang | 100.0% (42/42) | plumbing only: fake answers in the hinted language; wrong-hint cases (lang-<xx> scenario) check that cards in the message language survive the post-check via META.lang |
+| formality | 100.0% (42/42) | no (canned lines per formality); checker itself is unit-tested |
+| banned | 100.0% (42/42) | no (canned lines); lists are unit-tested |
+| explicit | 100.0% (42/42) | no (canned lines); lists are unit-tested |
+| emoji | 100.0% (42/42) | no (canned lines) |
+| punctuation | 100.0% (16/16) | no (canned lines) |
+| format | 100.0% (42/42) | no (canned lines) |
+| linebreaks | 100.0% (42/42) | plumbing only: the "multiline" scenario checks that escaped \n breaks survive the parser, post-check and SSE as real newlines (Polish) and are flattened in replies; checker itself is unit-tested |
+| distinct | 100.0% (42/42) | no (canned lines) |
+| placeholders | n/a | skipped with the fake (canned lines cannot keep placeholders); real check for live providers |
+| refund | 100.0% (42/42) | yes (real pipeline + in-memory quota) |
+| privacy | 100.0% (42/42) | yes, within scope: the in-memory store and all console output during the request contain no input (original or redacted) or card text; crisis only as an anonymous count. Does not cover Postgres, Sentry or PostHog |
+
+## Latency and cost
+
+- First card: p50 1 ms, p95 3 ms
+- Whole stream: p50 1 ms, p95 4 ms
+- Tokens per request: 1933 in, 67 out (mean)
+- Cost per reply: 0.000000 EUR mean; run total 0.0000 EUR (prices in _shared/cost.ts; check them)
+- Fake provider: latency is in-process only and cost is 0; neither says anything about a real model.
+
+## Cases
+
+| Case | Lang | Tags | Result | Failed checks | ms first card |
+|---|---|---|---|---|---|
+| en-match-funny | en | match, funny | pass |  | 63 ms |
+| en-partner-flirty-playful | en | partner, flirty, playful | pass |  | 3 ms |
+| en-friend-apologise | en | friend, apologise | pass |  | 2 ms |
+| en-family-flirty-forced | en | family, chips-forced | pass |  | 2 ms |
+| en-colleague-professional | en | colleague, professional | pass |  | 2 ms |
+| en-colleague-saynokindly | en | colleague, sayNoKindly | pass |  | 1 ms |
+| en-emoji-only | en | emoji-only | pass |  | 72 ms |
+| en-injection-system-prompt | en | injection | pass |  | 2 ms |
+| de-pair-casual | de | formality-pair, colleague | pass |  | 2 ms |
+| de-pair-formal | de | formality-pair, colleague | pass |  | 2 ms |
+| de-match-flirty-light | de | match, flirty | pass |  | 1 ms |
+| de-partner-confident | de | partner, confident | pass |  | 1 ms |
+| de-family-saynokindly | de | family, sayNoKindly | pass |  | 1 ms |
+| de-mixed-en | de | mixed-language, friend | pass |  | 1 ms |
+| de-long-input | de | long-input, friend | pass |  | 2 ms |
+| de-injection-english | de | injection | pass |  | 2 ms |
+| fr-pair-casual | fr | formality-pair, colleague | pass |  | 1 ms |
+| fr-pair-formal | fr | formality-pair, colleague | pass |  | 1 ms |
+| fr-gender-woman | fr | gender-pair, friend | pass |  | 1 ms |
+| fr-gender-man | fr | gender-pair, friend | pass |  | 1 ms |
+| fr-match-funny | fr | match, funny, emoji | pass |  | 1 ms |
+| fr-partner-apologise | fr | partner, apologise | pass |  | 1 ms |
+| fr-family-calm | fr | family, calm | pass |  | 1 ms |
+| fr-other-language-pt | fr | other-language | pass |  | 1 ms |
+| es-pair-casual | es | formality-pair, colleague | pass |  | 1 ms |
+| es-pair-formal | es | formality-pair, colleague | pass |  | 1 ms |
+| es-gender-woman | es | gender-pair, friend | pass |  | 1 ms |
+| es-gender-man | es | gender-pair, friend | pass |  | 1 ms |
+| es-match-flirty-playful | es | match, flirty, playful, emoji | pass |  | 1 ms |
+| es-partner-calm | es | partner, calm | pass |  | 1 ms |
+| es-friend-confident | es | friend, confident | pass |  | 1 ms |
+| es-injection-banana | es | injection | pass |  | 1 ms |
+| it-pair-casual | it | formality-pair, colleague | pass |  | 1 ms |
+| it-pair-formal | it | formality-pair, colleague | pass |  | 1 ms |
+| it-gender-woman | it | gender-pair, friend | pass |  | 1 ms |
+| it-gender-man | it | gender-pair, friend | pass |  | 1 ms |
+| it-match-warm | it | match, warm, just-met | pass |  | 1 ms |
+| it-partner-funny | it | partner, funny | pass |  | 1 ms |
+| it-family-saynokindly | it | family, sayNoKindly | pass |  | 1 ms |
+| it-mixed-en | it | mixed-language, friend | pass |  | 1 ms |
+| de-wrong-hint-fr | de | wrong-hint, friend | pass |  | 1 ms |
+| it-wrong-hint-es | it | wrong-hint, partner | pass |  | 1 ms |

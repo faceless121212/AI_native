@@ -8,7 +8,8 @@
 //   wronglang · long · truncated · metafirst (v1 prompt order: META line first) · crisis-nometa
 //   (supportive crisis lines but the META line is lost: exercises the crisis keyword backstop) ·
 //   lang-en|de|fr|es|it (META first and cards in that language whatever the hint said: the
-//   on-device hint was wrong and the model followed the message) · multiline (META first; Polish
+//   on-device hint was wrong and the model followed the message) · lang-fr-group (like lang-fr,
+//   but the cards speak casually to a group: plural "vous" that is not formal) · multiline (META first; Polish
 //   cards keep a three-paragraph draft's breaks, written as `\n` the way the polish prompt asks,
 //   the casual rewrite with an escaped backslash `\\`; reply cards contain a stray `\n` the parser
 //   flattens to a space)
@@ -43,6 +44,7 @@ export const FAKE_SCENARIOS = [
   'lang-fr',
   'lang-es',
   'lang-it',
+  'lang-fr-group',
   'multiline',
 ] as const;
 export type FakeScenario = (typeof FAKE_SCENARIOS)[number];
@@ -288,6 +290,20 @@ export function fakeOutput(scenario: FakeScenario, prompt: LlmPrompt): string {
     case 'lang-it': {
       const actual = scenario.slice(5) as Lang;
       return `${meta(actual)}\n${cardLines(kind, actual, formality).join('\n')}\n`;
+    }
+    case 'lang-fr-group': {
+      const lines =
+        kind === 'polish'
+          ? [
+              'L|Désolé, je serai en retard de 10 min, commencez sans moi.',
+              "W|J'arrive dans 10 min, commencez sans moi, je vous rejoins !",
+            ]
+          : [
+              'R1|Trop bien, vous êtes déjà là ?',
+              "R2|J'arrive dans 10 min, gardez-moi une place.",
+              'R3|Commencez sans moi, je vous rejoins vite !',
+            ];
+      return `${meta('fr')}\n${lines.join('\n')}\n`;
     }
     case 'multiline': {
       if (kind === 'polish') {

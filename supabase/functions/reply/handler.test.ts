@@ -5,7 +5,7 @@ import {
   FIRST_TOKEN_TIMEOUT_MS,
   LAST_PROVIDER_FIRST_TOKEN_TIMEOUT_MS,
 } from '../_shared/llm/runner.ts';
-import { PROMPT_VERSION } from '../_shared/prompts/index.ts';
+import { PROMPT_SETS, PROMPT_VERSION } from '../_shared/prompts/index.ts';
 import { RateLimiter } from '../_shared/rate-limit.ts';
 import { device, jsonRequest } from '../_shared/testing/helpers.ts';
 import {
@@ -471,6 +471,24 @@ Deno.test('reply: personal data is redacted before the model sees it', async () 
     'redacted',
   ]);
 });
+
+Deno.test(
+  'reply: deps.promptVersion builds that version and is logged with the request',
+  async () => {
+    const fake = new FakeProvider();
+    const { store, handler, deps } = setupReply({ providers: [fake] });
+    assertFalse(PROMPT_VERSION === 'v1', 'test needs a non-default version');
+    deps.promptVersion = 'v1';
+    const { token } = await aiUser(store);
+    const res = await handler(replyRequest(token));
+    await readEvents(res);
+    const system = fake.calls[0]!.system;
+    assert(system.startsWith(PROMPT_SETS.v1.safety.reply), 'v1 safety rules sent');
+    assertFalse(system.startsWith(PROMPT_SETS[PROMPT_VERSION].safety.reply), 'not the default');
+    const row = store.requests.get(res.headers.get('x-request-id')!)!;
+    assertEquals(row.finish!.promptVersion, 'v1');
+  },
+);
 
 Deno.test('reply: user text is wrapped in a random tag and cannot close it', async () => {
   const fake = new FakeProvider();

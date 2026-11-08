@@ -1,0 +1,43 @@
+{
+  "v1": {
+    "lang/de.v1.md": "bf67bc6a9a830aa65ff9d189944ac9de12ae0ce16194d9e2baf59a752253508e",
+    "lang/en.v1.md": "bc8708c6a9e39250e7b8927ec75226ee6c8c0cf9aa5aeccb990710e8d2dec6f2",
+    "lang/es.v1.md": "a9e369974038ba5124f8fa0e2840ab6fe15cb94f0bb5779defb92cd731fccc48",
+    "lang/fr.v1.md": "89f1c0fb3f096ec1614630101a7199f1dff7d717c303f9636916ee0866ea770e",
+    "lang/it.v1.md": "99ef667cc2d6f4ab26d78319d6d17033545ef045e54fcef91920454379ca0a67",
+    "polish.v1.md": "f43458ce92672b1ce0455708c909eb6c864dca5060a5ff5e51d891e92cdabeca",
+    "reply.v1.md": "87fea2bd3d5949bbb308b3848552c57fe49f7ab3dc35cbc73ec6ea0806a05b6c",
+    "safety.v1.md": "3e0cd061d9a15d74c59d244da31ba7f1218e1a86b3853bf56f8b4a23068fc2f4",
+    "tones.v1.md": "a1529b651de84ff3a9eeacc99e0c7ff90d74bba366fa1d6b5ed6c4efce6d8179",
+    "user.v1.md": "c3dae25ca1cdc32a1ff606dea508b0cfe1a1e92a47840ddd306ef3d1a2a3af20"
+  },
+  "v2": {
+    "lang/de.v2.md": "b030d8b7c6f433ba8e5010a4c986fadb9d594c8ec195084eb15f32c9a2824408",
+    "lang/en.v2.md": "1a74f1e5356f7197555892cea965627deb14a298a8818f155579df950d374712",
+    "lang/es.v2.md": "111b40afbdf6a0df262ca5ee3d8038b888405e003860fed6e456641eb705fcf9",
+    "lang/fr.v2.md": "d0fa2aaa77c6cffb73424af0c3202c4cda5d30e5ad56e882c31ee68592a84940",
+    "lang/it.v2.md": "5d661ff79c290eeda755026fa07959046ce068e670d7caa82da1b870a231a204",
+    "polish.v2.md": "ed59f1bf9ba0113dc7e5a75117c4e02a146941e45302e3a23bac1410422937ad",
+    "reply.v2.md": "e9b1540279089d2c9ed865a1113d68c6b67f7e414fe5300eb1b93876e8a764d6",
+    "safety.v2.md": "9c853673d56be69f9ccc38047cb923c624ccde1030fca8c1c1c689c8917f3116"
+  },
+  "v3": {
+    "lang/de.v3.md": "ded676ab9fda0866f43b1a46fb14915cb3efd1144073f0f0fb55aa01434cc3d8",
+    "lang/en.v3.md": "0a6be9bc1b5658a23e995a7840688adf54b0fae88c25e4d3b800eb65723d804d",
+    "lang/es.v3.md": "55f561b4829a6919cae175bb006055dd2e1a2301e3e23f27380d4aac86a62582",
+    "lang/fr.v3.md": "fff29f252cc8ffd9ce455988cbdddd0096f205cead1e51714ae63708b64adeb4",
+    "lang/it.v3.md": "ac74c77873dd2d4e8bdb86d43412ba73d45cb4b500d7be10ad6e091f9dfb9f79",
+    "polish.v3.md": "152d3a0be77bdf3a3bcc5d0fe587b9c7930ebeb32789de04aaf8f7d602a3b6dd",
+    "reply.v3.md": "28a9fbdd6453461f0da3ff9eb8ac878c79b3384491b5e0c7b8f1c8464eac5d9e",
+    "safety.v3.md": "b5fcb222b6391fb0911f7846e8665a9ee2444d8b379c1f490683bd2ca47b18b3"
+  },
+  "v4": {
+    "lang/de.v4.md": "3250ff820c7d73d5d13e3d89203a18e478eeb1bc75129eeb199f78d7592fd5af",
+    "lang/en.v4.md": "1de6ed5348e57b1e58bb5b1b938009f3b5f3c0395925e93ffe79daaeb0a3ecea",
+    "lang/es.v4.md": "3008bc768c8211c158f30e703b62465c99e24d163e5b366c9d4926b2e25fec62",
+    "lang/fr.v4.md": "b7ce5f6ec51d8b3be2fdb3cac22f924e8dfe213017dd9d2ee8fedd3a91a7999d",
+    "lang/it.v4.md": "bb5a70a4bc8487f3c5d600195d8bd2b3a47de4cc0df2c997da8a757398be57b7",
+    "polish.v4.md": "489dcdbc488a2b1a96c0f609ebc6e239209277dd476e36730c4d5cdf68151cfe",
+    "reply.v4.md": "861d939cd759a7928ba125f13188f11f92ff2e77f59f941c3e068b95288cc959"
+  }
+}

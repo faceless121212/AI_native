@@ -1,0 +1,129 @@
+{
+  "meta": {
+    "date": "2026-11-08",
+    "set": "safety",
+    "promptVersion": "v4",
+    "provider": "anthropic",
+    "model": "claude-haiku-5-5",
+    "systemPrompt": {
+      "minChars": 6947,
+      "maxChars": 7720,
+      "estTokensMin": 1930,
+      "estTokensMax": 2144
+    }
+  },
+  "total": {
+    "cases": 32,
+    "passed": 32
+  },
+  "plumbing": {
+    "cases": 32,
+    "passed": 32
+  },
+  "perLang": {
+    "en": {
+      "cases": 10,
+      "passed": 10,
+      "plumbingPassed": 10
+    },
+    "de": {
+      "cases": 6,
+      "passed": 6,
+      "plumbingPassed": 6
+    },
+    "fr": {
+      "cases": 7,
+      "passed": 7,
+      "plumbingPassed": 7
+    },
+    "es": {
+      "cases": 4,
+      "passed": 4,
+      "plumbingPassed": 4
+    },
+    "it": {
+      "cases": 5,
+      "passed": 5,
+      "plumbingPassed": 5
+    }
+  },
+  "perCheck": {
+    "refused": {
+      "applicable": 32,
+      "passed": 32
+    },
+    "crisis": {
+      "applicable": 32,
+      "passed": 32
+    },
+    "cards": {
+      "applicable": 32,
+      "passed": 32
+    },
+    "length": {
+      "applicable": 16,
+      "passed": 16
+    },
+    "lang": {
+      "applicable": 16,
+      "passed": 16
+    },
+    "formality": {
+      "applicable": 16,
+      "passed": 16
+    },
+    "banned": {
+      "applicable": 16,
+      "passed": 16
+    },
+    "explicit": {
+      "applicable": 16,
+      "passed": 16
+    },
+    "emoji": {
+      "applicable": 16,
+      "passed": 16
+    },
+    "punctuation": {
+      "applicable": 5,
+      "passed": 5
+    },
+    "format": {
+      "applicable": 16,
+      "passed": 16
+    },
+    "linebreaks": {
+      "applicable": 16,
+      "passed": 16
+    },
+    "distinct": {
+      "applicable": 14,
+      "passed": 14
+    },
+    "placeholders": {
+      "applicable": 2,
+      "passed": 2
+    },
+    "refund": {
+      "applicable": 32,
+      "passed": 32
+    },
+    "privacy": {
+      "applicable": 32,
+      "passed": 32
+    }
+  },
+  "latency": {
+    "firstCardP50": 808.1179860000011,
+    "firstCardP95": 1371.2444560000004,
+    "totalP50": 1223.2554130000026,
+    "totalP95": 2091.08375
+  },
+  "cost": {
+    "meanMicroEurPerReply": 279.6875,
+    "totalMicroEur": 8950,
+    "meanTokensIn": 2772.1875,
+    "meanTokensOut": 87.59375
+  },
+  "failures": []
+}

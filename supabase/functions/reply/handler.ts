@@ -16,7 +16,13 @@ import type { ProviderHealth } from '../_shared/llm/health.ts';
 import type { LlmProvider } from '../_shared/llm/provider.ts';
 import { DEFAULT_TIMING, type RunnerTiming } from '../_shared/llm/runner.ts';
 import { logEvent } from '../_shared/log.ts';
-import { buildPrompt, PROMPT_VERSION, randomTag, targetLang } from '../_shared/prompts/index.ts';
+import {
+  buildPrompt,
+  PROMPT_VERSION,
+  type PromptVersion,
+  randomTag,
+  targetLang,
+} from '../_shared/prompts/index.ts';
 import type { RateLimiter } from '../_shared/rate-limit.ts';
 import { redact } from '../_shared/redact.ts';
 import type { ReplyRepo, StoredSafetyFlag } from '../_shared/repo.ts';
@@ -48,6 +54,8 @@ export interface ReplyDeps {
   timing?: RunnerTiming;
   now?: () => number;
   promptTag?: () => string;
+  /** Prompt version to build (evals compare versions); default PROMPT_VERSION. */
+  promptVersion?: PromptVersion;
   /** EdgeRuntime.waitUntil when running on Supabase. */
   waitUntil?: (work: Promise<unknown>) => void;
 }
@@ -123,6 +131,7 @@ export async function handleReply(req: Request, deps: ReplyDeps): Promise<Respon
       theyAre: body.theyAre,
     },
     (deps.promptTag ?? randomTag)(),
+    deps.promptVersion ?? PROMPT_VERSION,
   );
 
   const consumed = await deps.repo.consumeReply(userId, {
@@ -178,7 +187,7 @@ export async function handleReply(req: Request, deps: ReplyDeps): Promise<Respon
       userId,
       deviceKeyId,
       prompt,
-      promptVersion: PROMPT_VERSION,
+      promptVersion: deps.promptVersion ?? PROMPT_VERSION,
       expectedLang: targetLang(body.langHint, body.uiLang),
       quota: consumed.quota,
       flags,

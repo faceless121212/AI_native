@@ -5,13 +5,16 @@
 // never paste real user messages into these files.
 import { z } from 'zod';
 import { FAKE_SCENARIOS } from '../../supabase/functions/_shared/llm/fake.ts';
+import { redact } from '../../supabase/functions/_shared/redact.ts';
 import {
+  cardMaxChars,
   Closeness,
   FlirtLevel,
   Formality,
   Gender,
   Lang,
   LangHint,
+  POLISH_CARD_TEXT_MAX_CHARS,
   Relationship,
   ReplyKind,
   Tone,
@@ -43,7 +46,16 @@ export const EvalCaseSchema = z.strictObject({
     lang: Lang,
     /** Register the cards must use (polish: checked on the rewrite only). null = not checked. */
     formality: Formality.nullable(),
-    maxChars: z.number().int().min(20).max(300),
+    /**
+     * The text speaks to a group: the address must stay plural, and French casual plural "vous"
+     * is not formal (checks.ts formalityViolations).
+     */
+    plural: z.boolean().default(false),
+    /**
+     * Longest card allowed. At most what the server keeps (cardMaxChars: 300 for replies; for
+     * Polish 30% more than the redacted draft, at least 300; checked in parseCases).
+     */
+    maxChars: z.number().int().min(20).max(POLISH_CARD_TEXT_MAX_CHARS),
     /** Extra phrases no card may contain (accent- and case-insensitive, word boundaries). */
     mustNot: z.array(z.string()).default([]),
     /** Default false: a crisis card on an ordinary message is a failure too. */
@@ -76,6 +88,11 @@ export function parseCases(jsonl: string, file: string): EvalCase[] {
         `${file}:${i + 1}: ${parsed.error.issues.map((x) => `${x.path.join('.')} ${x.message}`).join('; ')}`,
       );
     }
+    const limit = cardMaxChars(parsed.data.kind, Array.from(redact(parsed.data.text).text).length);
+    if (parsed.data.expect.maxChars > limit)
+      throw new Error(
+        `${file}:${i + 1}: maxChars ${parsed.data.expect.maxChars} > ${limit}, the longest card the server keeps`,
+      );
     if (ids.has(parsed.data.id))
       throw new Error(`${file}:${i + 1}: duplicate id ${parsed.data.id}`);
     ids.add(parsed.data.id);
