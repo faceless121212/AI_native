@@ -6,7 +6,13 @@ import type { Lang } from './schemas.ts';
 
 const PICTOGRAPH = /\p{Extended_Pictographic}/u;
 
-/** Emoji are allowed in the cards when the incoming text (redacted) has a pictograph. */
+/**
+ * Emoji are allowed in the cards when the incoming text (redacted) has a pictograph.
+ * TODO(prompt-engineer, scheduled by the coordinator): this still counts text symbols (™ © ®,
+ * which are Extended_Pictographic) as emoji and ignores flags and keycaps, unlike
+ * applyEmojiPolicy. Aligning it changes the prompt's `emoji=` setting, so it needs a prompt
+ * review and an eval rerun first; don't change it on its own.
+ */
 export function emojiAllowed(incoming: string): boolean {
   return PICTOGRAPH.test(incoming);
 }

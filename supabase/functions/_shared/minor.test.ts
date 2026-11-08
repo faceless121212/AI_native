@@ -1,4 +1,4 @@
-import { assertEquals } from 'jsr:@std/assert@1';
+import { assert, assertEquals } from 'jsr:@std/assert@1';
 import { minorInDatingContext, statesMinor } from './minor.ts';
 
 Deno.test('minor: a stated age under 18 is detected in all five languages', () => {
@@ -174,4 +174,145 @@ Deno.test('minor: refused only for a reply to a match or partner', () => {
     minorInDatingContext({ kind: 'reply', relationship: 'match', text: 'my son is 15' }),
     false,
   );
+});
+
+Deno.test('minor: second review, recall (names, chat fillers, bare first person, labels)', () => {
+  for (const text of [
+    "Hi, I'm Lena, 16",
+    'Hey, Lena, 16 Jahre',
+    'Hi, Léa, 15 ans',
+    'Ciao, Giulia, 16 anni',
+    'Hola, soy Lucía, 15',
+    'im 16 u?',
+    'im 16 how old r u',
+    "I'm 15 tho",
+    "I'm 16 rn",
+    "I'm 16 x",
+    "I'm 17 in may",
+    'tengo 15',
+    "j'ai 15",
+    'ho 15',
+    'Ho 16, tu?',
+    'age: 15',
+    'Lena, age: 16',
+    'Alter: 15',
+    'age: 15 years old',
+    // Closed fillers and smileys after a bare first-person age (third review)
+    "j'ai 15 et toi ?",
+    'tengo 15 y tú?',
+    'ho 15 e tu?',
+    'tengo 15 jaja',
+    'ho 15 ahah',
+    "j'ai 15 mdr",
+    'ich bin 15 und du?',
+    'ich bin 15, wie alt bist du?',
+    'ich bin 15 wie alt bist du',
+    'im 16 wbu',
+    "I'm 16 hbu",
+    "I'm 15 :)",
+    'ich bin 16 :D',
+    'je suis Léa, 15',
+    "Moi c'est Léa, 15 ans",
+  ]) {
+    assertEquals(statesMinor(text), true, text);
+  }
+});
+
+Deno.test('minor: second review, fillers and names that are not an age statement', () => {
+  for (const text of [
+    'tengo 15 años y pico trabajando aquí',
+    'ho 15 anni e passa di esperienza',
+    "j'ai 15 ans et 3 enfants",
+    "I'm 16 and counting",
+    "I'm 16 and change",
+    "I'm 15 so far",
+    "I'm 10 lol",
+    'ich bin 10, lol',
+    // Sentence-start nouns that get ages (capitalisation can't tell them from names: German
+    // capitalises every noun and any sentence starts with a capital), so a short list of them.
+    'Whisky, 16 years old.',
+    'Hund, 15 Jahre.',
+    'My cat, 15 years old, still runs',
+    'Vino, 16 anni.',
+    // A bare number after a word that isn't a name
+    'Ok, 16.',
+    'Hi, 16?',
+    'Sohn (15)',
+    'my son Max (16)',
+    "my son's age: 15",
+    'tengo 15 euros',
+    'ho 15 messaggi',
+    "j'ai 15 minutes",
+    'tengo 15 años y 3 meses aquí',
+    "I'm 15 x 3 points",
+  ]) {
+    assertEquals(statesMinor(text), false, text);
+  }
+});
+
+Deno.test('minor: third review, precision over recall (date planning is never a minor)', () => {
+  for (const text of [
+    // A bare number after a word is a date, a time, a place or a price, not an age.
+    'Samstag, 16?',
+    'Tomorrow, 16?',
+    'Sabato, 16?',
+    'Demain, 16 ?',
+    'Paris, 15',
+    'Merci, 16',
+    'Preis, 16',
+    'Friday, 16',
+    'Mañana, 16',
+    'Domani, 16.',
+    'Heute, 15!',
+    "Aujourd'hui, 16",
+    'Lunedì, 17?',
+    'Juni, 16',
+    'Ok. Sabato, 16?',
+    'Great! Saturday, 16?',
+    // By decision, no longer detected without an intro: a bare number after a name, and brackets.
+    'Lena, 16',
+    'Lena (16)',
+    'Hi! Max (15) here',
+    // Lowercase name after an intro: "sono stanca, 16 …" (precision: names are capitalised).
+    'sono stanca, 16',
+    'im lena, 16',
+    // Labels with something after the number
+    'Age: 15 years of marriage',
+    'Alter: 15 Jahre Ehe',
+    'age: 16 months',
+    // Brackets of any kind
+    'Mama (16)?',
+    'Saal (12)',
+    'Seat (12)',
+    'Chapter (16)',
+    'Season (15)',
+    'Glenfiddich (15)',
+    'Max (16) is my son',
+    // Intro + name + number that is a date
+    "I'm Lena, 16 Baker Street",
+    'Je suis à Paris, 16 rue de Rivoli',
+  ]) {
+    assertEquals(statesMinor(text), false, text);
+  }
+});
+
+Deno.test('minor: fast on long inputs (blank lines, sentence breaks, spaces)', () => {
+  // Warm-up: the first non-BMP character in an isolate costs a one-time setup (~100 ms).
+  statesMinor('warm up, Lena, 16 Jahre 😀');
+  for (const [name, text] of [
+    ['1,000 newlines', '\n'.repeat(1000)],
+    ['newlines and spaces', '\n \n'.repeat(333)],
+    ['sentence breaks', '. '.repeat(500)],
+    ['exclamations', '! '.repeat(500)],
+    ['spaces', `a${' '.repeat(998)}!`],
+    ['names', 'Hi, Lena, '.repeat(100)],
+    ['emoji', '😀'.repeat(1000)],
+    ['letters', 'a'.repeat(1000)],
+    ['numbers', ' 16'.repeat(333)],
+  ] as const) {
+    const started = performance.now();
+    statesMinor(text);
+    const ms = performance.now() - started;
+    assert(ms < 5, `${name}: ${ms.toFixed(1)} ms`);
+  }
 });

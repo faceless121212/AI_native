@@ -1,9 +1,12 @@
-import { assertEquals } from 'jsr:@std/assert@1';
+import { assert, assertEquals } from 'jsr:@std/assert@1';
+import type { Lang } from './schemas.ts';
 import {
   cardWords,
   cleanCardText,
   confidentlyOtherLanguage,
   dominantLanguage,
+  isTopLanguage,
+  languageScores,
   postCheckCard,
   repeatsCard,
   sameOpener,
@@ -218,4 +221,68 @@ Deno.test('postcheck: a card in the message language is never wrong_lang', () =>
     ok: false,
     reason: 'wrong_lang',
   });
+});
+
+Deno.test('postcheck: the message-language exception needs the card to be in that language', () => {
+  // Second review: a mixed German/English card for expected fr, message en, is dropped (its best
+  // language is de, not the message's en).
+  const mixed = 'Hi! Das klingt super, I would love to, wann passt es dir?';
+  assertEquals(postCheckCard(mixed, 'fr', 300, { messageLang: 'en' }), {
+    ok: false,
+    reason: 'wrong_lang',
+  });
+  // A short Italian card with no dominant language (è is also a French hint) is still kept for
+  // an Italian message with a wrong hint: the live it-wrong-hint-es case.
+  const it = "Che bello! Com'è andato il tuo fine settimana?";
+  assertEquals(dominantLanguage(it), null);
+  assertEquals(confidentlyOtherLanguage(it, 'es'), true);
+  assertEquals(postCheckCard(it, 'es', 300, { messageLang: 'it' }), { ok: true, text: it });
+  // A tie with French still counts as Italian (fr 3, it 3).
+  const tie = 'Ahah, sai sempre come farmi ridere. Un caffè questa settimana?';
+  assertEquals(isTopLanguage(tie, 'it'), true);
+  assertEquals(postCheckCard(tie, 'es', 300, { messageLang: 'it' }), { ok: true, text: tie });
+  assertEquals(isTopLanguage(mixed, 'en'), false);
+  // Live it-wrong-hint-es (third review): French leads only through è, so HEAD kept it.
+  const perche = "Perché no? È un'ottima idea!";
+  assertEquals(postCheckCard(perche, 'es', 300, { messageLang: 'it' }), { ok: true, text: perche });
+  // Mixing in English is not a third language.
+  const sorry = 'Sorry, I was late, the meeting was long: ci vediamo alle 8 invece che alle 7?';
+  assertEquals(postCheckCard(sorry, 'es', 300, { messageLang: 'it' }).ok, true);
+});
+
+Deno.test(
+  'postcheck: the message-language exception keeps every card the d85c2cc rule kept',
+  async () => {
+    // d85c2cc: kept unless confidently outside both the expected and the message language.
+    const { LANG_RULES } = await import('./prompts/index.ts');
+    const langs = ['en', 'de', 'fr', 'es', 'it'] as const;
+    const head = (t: string, expected: Lang, message: Lang) =>
+      !(confidentlyOtherLanguage(t, expected) && confidentlyOtherLanguage(t, message));
+    let compared = 0;
+    for (const message of langs) {
+      const lines = Object.values(LANG_RULES[message].examples)
+        .join('\n')
+        .split('\n')
+        .map((l) => l.replace(/^[-*\d.\s]*/, '').trim())
+        .filter((l) => l.length > 8 && postCheckCard(l, message).ok);
+      for (const line of lines) {
+        for (const expected of langs) {
+          if (expected === message) continue;
+          compared++;
+          if (head(line, expected, message)) {
+            assertEquals(
+              postCheckCard(line, expected, 300, { messageLang: message }).ok,
+              true,
+              `${message} example kept by HEAD, expected ${expected}`,
+            );
+          }
+        }
+      }
+    }
+    assert(compared > 400, `compared ${compared}`);
+  },
+);
+
+Deno.test('postcheck: English has no character hint', () => {
+  assertEquals(languageScores('naïve café ü').en, 0);
 });

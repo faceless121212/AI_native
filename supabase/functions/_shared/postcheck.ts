@@ -237,16 +237,23 @@ const STOP_SETS: Record<Lang, Set<string>> = Object.fromEntries(
   Object.entries(STOP_WORDS).map(([lang, words]) => [lang, new Set(words.map(normalize))]),
 ) as Record<Lang, Set<string>>;
 
-/** Characters that point to one language (checked on the raw text). */
-const CHAR_HINTS: Record<Lang, RegExp> = {
-  en: /$^/,
+/** Characters that point to one language (checked on the raw text). English has none. */
+const CHAR_HINTS: Partial<Record<Lang, RegExp>> = {
   de: /[äöüß]/i,
   fr: /[çœêèëîïûù]|\s[?!;:]/i,
   es: /[ñ¿¡]/i,
   it: /\b\p{L}+[àòù](?!\p{L})/iu,
 };
 
-export function languageScores(text: string): Record<Lang, number> {
+/**
+ * Stop-word hits per language, plus 2 for a language's characters (ñ, ß, è, …) unless
+ * `charHints` is false. Without them, a few accents can't outweigh the words (è is Italian and
+ * French).
+ */
+export function languageScores(
+  text: string,
+  opts: { charHints?: boolean } = {},
+): Record<Lang, number> {
   const words = normalize(text)
     .split(/[^\p{L}']+/u)
     .flatMap((w) => (w.includes("'") ? [w, ...w.split("'")] : [w]))
@@ -254,7 +261,7 @@ export function languageScores(text: string): Record<Lang, number> {
   const scores = { en: 0, de: 0, fr: 0, es: 0, it: 0 } as Record<Lang, number>;
   for (const lang of Object.keys(scores) as Lang[]) {
     for (const w of words) if (STOP_SETS[lang].has(w)) scores[lang]++;
-    if (CHAR_HINTS[lang].test(text)) scores[lang] += 2;
+    if (opts.charHints !== false && CHAR_HINTS[lang]?.test(text)) scores[lang] += 2;
   }
   return scores;
 }
@@ -307,6 +314,19 @@ export function confidentlyOtherLanguage(text: string, expected: Lang): boolean 
   for (const lang of Object.keys(scores) as Lang[]) if (scores[lang] > scores[best]) best = lang;
   if (best === expected) return false;
   return scores[best] >= 3 && scores[expected] * 3 <= scores[best];
+}
+
+/**
+ * False only when a third language clearly leads `lang` on stop words (at least 3 and more than
+ * `lang`; character hints left out). English doesn't count as a third language: mixing in
+ * English is normal ("Sorry per il ritardo, la call è finita tardi").
+ */
+export function isTopLanguage(text: string, lang: Lang): boolean {
+  const scores = languageScores(text, { charHints: false });
+  return (Object.keys(scores) as Lang[]).every(
+    (other) =>
+      other === lang || other === 'en' || scores[other] < 3 || scores[other] <= scores[lang],
+  );
 }
 
 /**
@@ -393,14 +413,18 @@ export function postCheckCard(
   const normalized = normalize(text);
   if (EXPLICIT?.test(normalized)) return { ok: false, reason: 'explicit' };
   if (BANNED?.test(normalized)) return { ok: false, reason: 'banned' };
+  // The message-language exception (live it-wrong-hint-es): a card that is not confidently
+  // outside the message language is kept, as at d85c2cc, so nothing HEAD kept is dropped by it,
+  // e.g. "Perché no? È un'ottima idea!" for hint es (fr 3 only through è, it 2). The one extra
+  // drop: a third language clearly leads on stop words ("Das klingt super, I would love to, wann
+  // passt es dir?" for fr with an English message: de 3, en 2).
   const messageLang = opts.messageLang ?? null;
-  if (
-    expectedLang &&
-    confidentlyOtherLanguage(text, expectedLang) &&
-    (messageLang === null ||
-      messageLang === expectedLang ||
-      confidentlyOtherLanguage(text, messageLang))
-  ) {
+  const inMessageLang =
+    messageLang !== null &&
+    messageLang !== expectedLang &&
+    !confidentlyOtherLanguage(text, messageLang) &&
+    isTopLanguage(text, messageLang);
+  if (expectedLang && confidentlyOtherLanguage(text, expectedLang) && !inMessageLang) {
     return { ok: false, reason: 'wrong_lang' };
   }
   return emoji.changed ? { ok: true, text, fixed: 'emoji' } : { ok: true, text };

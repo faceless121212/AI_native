@@ -480,3 +480,64 @@ Deno.test(
     assertEquals(cardTexts(events).length, 3);
   },
 );
+
+// Regression (third live run, it-wrong-hint-es → `error internal` again): Italian cards on which
+// French scores higher only through è and "un" ("Perché no? È un'ottima idea!"). With the hint
+// es, an attempt without META and a retry with META last checked every card against es, and the
+// follow-up rule (message language must be the top scorer, character hints included) dropped
+// them all.
+Deno.test(
+  'regression: French-leaning Italian cards for an Italian message survive a wrong hint',
+  async () => {
+    const fake = new FakeProvider({ script: ['lang-it-fr-nometa', 'lang-it-fr-metalast'] });
+    const { store, handler } = setupReply({ providers: [fake] });
+    const { token } = await aiUser(store);
+    const { result: res } = await captureConsole(() =>
+      handler(replyRequest(token, { text: IT_MESSAGE, langHint: 'es', relationship: 'partner' })),
+    );
+    const { result: events, lines } = await captureConsole(() => readEvents(res));
+    assertEquals(events.at(-1)!.event, 'done');
+    assertEquals(cardTexts(events), [
+      "Perché no? È un'ottima idea!",
+      "Sì, è un'idea fantastica!",
+      "Ottimo, un brindisi è d'obbligo!",
+    ]);
+    assertEquals(fake.calls.length, 1, 'kept on the first attempt: no retry');
+    assertEquals(
+      parsed(lines).filter((l) => l.event === 'card_dropped'),
+      [],
+    );
+  },
+);
+
+Deno.test(
+  'regression: Italian cards that tie with fr or es are kept whatever META says',
+  async () => {
+    const cards = [
+      "R1|Sì, è vero, non vedo l'ora!", // fr 2, it 2
+      'R2|Con te sempre, una serata così mi piace.', // es 4, it 4
+      "R3|Va bene, è un'ottima scelta.", // fr 3, it 3
+    ];
+    for (const meta of [
+      'META|{"lang":"it","crisis":false,"refused":false}',
+      'META|{"lang":"es","crisis":false,"refused":false}',
+      null,
+    ]) {
+      for (const metaLast of [false, true]) {
+        const lines = meta === null ? cards : metaLast ? [...cards, meta] : [meta, ...cards];
+        const provider = new ScriptedProvider(`${lines.join('\n')}\n`);
+        const { store, handler } = setupReply({ providers: [provider] });
+        const { token } = await aiUser(store);
+        const { result: res } = await captureConsole(() =>
+          handler(
+            replyRequest(token, { text: IT_MESSAGE, langHint: 'es', relationship: 'partner' }),
+          ),
+        );
+        const { result: events } = await captureConsole(() => readEvents(res));
+        const where = `${meta ?? 'no META'} ${metaLast ? 'last' : 'first'}`;
+        assertEquals(cardTexts(events).length, 3, where);
+        assertEquals(provider.calls, 1, where);
+      }
+    }
+  },
+);

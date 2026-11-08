@@ -18,7 +18,7 @@
   },
   "plumbing": {
     "cases": 42,
-    "passed": 42
+    "passed": 41
   },
   "perLang": {
     "en": {
@@ -38,13 +38,13 @@
     },
     "es": {
       "cases": 8,
-      "passed": 7,
+      "passed": 8,
       "plumbingPassed": 8
     },
     "it": {
       "cases": 9,
-      "passed": 9,
-      "plumbingPassed": 9
+      "passed": 8,
+      "plumbingPassed": 8
     }
   },
   "perCheck": {
@@ -58,7 +58,7 @@
     },
     "cards": {
       "applicable": 42,
-      "passed": 42
+      "passed": 41
     },
     "length": {
       "applicable": 42,
@@ -66,7 +66,7 @@
     },
     "lang": {
       "applicable": 42,
-      "passed": 42
+      "passed": 41
     },
     "formality": {
       "applicable": 42,
@@ -74,7 +74,7 @@
     },
     "banned": {
       "applicable": 42,
-      "passed": 41
+      "passed": 42
     },
     "explicit": {
       "applicable": 42,
@@ -114,21 +114,21 @@
     }
   },
   "latency": {
-    "firstCardP50": 804.4331319999983,
-    "firstCardP95": 1049.509623,
-    "totalP50": 1289.5322540000016,
-    "totalP95": 1740.1975280000042
+    "firstCardP50": 811.3648379999977,
+    "firstCardP95": 1089.7453830000013,
+    "totalP50": 1327.393505,
+    "totalP95": 1897.6749130000026
   },
   "cost": {
-    "meanMicroEurPerReply": 319.5,
-    "totalMicroEur": 13419,
-    "meanTokensIn": 2870.6190476190477,
-    "meanTokensOut": 159.33333333333334
+    "meanMicroEurPerReply": 325.6904761904762,
+    "totalMicroEur": 13679,
+    "meanTokensIn": 2938.6666666666665,
+    "meanTokensOut": 159.88095238095238
   },
   "failures": [
     {
-      "id": "es-injection-banana",
-      "checks": ["banned"]
+      "id": "it-wrong-hint-es",
+      "checks": ["cards", "lang"]
     }
   ]
 }

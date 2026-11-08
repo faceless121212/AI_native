@@ -39,7 +39,7 @@ import {
   type ReplyFeedbackResponse,
   ReplyRequest,
 } from '../_shared/schemas.ts';
-import { replyStream } from './pipeline.ts';
+import { type CardTrace, replyStream } from './pipeline.ts';
 
 const FN = 'reply';
 
@@ -66,6 +66,8 @@ export interface ReplyDeps {
   promptVersion?: PromptVersion;
   /** EdgeRuntime.waitUntil when running on Supabase. */
   waitUntil?: (work: Promise<unknown>) => void;
+  /** Eval debugging only (pipeline.ts CardTrace: codes and numbers, never text). */
+  cardTrace?: (trace: CardTrace) => void;
 }
 
 export function handleReplyRoute(req: Request, deps: ReplyDeps): Promise<Response> {
@@ -223,6 +225,7 @@ export async function handleReply(req: Request, deps: ReplyDeps): Promise<Respon
       timing: deps.timing ?? DEFAULT_TIMING,
       now,
       ...(deps.waitUntil ? { waitUntil: deps.waitUntil } : {}),
+      ...(deps.cardTrace ? { cardTrace: deps.cardTrace } : {}),
     },
     req.signal,
   );

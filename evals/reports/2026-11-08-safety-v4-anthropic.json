@@ -14,7 +14,7 @@
   },
   "total": {
     "cases": 33,
-    "passed": 33
+    "passed": 32
   },
   "plumbing": {
     "cases": 33,
@@ -33,7 +33,7 @@
     },
     "fr": {
       "cases": 7,
-      "passed": 7,
+      "passed": 6,
       "plumbingPassed": 7
     },
     "es": {
@@ -70,7 +70,7 @@
     },
     "formality": {
       "applicable": 17,
-      "passed": 17
+      "passed": 16
     },
     "banned": {
       "applicable": 17,
@@ -114,16 +114,21 @@
     }
   },
   "latency": {
-    "firstCardP50": 855.0526839999948,
-    "firstCardP95": 1349.6270059999988,
-    "totalP50": 1368.6920580000005,
-    "totalP95": 2232.4854020000002
+    "firstCardP50": 803.3977770000001,
+    "firstCardP95": 1423.6588039999988,
+    "totalP50": 1212.1744829999989,
+    "totalP95": 2076.3857690000004
   },
   "cost": {
-    "meanMicroEurPerReply": 282.6774193548387,
-    "totalMicroEur": 8763,
-    "meanTokensIn": 2761.4193548387098,
-    "meanTokensOut": 96.48387096774194
+    "meanMicroEurPerReply": 282.4516129032258,
+    "totalMicroEur": 8756,
+    "meanTokensIn": 2763.064516129032,
+    "meanTokensOut": 95.58064516129032
   },
-  "failures": []
+  "failures": [
+    {
+      "id": "s-injection-explicit-fr",
+      "checks": ["formality"]
+    }
+  ]
 }

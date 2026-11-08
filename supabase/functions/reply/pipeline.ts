@@ -16,7 +16,7 @@
 import type { Analytics } from '../_shared/analytics.ts';
 import { costMicroEur } from '../_shared/cost.ts';
 import type { ProviderHealth } from '../_shared/llm/health.ts';
-import { LineParser, type ModelMeta, type ParsedItem } from '../_shared/llm/lines.ts';
+import { type CardTag, LineParser, type ModelMeta, type ParsedItem } from '../_shared/llm/lines.ts';
 import type { LlmPrompt, LlmProvider, StopKind } from '../_shared/llm/provider.ts';
 import {
   type ProviderCall,
@@ -26,7 +26,13 @@ import {
 } from '../_shared/llm/runner.ts';
 import { emojiPolicy } from '../_shared/emoji.ts';
 import { logError, logEvent } from '../_shared/log.ts';
-import { type DropReason, postCheckCard, repeatsCard } from '../_shared/postcheck.ts';
+import {
+  type DropReason,
+  type FixReason,
+  languageScores,
+  postCheckCard,
+  repeatsCard,
+} from '../_shared/postcheck.ts';
 import type { QuotaSnapshot, ReplyRepo, RequestStatus, StoredSafetyFlag } from '../_shared/repo.ts';
 import {
   type CardEvent,
@@ -45,6 +51,25 @@ import { formatSse } from '../_shared/sse.ts';
 
 const FN = 'reply';
 
+/**
+ * One post-checked line, for eval debugging only (scripts/run-evals.ts --trace): codes and
+ * numbers, never card text. Not set in production.
+ */
+export interface CardTrace {
+  attempt: number;
+  /** R1–R3, L, W; 'invalid' for a line the parser couldn't read. */
+  tag: CardTag | 'invalid';
+  /** Language the card was checked against, and whether META had arrived by then. */
+  expected: Lang;
+  metaSeen: boolean;
+  messageLang: Lang | null;
+  reason: DropReason | null;
+  fixed: FixReason | null;
+  /** languageScores of the card, with and without character hints. */
+  scores: Record<Lang, number>;
+  stopScores: Record<Lang, number>;
+}
+
 export interface PipelineDeps {
   providers: readonly LlmProvider[];
   health: ProviderHealth;
@@ -54,6 +79,8 @@ export interface PipelineDeps {
   now: () => number;
   /** EdgeRuntime.waitUntil on Supabase: keeps the worker alive for the post-stream work. */
   waitUntil?: (work: Promise<unknown>) => void;
+  /** Eval debugging only (CardTrace). */
+  cardTrace?: (trace: CardTrace) => void;
 }
 
 export interface PipelineInput {
@@ -175,6 +202,7 @@ async function run(input: PipelineInput, deps: PipelineDeps, signal: AbortSignal
   let lastStop: StopKind | null = null;
   let providerRefused = false;
   const serverRefused = input.refuseBeforeModel === true;
+  let currentAttempt = 0;
   let fallbackUsed = false;
   let stoppedAiOff = false;
   let internalError = false;
@@ -213,6 +241,17 @@ async function run(input: PipelineInput, deps: PipelineDeps, signal: AbortSignal
     for (const item of items) {
       if (item.type === 'invalid') {
         invalid++;
+        deps.cardTrace?.({
+          attempt: currentAttempt,
+          tag: 'invalid',
+          expected: expectedLang(),
+          metaSeen: meta !== null,
+          messageLang: input.messageLang,
+          reason: null,
+          fixed: null,
+          scores: { en: 0, de: 0, fr: 0, es: 0, it: 0 },
+          stopScores: { en: 0, de: 0, fr: 0, es: 0, it: 0 },
+        });
         continue;
       }
       if (item.type === 'meta') {
@@ -243,6 +282,20 @@ async function run(input: PipelineInput, deps: PipelineDeps, signal: AbortSignal
           if (reason !== null) break;
         }
       }
+      if (deps.cardTrace) {
+        const traced = checked.ok ? checked.text : item.text;
+        deps.cardTrace({
+          attempt: currentAttempt,
+          tag: item.tag,
+          expected: expectedLang(),
+          metaSeen: meta !== null,
+          messageLang: input.messageLang,
+          reason,
+          fixed: checked.ok ? (checked.fixed ?? null) : null,
+          scores: languageScores(traced),
+          stopScores: languageScores(traced, { charHints: false }),
+        });
+      }
       if (!checked.ok || reason !== null) {
         dropped++;
         flags.add('card_dropped');
@@ -269,6 +322,7 @@ async function run(input: PipelineInput, deps: PipelineDeps, signal: AbortSignal
     // A server refusal skips the model; the `done` line and the row record it as refused.
     if (!serverRefused) {
       for (let attempt = 0; attempt < 2; attempt++) {
+        currentAttempt = attempt;
         if (attempt > 0 && !(await stillAllowed())) {
           stoppedAiOff = true;
           break;

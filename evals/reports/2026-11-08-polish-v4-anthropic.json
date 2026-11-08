@@ -114,16 +114,16 @@
     }
   },
   "latency": {
-    "firstCardP50": 691.0754919999999,
-    "firstCardP95": 936.5893000000033,
-    "totalP50": 958.3079099999995,
-    "totalP95": 1106.6504220000006
+    "firstCardP50": 630.7369309999995,
+    "firstCardP95": 986.4439109999985,
+    "totalP50": 875.4045800000022,
+    "totalP95": 1203.9451399999998
   },
   "cost": {
-    "meanMicroEurPerReply": 282.6060606060606,
-    "totalMicroEur": 9326,
-    "meanTokensIn": 2723.7272727272725,
-    "meanTokensOut": 103.81818181818181
+    "meanMicroEurPerReply": 283.030303030303,
+    "totalMicroEur": 9340,
+    "meanTokensIn": 2723.3636363636365,
+    "meanTokensOut": 104.51515151515152
   },
   "failures": [
     {

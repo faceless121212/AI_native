@@ -4,6 +4,10 @@
 //
 //   npm run evals -- --prompt reply|polish|safety [--provider fake|anthropic|bedrock|mistral]
 //                    [--version <one of PROMPT_VERSIONS>] [--case <id>] [--lang <en|de|fr|es|it>]
+//                    [--trace] [--fake-scenario <FAKE_SCENARIOS name>]
+// --trace prints, per card line, the drop reason and the language scores (codes and numbers
+// only, never card text) to stdout. --fake-scenario replaces each case's fake scenario
+// (--provider fake only), e.g. lang-it-metalast.
 //                    [--baseline <report.json>] [--no-write]
 //
 // --version builds an older prompt version through the same handler (default PROMPT_VERSION),
@@ -28,6 +32,8 @@ import {
 import { redact } from '../supabase/functions/_shared/redact.ts';
 import { validateChips } from '../supabase/functions/_shared/chips.ts';
 import { EVAL_SETS, type EvalCase, type EvalSet, parseCases } from '../evals/lib/cases.ts';
+import { FAKE_SCENARIOS, type FakeScenario } from '../supabase/functions/_shared/llm/fake.ts';
+import { formatTrace } from '../evals/lib/trace.ts';
 import { evaluate, type CaseResult } from '../evals/lib/evaluate.ts';
 import { EVAL_PROVIDERS, type EvalProvider, Harness, makeProviders } from '../evals/lib/harness.ts';
 import { prettyJson, renderReport, type Summary, summarise } from '../evals/lib/report.ts';
@@ -43,6 +49,8 @@ const { values: args } = parseArgs({
     lang: { type: 'string' },
     baseline: { type: 'string' },
     'no-write': { type: 'boolean', default: false },
+    trace: { type: 'boolean', default: false },
+    'fake-scenario': { type: 'string' },
     help: { type: 'boolean', default: false },
   },
 });
@@ -84,7 +92,17 @@ const providers = await makeProviders(provider, (name) => Deno.env.get(name)).ca
   );
   Deno.exit(2);
 });
-const harness = new Harness(providers, provider, version);
+const fakeScenario = args['fake-scenario'];
+if (fakeScenario !== undefined && !(FAKE_SCENARIOS as readonly string[]).includes(fakeScenario)) {
+  console.error(`--fake-scenario must be one of ${FAKE_SCENARIOS.join(', ')}`);
+  Deno.exit(2);
+}
+const harness = new Harness(
+  providers,
+  provider,
+  version,
+  fakeScenario ? { fakeScenario: fakeScenario as FakeScenario } : {},
+);
 
 // System prompt size for these cases (the same assembly the function uses).
 const sizes = cases.map((c) => {
@@ -115,6 +133,7 @@ const results: CaseResult[] = [];
 for (const c of cases) {
   const run = await harness.run(c);
   const result = evaluate(c, run, { fake: provider === 'fake' });
+  if (args.trace) for (const t of run.traces) console.log(`trace ${c.id} ${formatTrace(t)}`);
   results.push(result);
   const failed = result.checks.filter((x) => x.status === 'fail');
   console.log(

@@ -257,3 +257,34 @@ Deno.test(
     assert(status(cardLeak)?.detail?.includes('card 2 in store'));
   },
 );
+
+Deno.test('trace: run-evals --trace gets codes and numbers only, never card text', async () => {
+  const { Harness } = await import('./harness.ts');
+  const { FakeProvider } = await import('../../supabase/functions/_shared/llm/fake.ts');
+  const { parseCases } = await import('./cases.ts');
+  const { formatTrace } = await import('./trace.ts');
+  const root = new URL('../', import.meta.url);
+  const cases = parseCases(await Deno.readTextFile(new URL('reply/cases.jsonl', root)), 'reply');
+  const c = cases.find((x) => x.id === 'it-wrong-hint-es')!;
+  const harness = new Harness([new FakeProvider()], 'fake', undefined, {
+    fakeScenario: 'lang-it-fr-metalast',
+  });
+  const run = await harness.run(c);
+  assertEquals(run.traces.length, 3);
+  for (const t of run.traces) {
+    for (const value of Object.values(t)) {
+      if (typeof value === 'string') assert(value.length <= 8, `short code only: ${value}`);
+    }
+    const line = formatTrace(t);
+    for (const card of run.cards) assert(!line.includes(card.text.slice(0, 6)), line);
+    assert(!line.includes(c.text.slice(0, 6)), line);
+  }
+  assertEquals(
+    run.traces.map((t) => [t.tag, t.expected, t.metaSeen, t.messageLang, t.reason]),
+    [
+      ['R1', 'es', false, 'it', null],
+      ['R2', 'es', false, 'it', null],
+      ['R3', 'es', false, 'it', null],
+    ],
+  );
+});

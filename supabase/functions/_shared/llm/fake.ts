@@ -17,7 +17,10 @@
 //   same three words as the first) · es-it-swap (META says the prompt language; for it the cards
 //   are Spanish, for es Italian, otherwise as ok) · lang-it-metalast (Italian cards whatever the
 //   hint, META last: the cards arrive while only the on-device hint is known; live run
-//   it-wrong-hint-es)
+//   it-wrong-hint-es) · lang-it-fr-metalast / lang-it-fr-nometa (short Italian cards on which
+//   French scores higher, only through è and "un", e.g. "Perché no? È un'ottima idea!"; META
+//   last / no META. With the on-device hint es, a nometa attempt and a metalast retry check every
+//   card against the hint: the live it-wrong-hint-es `error internal`)
 import type { Lang, ReplyKind } from '../schemas.ts';
 import {
   emptyOutcome,
@@ -55,6 +58,8 @@ export const FAKE_SCENARIOS = [
   'same-opener',
   'es-it-swap',
   'lang-it-metalast',
+  'lang-it-fr-metalast',
+  'lang-it-fr-nometa',
 ] as const;
 export type FakeScenario = (typeof FAKE_SCENARIOS)[number];
 
@@ -229,6 +234,13 @@ const MULTILINE: Record<Lang, Record<Formality, readonly [string, string]>> = {
   },
 };
 
+/** Italian cards on which French scores higher than Italian (fr 3, it 2): è + "un". */
+const IT_FRENCH_LEANING: Lines = [
+  "Perché no? È un'ottima idea!",
+  "Sì, è un'idea fantastica!",
+  "Ottimo, un brindisi è d'obbligo!",
+];
+
 /** Escapes a card for one output line the way the polish prompt asks (`\\` first, then `\n`). */
 export function escapeCardLine(text: string): string {
   return text.replaceAll('\\', '\\\\').replaceAll('\n', '\\n');
@@ -341,6 +353,15 @@ export function fakeOutput(scenario: FakeScenario, prompt: LlmPrompt): string {
       const [first, second, third] = REPLIES[lang][formality];
       const opener = first.split(' ').slice(0, 3).join(' ');
       return `${meta(lang)}\nR1|${first}\nR2|${opener} ${second}\nR3|${third}\n`;
+    }
+    case 'lang-it-fr-metalast':
+    case 'lang-it-fr-nometa': {
+      const lines =
+        kind === 'polish'
+          ? [`L|${IT_FRENCH_LEANING[0]}`, `W|${IT_FRENCH_LEANING[1]}`]
+          : IT_FRENCH_LEANING.map((t, i) => `R${i + 1}|${t}`);
+      const tail = scenario === 'lang-it-fr-metalast' ? `${meta('it')}\n` : '';
+      return `${lines.join('\n')}\n${tail}`;
     }
     case 'lang-it-metalast':
       return `${cardLines(kind, 'it', formality).join('\n')}\n${meta('it')}\n`;
