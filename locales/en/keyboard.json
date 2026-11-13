@@ -5,7 +5,8 @@
   "actions": {
     "reply": "Reply",
     "polish": "Polish",
-    "more": "↻ More"
+    "more": "↻ More",
+    "openApp": "Open app"
   },
   "counter": {
     "leftToday_one": "{{count}} left today",
@@ -20,7 +21,8 @@
     "quotaEmpty": "Out of free replies. More tomorrow, or go unlimited in the Replywise app.",
     "fairUse": "Daily limit reached. Back tomorrow.",
     "providerDown": "AI replies are having trouble. Try again in a minute.",
-    "lastTrialDay": "Your free trial ends tomorrow: {{price}}/week after that. Manage in the Replywise app."
+    "lastTrialDay": "Your free trial ends tomorrow: {{price}}/year after that. Manage in the Replywise app.",
+    "signedOut": "Sign in to use AI replies."
   },
   "chipRows": {
     "who": "Who",
@@ -61,5 +63,28 @@
   "formality": {
     "casual": "Casual",
     "formal": "Formal"
+  },
+  "keys": {
+    "shift": "Shift",
+    "capsLock": "Caps lock",
+    "shiftOn": "on",
+    "shiftOff": "off",
+    "delete": "Delete",
+    "space": "space",
+    "numbers": "Numbers",
+    "letters": "Letters",
+    "moreSymbols": "More symbols"
+  },
+  "returnKey": {
+    "default": "return",
+    "go": "go",
+    "search": "search",
+    "send": "send",
+    "done": "done",
+    "next": "next",
+    "join": "join",
+    "route": "route",
+    "continue": "continue",
+    "emergencyCall": "emergency call"
   }
 }

@@ -261,3 +261,54 @@ Deno.test({
     }
   },
 });
+
+Deno.test({
+  name: 'integration: a minor in a match reply is refused before the model and refunded in SQL',
+  ignore: !enabled,
+  sanitizeResources: false,
+  sanitizeOps: false,
+  async fn() {
+    const db = createServiceClient();
+    await resetFakeProvider(db);
+    const repo = new SupabaseReplyRepo(db);
+    const health = new CachedProviderHealth(new SupabaseProviderStatusStore(db));
+    const fake = new FakeProvider();
+    const deps: ReplyDeps = {
+      auth: supabaseAuthDeps(db),
+      repo,
+      llm: { ok: true, providers: [fake] },
+      health,
+      rateLimiter: new RateLimiter(),
+      timing: FAST_TIMING,
+    };
+    const reply = withErrors('reply', (r) => handleReplyRoute(r, deps));
+    const { token } = await signInReady(db);
+
+    const res = await reply(
+      replyRequest(token, {
+        text: `ich bin 15 lol. ${TEXT}`,
+        langHint: 'de',
+        relationship: 'match',
+        tone: 'flirty',
+        flirt: 'light',
+      }),
+    );
+    const id = res.headers.get('x-request-id')!;
+    const events = await readEvents(res);
+    assertEquals(names(events), ['meta', 'quota', 'done']);
+    assertEquals(events[0]!.data.refused, true);
+    assertEquals(events[1]!.data.leftToday, 13, 'refunded: 10 starter + 3 daily');
+    assertEquals(fake.calls.length, 0);
+    const { data: row, error } = await db.from('ai_requests').select('*').eq('id', id).single();
+    assert(!error, 'read ai_requests');
+    assertEquals(
+      [row.status, row.provider, row.safety_flags],
+      ['refused', null, ['redacted', 'refused']],
+    );
+    assert(row.refunded_at !== null);
+    // Cleared after the refund; charge and language stay.
+    assertEquals([row.relationship, row.tone, row.flirt], [null, null, null]);
+    assertEquals([row.kind, row.lang, row.charge], ['reply', 'de', 'starter']);
+    assert(!JSON.stringify(row).includes('Integrationquokka'), 'no text in ai_requests');
+  },
+});

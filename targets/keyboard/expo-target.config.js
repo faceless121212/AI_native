@@ -17,7 +17,7 @@ module.exports = () => {
     // Leading dot: appended to the app's bundle ID, so production is app.replywise.keyboard
     // and APP_VARIANT=staging gives app.replywise.staging.keyboard.
     bundleIdentifier: '.keyboard',
-    deploymentTarget: '16.0',
+    deploymentTarget: '16.4',
     // Set explicitly; never rely on the plugin syncing these from the main app.
     // The keyboard gets only the SHARED keychain group, never the app-only one.
     entitlements: {

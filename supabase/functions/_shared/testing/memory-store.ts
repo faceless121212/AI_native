@@ -49,7 +49,12 @@ export interface StoredCredit {
 export interface StoredRequest {
   id: string;
   userId: string;
-  input: ConsumeInput;
+  /** relationship, tone and flirt are null after a server refusal (FinishInput.clearChips). */
+  input: Omit<ConsumeInput, 'relationship' | 'tone' | 'flirt'> & {
+    relationship: ConsumeInput['relationship'] | null;
+    tone: ConsumeInput['tone'] | null;
+    flirt: ConsumeInput['flirt'] | null;
+  };
   createdAt: number;
   charge: 'starter' | 'daily' | 'bonus' | 'paid';
   chargeDate: string;
@@ -59,7 +64,7 @@ export interface StoredRequest {
 }
 export interface StoredEntitlement {
   userId: string;
-  product: 'weekly' | 'annual' | 'lifetime' | 'lifetime_upgrade';
+  product: 'annual';
   active: boolean;
   expiresAt: string | null;
 }
@@ -299,20 +304,8 @@ export class MemoryStore implements AuthDeps, ConsentRepo, ProfileRepo, DeviceKe
         e.userId === userId && e.active && (e.expiresAt === null || Date.parse(e.expiresAt) > now),
     );
     if (active.length === 0) return { plan: 'free', cap: null };
-    const lifetime = active.some(
-      (e) => e.product === 'lifetime' || e.product === 'lifetime_upgrade',
-    );
-    const plan: Plan = lifetime
-      ? 'lifetime'
-      : active.some((e) => e.product === 'annual')
-        ? 'annual'
-        : 'weekly';
-    const cap = Math.max(
-      ...active.map((e) =>
-        e.product === 'lifetime' || e.product === 'lifetime_upgrade' ? 100 : 300,
-      ),
-    );
-    return { plan, cap };
+    // Annual is the only product; subscribers have a fair-use cap of 100/day (reply_plan).
+    return { plan: 'annual', cap: 100 };
   }
 
   private creditsOf(userId: string): { starter: number; bonus: number } {
@@ -455,6 +448,11 @@ export class MemoryStore implements AuthDeps, ConsentRepo, ProfileRepo, DeviceKe
     }
     req.status = input.status;
     req.finish = structuredClone(input);
+    if (input.clearChips) {
+      req.input.relationship = null;
+      req.input.tone = null;
+      req.input.flirt = null;
+    }
     return Promise.resolve();
   }
 

@@ -8,7 +8,19 @@
 //   wronglang · long · truncated · metafirst (v1 prompt order: META line first) · crisis-nometa
 //   (supportive crisis lines but the META line is lost: exercises the crisis keyword backstop) ·
 //   lang-en|de|fr|es|it (META first and cards in that language whatever the hint said: the
-//   on-device hint was wrong and the model followed the message)
+//   on-device hint was wrong and the model followed the message) · lang-fr-group (like lang-fr,
+//   but the cards speak casually to a group: plural "vous" that is not formal) · multiline (META first; Polish
+//   cards keep a three-paragraph draft's breaks, written as `\n` the way the polish prompt asks,
+//   the casual rewrite with an escaped backslash `\\`; reply cards contain a stray `\n` the parser
+//   flattens to a space) · emoji (every card ends with two emoji, the second card is emoji only:
+//   exercises the emoji net) · same-opener (META first; the second reply card opens with the
+//   same three words as the first) · es-it-swap (META says the prompt language; for it the cards
+//   are Spanish, for es Italian, otherwise as ok) · lang-it-metalast (Italian cards whatever the
+//   hint, META last: the cards arrive while only the on-device hint is known; live run
+//   it-wrong-hint-es) · lang-it-fr-metalast / lang-it-fr-nometa (short Italian cards on which
+//   French scores higher, only through è and "un", e.g. "Perché no? È un'ottima idea!"; META
+//   last / no META. With the on-device hint es, a nometa attempt and a metalast retry check every
+//   card against the hint: the live it-wrong-hint-es `error internal`)
 import type { Lang, ReplyKind } from '../schemas.ts';
 import {
   emptyOutcome,
@@ -40,6 +52,14 @@ export const FAKE_SCENARIOS = [
   'lang-fr',
   'lang-es',
   'lang-it',
+  'lang-fr-group',
+  'multiline',
+  'emoji',
+  'same-opener',
+  'es-it-swap',
+  'lang-it-metalast',
+  'lang-it-fr-metalast',
+  'lang-it-fr-nometa',
 ] as const;
 export type FakeScenario = (typeof FAKE_SCENARIOS)[number];
 
@@ -190,6 +210,42 @@ const CRISIS: Record<Lang, Lines> = {
   ],
 };
 
+/** Greeting and sign-off around the Polish body for 'multiline' (three paragraphs; formal sign-offs put the name on its own line). */
+const MULTILINE: Record<Lang, Record<Formality, readonly [string, string]>> = {
+  en: {
+    casual: ['Hi Sam,', 'See you soon, Alex'],
+    formal: ['Dear Ms Taylor,', 'Kind regards,\nAlex Morgan'],
+  },
+  de: {
+    casual: ['Hallo Sam,', 'Bis bald, Alex'],
+    formal: ['Sehr geehrte Frau Weber,', 'Mit freundlichen Grüßen\nAlex Morgan'],
+  },
+  fr: {
+    casual: ['Salut Sam,', 'À bientôt, Alex'],
+    formal: ['Madame Martin,', 'Bien cordialement,\nAlex Morgan'],
+  },
+  es: {
+    casual: ['Hola, Sam:', 'Hasta pronto, Alex'],
+    formal: ['Estimada señora García:', 'Un cordial saludo,\nAlex Morgan'],
+  },
+  it: {
+    casual: ['Ciao Sam,', 'A presto, Alex'],
+    formal: ['Gentile signora Rossi,', 'Cordiali saluti,\nAlex Morgan'],
+  },
+};
+
+/** Italian cards on which French scores higher than Italian (fr 3, it 2): è + "un". */
+const IT_FRENCH_LEANING: Lines = [
+  "Perché no? È un'ottima idea!",
+  "Sì, è un'idea fantastica!",
+  "Ottimo, un brindisi è d'obbligo!",
+];
+
+/** Escapes a card for one output line the way the polish prompt asks (`\\` first, then `\n`). */
+export function escapeCardLine(text: string): string {
+  return text.replaceAll('\\', '\\\\').replaceAll('\n', '\\n');
+}
+
 const OTHER_LANG: Record<Lang, Lang> = { en: 'de', de: 'fr', fr: 'es', es: 'it', it: 'en' };
 
 const MARKER = /\[\[fake:([a-z-]+)\]\]/;
@@ -255,6 +311,63 @@ export function fakeOutput(scenario: FakeScenario, prompt: LlmPrompt): string {
     case 'lang-it': {
       const actual = scenario.slice(5) as Lang;
       return `${meta(actual)}\n${cardLines(kind, actual, formality).join('\n')}\n`;
+    }
+    case 'lang-fr-group': {
+      const lines =
+        kind === 'polish'
+          ? [
+              'L|Désolé, je serai en retard de 10 min, commencez sans moi.',
+              "W|J'arrive dans 10 min, commencez sans moi, je vous rejoins !",
+            ]
+          : [
+              'R1|Trop bien, vous êtes déjà là ?',
+              "R2|J'arrive dans 10 min, gardez-moi une place.",
+              'R3|Commencez sans moi, je vous rejoins vite !',
+            ];
+      return `${meta('fr')}\n${lines.join('\n')}\n`;
+    }
+    case 'multiline': {
+      if (kind === 'polish') {
+        const [hello, bye] = MULTILINE[lang][formality];
+        const [light, rewrite] = POLISH[lang][formality];
+        return [
+          meta(lang),
+          `L|${escapeCardLine(`${hello}\n\n${light}\n\n${bye}`)}`,
+          // The rewrite keeps the breaks too; casual adds a backslash (an emoticon), sent as \\.
+          `W|${escapeCardLine(`${hello}\n\n${rewrite}${formality === 'casual' ? ' ¯\\_(ツ)_/¯' : ''}\n\n${bye}`)}`,
+          '',
+        ].join('\n');
+      }
+      const [first, ...others] = REPLIES[lang][formality];
+      const split = first.replace(/([!?.,]) /, '$1\\n');
+      return [meta(lang), `R1|${split}`, ...others.map((t, i) => `R${i + 2}|${t}`), ''].join('\n');
+    }
+    case 'emoji': {
+      const lines = cards.map((c, i) =>
+        i === 1 ? `${c.slice(0, c.indexOf('|'))}|😂😂` : `${c} 😄🎉`,
+      );
+      return `${meta(lang)}\n${lines.join('\n')}\n`;
+    }
+    case 'same-opener': {
+      if (kind === 'polish') return `${meta(lang)}\n${cards.join('\n')}\n`;
+      const [first, second, third] = REPLIES[lang][formality];
+      const opener = first.split(' ').slice(0, 3).join(' ');
+      return `${meta(lang)}\nR1|${first}\nR2|${opener} ${second}\nR3|${third}\n`;
+    }
+    case 'lang-it-fr-metalast':
+    case 'lang-it-fr-nometa': {
+      const lines =
+        kind === 'polish'
+          ? [`L|${IT_FRENCH_LEANING[0]}`, `W|${IT_FRENCH_LEANING[1]}`]
+          : IT_FRENCH_LEANING.map((t, i) => `R${i + 1}|${t}`);
+      const tail = scenario === 'lang-it-fr-metalast' ? `${meta('it')}\n` : '';
+      return `${lines.join('\n')}\n${tail}`;
+    }
+    case 'lang-it-metalast':
+      return `${cardLines(kind, 'it', formality).join('\n')}\n${meta('it')}\n`;
+    case 'es-it-swap': {
+      const swapped = lang === 'it' ? 'es' : lang === 'es' ? 'it' : lang;
+      return `${meta(lang)}\n${cardLines(kind, swapped, formality).join('\n')}\n`;
     }
     case 'crisis-nometa':
       return `${(kind === 'polish'

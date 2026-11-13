@@ -13,14 +13,14 @@ Read `CLAUDE.md`, `docs/product-spec.md` and `docs/architecture.md` first.
 
 | Layer | Tool | Location | Must cover |
 |---|---|---|---|
-| Quota | pgTAP + Deno | `supabase/tests`, `supabase/functions/reply/` | Starter 10 → daily 3 → bonus; reset at local midnight in Europe/London, Berlin, Madrid; concurrent taps don't over-consume; refund on failure before first card; lifetime 100/day; subscription 300/day |
+| Quota | pgTAP + Deno | `supabase/tests`, `supabase/functions/reply/` | Starter 10 → daily 3 → bonus; reset at local midnight in Europe/London, Berlin, Madrid; concurrent taps don't over-consume; refund on failure before first card; subscription 100/day |
 | Reply function | Deno, fake provider | `supabase/functions/reply/*.test.ts` | 401 without auth; device key revoked → 401; 403 without consent or age; 402/429 paths; SSE events order; fallback on timeout and error; card post-checks drop bad cards; no text in any log call (spy on console); Flirty forced off for Colleague |
-| Webhook | Deno | `webhooks-revenuecat/` | Bad secret; duplicate event; trial start; renewal count; lifetime; expiration |
+| Webhook | Deno | `webhooks-revenuecat/` | Bad secret; duplicate event; trial start; renewal count; non-annual product ignored; expiration |
 | RLS | pgTAP | `supabase/tests/rls_*.sql` | User A can't read B in every table; client can't read `ai_requests`, `device_keys`, `support_messages` |
 | iOS keyboard core | `swift test --package-path targets/keyboard` | `targets/keyboard/Tests` | Layout maps per language, autocapitalise, SSE parser across split chunks, request builder, quota cache, polish replace count (grapheme clusters, emoji) |
 | Android IME core | Gradle JVM tests | `modules/replywise-ime/android/src/test` | Same as iOS core; password field detection |
 | App logic | Jest | `src/**/__tests__` | Trial reminder times (DST), upgrade-card eligibility, plan display from store prices, App Group mirror writes |
-| Screens | RNTL | `src/features/*/__tests__` | Paywall ✕ present and leads to free tier; trial timeline only for weekly; consent buttons; settings states; strings from i18n |
+| Screens | RNTL | `src/features/*/__tests__` | Paywall ✕ present and leads to free tier; reminder switch under the RevenueCat paywall; consent buttons; settings states; strings from i18n |
 | Flows | Maestro | `e2e/*.yaml` | Onboarding (consent yes and no), Try it, paywall close, settings: withdraw consent, delete my data |
 | Prompts | Evals | `evals/` | Run by `prompt-engineer`; you check the runner works |
 

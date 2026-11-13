@@ -9,7 +9,10 @@
     "close": "Schließen",
     "reply": "Antworten",
     "polish": "Verbessern",
-    "more": "↻ Mehr"
+    "more": "↻ Mehr",
+    "signIn": "Anmelden",
+    "signOut": "Abmelden",
+    "manageSubscription": "Abo verwalten"
   },
   "status": {
     "loading": "Wird geladen",
@@ -20,5 +23,13 @@
     "error": "Fehler",
     "stepDone": "erledigt",
     "stepCurrent": "aktueller Schritt"
+  },
+  "deleteData": {
+    "subscriptionWarningIos": "Wenn du deine Daten löschst, wird dein Abo nicht gekündigt. Kündige es zuerst in deinen Abonnements im App Store.",
+    "subscriptionWarningAndroid": "Wenn du deine Daten löschst, wird dein Abo nicht gekündigt. Kündige es zuerst in deinen Abos bei Google Play."
+  },
+  "signedOutCard": {
+    "title": "Melde dich an für KI-Antworten",
+    "body": "Du hast dich abgemeldet, darum sind KI-Antworten aus. Tippen geht weiter. Melde dich mit Apple oder Google an, um dein Abo zurückzubekommen."
   }
 }

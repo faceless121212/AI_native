@@ -8,5 +8,25 @@
   "actions": {
     "allowAi": "Activer les réponses IA",
     "notNow": "Pas maintenant"
+  },
+  "age": {
+    "actions": {
+      "adult": "J’ai 18 ans ou plus",
+      "under18": "J’ai moins de 18 ans"
+    },
+    "under18Stop": "Replywise est réservé aux adultes. Les réponses IA sont désactivées."
+  },
+  "keyboardSetup": {
+    "actions": {
+      "openSettings": "Ouvrir les réglages",
+      "done": "C’est fait"
+    }
+  },
+  "signIn": {
+    "actions": {
+      "google": "Continuer avec Google"
+    },
+    "notice": "On utilise ta connexion Apple ou Google uniquement pour garder ton abonnement sur tous tes appareils.",
+    "privacyLink": "Confidentialité"
   }
 }

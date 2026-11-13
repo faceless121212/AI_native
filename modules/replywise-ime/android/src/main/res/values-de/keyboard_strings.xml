@@ -7,6 +7,7 @@
     <string name="kb_actions_reply">Antworten</string>
     <string name="kb_actions_polish">Verbessern</string>
     <string name="kb_actions_more">↻ Mehr</string>
+    <string name="kb_actions_open_app">App öffnen</string>
     <plurals name="kb_counter_left_today">
         <item quantity="one">Heute noch %1$d</item>
         <item quantity="other">Heute noch %1$d</item>
@@ -19,7 +20,8 @@
     <string name="kb_bar_quota_empty">Keine Gratis-Antworten mehr. Morgen gibt’s neue – oder unbegrenzt in der Replywise-App.</string>
     <string name="kb_bar_fair_use">Tageslimit erreicht. Morgen geht’s weiter.</string>
     <string name="kb_bar_provider_down">KI-Antworten haben gerade Probleme. Versuch es gleich noch mal.</string>
-    <string name="kb_bar_last_trial_day">Deine Testphase endet morgen, danach %1$s/Woche. Verwalten in der Replywise-App.</string>
+    <string name="kb_bar_last_trial_day">Deine Testphase endet morgen, danach %1$s/Jahr. Verwalten in der Replywise-App.</string>
+    <string name="kb_bar_signed_out">Melde dich an, um KI-Antworten zu nutzen.</string>
     <string name="kb_chip_rows_who">Wer</string>
     <string name="kb_chip_rows_closeness">Nähe</string>
     <string name="kb_chip_rows_tone">Ton</string>
@@ -48,4 +50,23 @@
     <string name="kb_flirt_playful">Verspielt</string>
     <string name="kb_formality_casual">Locker</string>
     <string name="kb_formality_formal">Förmlich</string>
+    <string name="kb_keys_shift">Umschalt</string>
+    <string name="kb_keys_caps_lock">Feststelltaste</string>
+    <string name="kb_keys_shift_on">ein</string>
+    <string name="kb_keys_shift_off">aus</string>
+    <string name="kb_keys_delete">Löschen</string>
+    <string name="kb_keys_space">Leerzeichen</string>
+    <string name="kb_keys_numbers">Zahlen</string>
+    <string name="kb_keys_letters">Buchstaben</string>
+    <string name="kb_keys_more_symbols">Weitere Symbole</string>
+    <string name="kb_return_key_default">Return</string>
+    <string name="kb_return_key_go">Öffnen</string>
+    <string name="kb_return_key_search">Suchen</string>
+    <string name="kb_return_key_send">Senden</string>
+    <string name="kb_return_key_done">Fertig</string>
+    <string name="kb_return_key_next">Weiter</string>
+    <string name="kb_return_key_join">Verbinden</string>
+    <string name="kb_return_key_route">Route</string>
+    <string name="kb_return_key_continue">Weiter</string>
+    <string name="kb_return_key_emergency_call">Notruf</string>
 </resources>

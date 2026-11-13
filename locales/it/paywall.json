@@ -1,7 +1,5 @@
 {
-  "trialTimeline": "Oggi: gratis · Giorno 2: te lo ricordiamo · Giorno 3: inizia {{price}}/settimana",
-  "perWeek": "{{price}} a settimana",
-  "lifetimeLine": "Paga una volta. Risposte illimitate finché l’app esiste.",
-  "fairUse": "Uso corretto: fino a 100 risposte al giorno.",
-  "plansLabel": "Scegli un piano"
+  "reminderSwitch": "Ricordamelo prima che finisca la prova",
+  "fairUse_one": "Uso corretto: fino a {{count}} risposta al giorno.",
+  "fairUse_other": "Uso corretto: fino a {{count}} risposte al giorno."
 }

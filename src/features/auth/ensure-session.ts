@@ -4,7 +4,8 @@ type AuthClient = Pick<SupabaseClient['auth'], 'getSession' | 'signInAnonymously
 
 /**
  * Returns the stored session, or signs in anonymously on first launch (spec §2 screen 1:
- * "Anonymous account created silently"). No email, phone or name is ever sent.
+ * "Anonymous account created silently"). No email, phone or name is sent here; the optional
+ * sign-in after the paywall links an identity to this same user (architecture §4.1).
  * Throws when offline so the caller can retry; typing and the rest of the app don't wait on it.
  */
 export async function ensureAnonymousSession(auth: AuthClient): Promise<Session> {

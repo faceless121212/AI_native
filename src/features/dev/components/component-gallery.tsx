@@ -3,12 +3,12 @@ import { useTranslation } from 'react-i18next';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Banner, Button, Card, Chip, PlanCard, RadioGroup, StepGuide, Text } from '@/components';
+import { Banner, Button, Card, Chip, RadioGroup, StepGuide, Text } from '@/components';
 import { type ColorScheme, ThemeProvider, useTheme } from '@/theme';
 
 // Development-only screen (app/dev/components.tsx redirects away in release builds), so its
 // section headings are not translated. Every component inside uses real i18n strings.
-// Prices below are sample store-formatted strings for the preview, never shipped copy.
+// The paywall itself is a RevenueCat Paywall (spec §6), so it has no preview here.
 
 const PREVIEWS: { scheme: ColorScheme; textScale: number; heading: string }[] = [
   { scheme: 'light', textScale: 1, heading: 'Light · normal text' },
@@ -37,10 +37,9 @@ export function ComponentGallery() {
 
 function Gallery({ heading }: { heading: string }) {
   const theme = useTheme();
-  const { t } = useTranslation(['common', 'keyboard', 'onboarding', 'paywall']);
+  const { t } = useTranslation(['common', 'keyboard', 'onboarding']);
   const [tone, setTone] = useState<'warm' | 'funny' | 'calm'>('warm');
   const [who, setWho] = useState<string[]>(['friend']);
-  const [plan, setPlan] = useState<'weekly' | 'annual' | 'lifetime'>('annual');
   const [loading, setLoading] = useState(false);
 
   return (
@@ -111,33 +110,6 @@ function Gallery({ heading }: { heading: string }) {
         message={t('keyboard:bar.providerDown')}
         action={{ label: t('actions.close'), onPress: () => {} }}
       />
-
-      <RadioGroup label={t('paywall:plansLabel')} style={{ gap: theme.spacing.md }}>
-        <PlanCard
-          title="Weekly"
-          price="€4.99"
-          period="per week"
-          secondaryLine={t('paywall:trialTimeline', { price: '€4.99' })}
-          selected={plan === 'weekly'}
-          onPress={() => setPlan('weekly')}
-        />
-        <PlanCard
-          title="Annual"
-          price="€39.99"
-          period="per year"
-          secondaryLine={t('paywall:perWeek', { price: '€0.77' })}
-          selected={plan === 'annual'}
-          onPress={() => setPlan('annual')}
-        />
-        <PlanCard
-          title="Lifetime"
-          price="€59.99"
-          period=""
-          details={[t('paywall:lifetimeLine'), t('paywall:fairUse')]}
-          selected={plan === 'lifetime'}
-          onPress={() => setPlan('lifetime')}
-        />
-      </RadioGroup>
 
       <StepGuide
         activeIndex={1}

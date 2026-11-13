@@ -46,6 +46,10 @@ const SCENARIOS: FakeScenario[] = [
   'wronglang',
   'long',
   'truncated',
+  'multiline',
+  'emoji',
+  'same-opener',
+  'es-it-swap',
 ];
 
 const MODEL_OUTPUT = [
@@ -148,6 +152,32 @@ Deno.test('reply: no request text in logs, stored rows or analytics on any path'
       healthStates.push(JSON.stringify([...health.failures]));
     }
 
+    // Refused on the server before the model: a minor in a match reply (the text states an age).
+    use([primary, fallback]);
+    const minor = await handler(
+      replyRequest(token, { text: `I'm 15 lol. ${TEXT}`, relationship: 'match', langHint: 'en' }),
+    );
+    assertEquals(
+      (await readEvents(minor)).map((e) => e.event),
+      ['meta', 'quota', 'done'],
+    );
+    const school = await handler(
+      replyRequest(token, {
+        text: `Bin in der 9. Klasse. ${TEXT}`,
+        relationship: 'partner',
+        langHint: 'de',
+      }),
+    );
+    assertEquals(
+      (await readEvents(school)).map((e) => e.event),
+      ['meta', 'quota', 'done'],
+    );
+    // A stated minor outside dating: answered without flirting.
+    const friend = await handler(
+      replyRequest(token, { text: `I'm 15 lol. ${TEXT}`, relationship: 'friend', tone: 'flirty' }),
+    );
+    assertEquals((await readEvents(friend)).at(-1)!.event, 'done');
+
     // Real adapters (canned HTTP), each as the only provider.
     for (const provider of realProviders()) {
       use([provider]);
@@ -211,6 +241,40 @@ Deno.test('reply: no request text in logs, stored rows or analytics on any path'
   else Deno.env.set('ANTHROPIC_LOG', previousLog);
 
   assert(lines.length > 0, 'the pipeline logs metadata');
+  // The deterministic nets log codes only: card_fixed and card_dropped carry a reason code, the
+  // server refusal nothing at all (no age, no matched words).
+  const events = lines.flatMap((l) => {
+    try {
+      return [JSON.parse(l) as Record<string, unknown>];
+    } catch {
+      return [];
+    }
+  });
+  const fixed = events.filter((e) => e.event === 'card_fixed');
+  assert(fixed.length > 0, 'the emoji scenario logged card_fixed');
+  for (const e of fixed) assertEquals(e, { fn: 'reply', event: 'card_fixed', reason: 'emoji' });
+  assert(events.some((e) => e.event === 'card_dropped' && e.reason === 'same_opener'));
+  for (const e of events.filter((e) => e.event === 'card_dropped')) {
+    assertEquals(Object.keys(e).sort(), ['event', 'fn', 'reason']);
+  }
+  // The minor check leaves no trace of its own: no event, no age, no school words.
+  assertEquals(
+    events.filter((e) => e.event === 'refused_before_model'),
+    [],
+  );
+  const strings = events.flatMap((e) => Object.values(e).filter((v) => typeof v === 'string'));
+  for (const word of ['15', '9.', 'klasse', "i'm", 'minor']) {
+    assertEquals(
+      strings.filter((v) => String(v).toLowerCase().includes(word)),
+      [],
+      `no "${word}" in log values`,
+    );
+  }
+  assertEquals(
+    lines.filter((l) => /klasse|minor|"age"/i.test(l)),
+    [],
+    'no school words or age fields in any line',
+  );
   assertEquals(lines.flatMap(leaks), [], 'console');
   assert(!lines.some((l) => /crisis/i.test(l)), 'no crisis signal in logs');
   assertEquals(leaks(JSON.stringify([...store.requests.values()])), [], 'ai_requests rows');

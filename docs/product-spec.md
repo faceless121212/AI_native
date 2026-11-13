@@ -1,6 +1,6 @@
 # Product spec v1: Replywise
 
-Source: `docs/teardown.md` (ranked items 1–10 and section 8 "Recommended v1 scope"). This file is the single source of truth for what v1 does. If code and this file disagree, ask before changing either. Prices are starting hypotheses to test.
+Source: `docs/teardown.md` (ranked items 1–10 and section 8 "Recommended v1 scope"). This file is the single source of truth for what v1 does. If code and this file disagree, ask before changing either. Prices are starting hypotheses to test; the cost reasoning behind them is in `docs/pricing.md`, and dated product decisions are logged in `docs/decisions.md`.
 
 ## 1. The promise
 
@@ -13,18 +13,20 @@ Name: Replywise is a working name. Keyboard display name in iOS/Android settings
 
 ## 2. Onboarding (containing app, in this order)
 
+Four onboarding screens, then the paywall and sign-in (decided 2026-11-13, `docs/decisions.md`).
+
 | # | Screen | Content | Notes |
 |---|---|---|---|
-| 1 | Welcome | "The right reply, in any chat" + 3-second looping demo of the keyboard bar inserting a reply. Button: Continue | No rating ask, no push ask. Anonymous account created silently |
-| 2 | Age check | "Are you 18 or over?" Yes / No | No → stop screen: "Replywise is for adults. AI replies are off." Keyboard still types; AI never enabled for this install. Store `age_confirmed_at` |
-| 3 | One question | "Who do you text most?" chips Match / Partner / Friends / Work (multi-select). Skip | Sets the default relationship chip (first selected; Friends → Friend, Work → Colleague) |
-| 4 | What Replywise can see | Three lines: "Nothing you type leaves your phone unless you tap Reply or Polish." "When you tap, only the copied message or your draft goes to our AI provider, processed in the EU." "We don't keep your chats." Buttons: "Allow AI replies" / "Not now" | Records consent (kind `ai_sharing`, policy version, timestamp). Must come before any AI call, so before Try it (Apple 5.1.2(i)). "Not now" → plain keyboard; AI can be allowed later in Settings |
-| 5 | Try it now | In-app text field pre-filled with a sample incoming message in the device language (e.g. de: "Hey, wie war dein Wochenende? 😊"). Tap Reply → 3 real replies in the chosen tone, with "AI suggestion" labels | Uses 1 of the 10 starter replies. The aha before price. Skipped if consent was "Not now" |
-| 6 | Add the keyboard | 3-step animated guide. Button "Open Settings" opens the app's own page in iOS Settings (which lists Keyboards → Replywise). Android: opens input method settings, then the keyboard picker | App detects the keyboard (iOS: keyboard-bridge check; Android: enabled IME list) and shows a success tick |
-| 7 | Allow Full Access (iOS) | Same guide style. "Typing works without it. AI replies need it, because the keyboard has to reach our server when you tap Reply. We never send what you type unless you tap." Android: "Android will warn that keyboards can collect what you type. Replywise only sends text when you tap Reply or Polish." | App detects Full Access from the keyboard's heartbeat in the App Group; "Skip for now" allowed |
-| 8 | Paywall | See §6. ✕ visible at once; ✕ leads to the free tier | Shown once in onboarding |
-| 9 | Reminder ask | Only if a trial started: "Want a reminder before you're charged?" Yes → OS notification prompt | Schedules the trial-ends reminder |
-| 10 | Done | "Copy their message, switch to Replywise with the globe key, tap Reply." Counter shows replies left | Then Home |
+| 1 | Welcome + age | "The right reply, in any chat" + 3-second looping demo of the keyboard bar inserting a reply. Buttons: "I'm 18+, let's go" / "I'm under 18" | No rating ask, no push ask. Anonymous account created silently. "I'm 18+, let's go" stores `age_confirmed_at`. "I'm under 18" → stop screen: "Replywise is for adults. AI replies are off." Keyboard still types; AI never enabled for this install: a local install flag keeps AI off whatever account later signs in, and sign-in is hidden on this install (screen 6 and Settings) |
+| 2 | What Replywise can see | Three lines: "Nothing you type leaves your phone unless you tap Reply or Polish." "When you tap, only the copied message or your draft goes to our AI provider, processed in the EU." "We don't keep your chats." Buttons: "Allow AI replies" / "Not now" | Records consent (kind `ai_sharing`, policy version, timestamp). Must come before any AI call, so before Try it (Apple 5.1.2(i)). "Not now" → plain keyboard; AI can be allowed later in Settings |
+| 3 | Turn on the keyboard | One screen, two steps in one animated guide: (a) add the keyboard, (b) Allow Full Access (iOS). Buttons: "Open Settings" / "I've done it". "Open Settings" opens the app's own page in iOS Settings (which lists Keyboards → Replywise, and the Full Access switch under it). Full Access text: "Typing works without it. AI replies need it, because the keyboard has to reach our server when you tap Reply. We never send what you type unless you tap." Android: "Open Settings" opens input method settings, then the keyboard picker; instead of the Full Access step: "Android will warn that keyboards can collect what you type. Replywise only sends text when you tap Reply or Polish." | Full Access is skippable: "I've done it" always moves on, and typing works without it. Detection: iOS from the keyboard's heartbeat in the App Group (which needs Full Access; without it the user's "I've done it" is all the app knows, architecture §5); Android from the enabled IME list. A tick shows each step the app could confirm. Home's status card shows anything still missing, with "Fix" |
+| 4 | Try it | In-app text field pre-filled with a sample incoming message in the device language (e.g. de: "Hey, wie war dein Wochenende? 😊"), a tone picker (the tones of §3.2 for the default relationship, Friend), Reply → 3 real reply cards, each labelled "AI suggestion" | Uses 1 of the 10 starter replies. The aha before price. Skipped if consent was "Not now". The field is also a place to open the new keyboard once, which lets the iOS app see the Full Access heartbeat |
+| 5 | Paywall | See §6. ✕ visible at once; ✕ leads to Sign in, then Home on the free tier. Switch "Remind me before the trial ends" | Shown once in onboarding |
+| 6 | Sign in | "Continue with Apple" (iOS), "Continue with Google". "Not now" → Home. One-line notice: "We use your Apple or Google sign-in only to keep your plan on all your devices." + Privacy link. No email + password sign-in (dropped 2026-11-13) | Skippable. Links the anonymous account to the identity, so the device key, consent, quota and RevenueCat app user ID are kept (architecture §4). Lets the user keep their account and subscription on a new phone. Apple: request only the email scope (no full name); Google: no scopes beyond the default sign-in. We never email the user: no marketing and no transactional email (Replywise sends no email at all). Not shown on an under-18 install |
+
+Then Home, which shows how to use the keyboard ("Copy their message, switch to Replywise with the globe key, tap Reply") and the replies left.
+
+Removed on 2026-11-13: the "Who do you text most?" screen (the default relationship stays Friend and can be changed in Settings and in the keyboard's chip panel), the separate Full Access screen (now step (b) of screen 3), the Reminder screen (now the switch on the paywall) and the Done screen (its how-to and counter are on Home).
 
 ## 3. The keyboard (iOS and Android)
 
@@ -73,13 +75,14 @@ Most messages fit one line. The bar grows to two lines for the longer ones (No F
 | State | Bar shows |
 |---|---|
 | No Full Access | "Turn on Full Access in Settings for AI replies. Typing works without it." (+ the Settings path as text) |
+| Signed out (the user signed out in the app) | "Sign in to use AI replies." with an "Open app" action. Typing works. Checked right after the Full Access check, before the other AI states (sign-out also revokes the device key). Android: the action launches the app; iOS: a keyboard extension has no supported way to open its app, so if it can't be done reliably the action is left out and the text stays (decided 2026-11-13) |
 | No AI consent / under 18 / consent withdrawn | "AI replies are off. Turn them on in the Replywise app." |
 | Not signed up yet (app never opened) | "Open the Replywise app once to set up AI replies." |
 | Offline | "No connection. AI replies need the internet." |
 | Out of free replies | "Out of free replies. More tomorrow, or go unlimited in the Replywise app." (the keyboard cannot open the app) |
 | Fair-use cap reached (paid) | "Daily limit reached. Back tomorrow." |
 | AI provider down | "AI replies are having trouble. Try again in a minute." |
-| Last trial day | "Your free trial ends tomorrow: €4.99/week after that. Manage in the Replywise app." |
+| Last trial day | "Your free trial ends tomorrow: €29.99/year after that. Manage in the Replywise app." (price from the store, mirrored by the app) |
 | Crisis detected | Crisis card (see §9) above the reply cards |
 
 ## 4. Reply quality rules (all languages)
@@ -93,10 +96,10 @@ Most messages fit one line. The bar grows to two lines for the longer ones (No F
 
 ## 5. Free vs paid
 
-| | Free | Unlimited (any plan) |
+| | Free | Unlimited (Annual) |
 |---|---|---|
 | Typing | ✓ | ✓ |
-| AI replies + Polish | 10 starter replies on install (granted when the account is created; usable only after AI consent and the 18+ check), then 3 per day (reset at local midnight) | Unlimited (fair use: lifetime 100/day; subscriptions 300/day abuse cap) |
+| AI replies + Polish | 10 starter replies on install (granted when the account is created; usable only after AI consent and the 18+ check), then 3 per day (reset at local midnight) | Unlimited (fair use: up to 100 replies a day, disclosed on the paywall and in the terms; decided 2026-11-13, was 300, `docs/pricing.md`) |
 | All tones, chips, formality, languages | ✓ | ✓ |
 | Referral bonus | +10 replies for you and your friend after the friend's first inserted reply | n/a |
 
@@ -106,41 +109,54 @@ Most messages fit one line. The bar grows to two lines for the longer ones (No F
 
 ## 6. Paywall
 
-Shown once in onboarding (screen 8), then only when the user taps "Go unlimited" (home, settings, out-of-replies card in the app).
+Shown once in onboarding (screen 5), then only when the user taps "Go unlimited" (Home, Settings, out-of-replies card in the app).
 
-- ✕ visible from the first frame, top-left, 44 pt hit area. ✕ → free tier, never replays intro.
-- Three plans, Annual pre-selected:
-  - **Weekly €4.99**, 3-day free trial.
-  - **Annual €39.99**, secondary line "€0.77 a week" under the yearly price (never as the headline).
-  - **Lifetime €59.99**, "Pay once. Unlimited replies for as long as the app exists." + "Fair use: up to 100 replies a day."
-- Trial timeline row (shown when Weekly is selected): "Today: free · Day 2: we remind you · Day 3: €4.99/week starts".
-- All prices from the store in local currency. No countdown, no scarcity, no per-day headline.
-- Links: Terms, Privacy, Restore purchases, Manage subscription. Auto-renew text under the button.
-- **Upgrade to lifetime:** after a weekly subscriber's 2nd renewal, one card on Home: "Switch to lifetime for €X" (product `lifetime_upgrade`). After purchase, a screen: "You're on lifetime. Cancel your weekly plan so you aren't charged again." Button opens the store's subscription management.
-- Never relabel or expire a lifetime purchase. Family Sharing: later.
+- **One plan: Annual**, 3-day free trial (store introductory offer). EUR reference price **€29.99/year**, used to configure App Store Connect and Play Console; other currencies use the stores' price tiers. Weekly and Lifetime were removed on 2026-11-13. Rationale: `docs/pricing.md`.
+- The price per billing period always comes from the store at runtime, in local currency. Never a hard-coded amount in the app, the template or the keyboard.
+- **Built with RevenueCat Paywalls** (`react-native-purchases-ui`): the app's paywall route embeds `RevenueCatUI.Paywall` for the current offering, with the reminder switch rendered by the app under it. The template and its copy (all 5 languages) are configured remotely in the RevenueCat dashboard, so a template change ships without an app release and must be checked against the list below first. `presentPaywall` is not used, because it can't hold the switch.
+- **Required template settings** (CLAUDE.md rule 8; check them on every template change):
+  - ✕ (close button) visible from the first frame: no "show after a delay" setting, 44 pt hit area. ✕ → onboarding: Sign in, then Home on the free tier; elsewhere: back to where the user came from, free tier. Never replays the intro.
+  - The price per billing period from RevenueCat's store price variables ("€29.99/year" in the user's currency). The billed "€X/year" is the most prominent price text, never smaller than "3 days free". No "free" headline without the post-trial price next to it.
+  - No RevenueCat per-day, per-week or per-month price variables and no relative-discount variables; no strikethrough or "save X%".
+  - The purchase button (CTA) never says only "Try free"; it names the plan or the price (e.g. "Start 3 days free, then €29.99/year").
+  - No countdown, timer, scarcity or "limited offer" element.
+  - Trial timeline: "Today: free · {date}: charged €29.99/year" (or "Day 3: charged €29.99/year" where the template can't show the date), price from the store. The timeline never promises a reminder: the reminder belongs to the app-drawn switch row, which the user can turn off.
+  - Renewal text under the button: "3 days free, then €29.99 per year. Renews until you cancel in App Store subscriptions." (Android: "…in Google Play subscriptions."), with the price from the store variable. A user who isn't eligible for the trial (the store decides) sees the template's no-trial text: "€29.99 per year. Renews until you cancel in …".
+  - Links: Terms, Privacy, Restore purchases.
+  - Fair-use line: "Fair use: up to {{count}} replies a day" (`paywall:fairUse`), drawn by the app under the template next to the reminder switch, with the same number in the terms. The number is the server's cap, 100 (decided 2026-11-13, `docs/pricing.md`): "Fair use: up to 100 replies a day"; the app fills `{{count}}` from the quota response, never typed into copy.
+  - A Maestro flow (`e2e/paywall-close.yaml`) checks on every build that the ✕ is visible on the first frame and leads to the free tier.
+- **Switch "Remind me before the trial ends"**, rendered by the app under the paywall, on by default. Only if it is on when the trial starts does the app ask for OS notification permission and schedule the trial reminder (§8). Off → no prompt. It can be changed later in Settings → Reminders. The switch is hidden when the user isn't eligible for the trial, and it is not visually tied to the purchase button (its own row, not inside or directly on the CTA).
+- **Template change control.** The template text is remote copy, so it is controlled like code:
+  - A reviewed copy of the template text for each locale lives in the repo (`locales/<lang>/paywall-template.md`); the dashboard must match it.
+  - Every dashboard change is signed off by `i18n-localizer` and `privacy-compliance` before it is published.
+  - Dashboard access is restricted to the people who publish paywalls.
+  - The Maestro ✕ flow also runs on a schedule against the production offering, so a dashboard change that hides the ✕ is caught without an app build.
+  - Template copy sits outside `locales/` JSON: an explicit exception to CLAUDE.md rule 9, approved by the user on 2026-11-13 (`docs/decisions.md`), on the condition of the controls above.
+- Manage or cancel subscription and Request a refund live in Settings (§7).
+- Family Sharing: later.
 
 ## 7. Containing app screens
 
-- **Home:** keyboard status card (Added ✓/✗, Full Access ✓/✗, with "Fix" buttons that reopen the guides), replies left today, Try-it field, "Go unlimited" (free users), upgrade-to-lifetime card (when eligible), provider-down banner.
-- **Settings:** App language · Keyboard language and layout · Default relationship · I am / They are · Formality default · Allow AI replies (on/off = consent / withdraw) · Reminders · Manage or cancel subscription (DE: "Verträge hier kündigen") · Request a refund (Apple link on iOS; Play order history on Android) · Restore purchases · Invite friends · Enter a friend's code · Write to the maker · Privacy · Terms · Delete my data · App version.
-- **Invite friends:** personal link `https://replywise.app/r/<code>` via share sheet. The landing page shows the code and store buttons. The friend enters the code in Settings or on the Done screen. +10 replies for both after the friend's first inserted reply. No cash payouts.
+- **Home:** how to use it ("Copy their message, switch to Replywise with the globe key, tap Reply"), keyboard status card (Added ✓/✗, Full Access ✓/✗, with "Fix" buttons that reopen the setup guide), replies left today, Try-it field, "Go unlimited" (free users), a sign-in card after Sign out ("Sign in to use AI replies", `common:signedOutCard.*`), a trial-ends banner on the last trial day when trial-reminder notifications are denied (§8), provider-down banner.
+- **Settings:** Sign in / Sign out (shows Apple or Google and the email it shared; hidden on an under-18 install). Sign out revokes this phone's device key and clears it from the keychain, signs out of Supabase and RevenueCat, and turns AI off until the user signs in again (decided 2026-11-13): typing keeps working, the keyboard shows the Signed out bar state (§3.5), Home shows a sign-in card, and no new anonymous account is created · App language · Keyboard language and layout · Default relationship (Friend unless changed) · I am / They are · Formality default · Allow AI replies (on/off = consent / withdraw) · Reminders (trial reminder, free replies are back) · Manage or cancel subscription (DE: "Verträge hier kündigen") · Request a refund (Apple link on iOS; Play order history on Android) · Restore purchases · Invite friends · Enter a friend's code · Write to the maker · Privacy · Terms · Delete my data (before deleting, warns that a subscription is not cancelled by deleting data, with a link to the store's subscription management) · App version.
+- **Invite friends:** personal link `https://replywise.app/r/<code>` via share sheet. The landing page shows the code and store buttons. The friend enters the code in Settings. +10 replies for both after the friend's first inserted reply. No cash payouts.
 - **Write to the maker:** text field (≤ 2,000 chars) + optional reply email. Attaches app version, OS, language and plan status. Never chat text. "We reply within 48 hours, in your language."
 
 ## 8. Notifications (local only)
 
 | Notification | When | Copy (en) |
 |---|---|---|
-| Trial ends tomorrow | 24 h before the trial converts, if the user agreed on screen 9 or in Settings | iOS: "Your free trial ends tomorrow. Then €4.99/week. Cancel anytime in your App Store subscriptions." Android: "…in your Google Play subscriptions." |
-| Annual renewal soon | 7 days before an annual renewal (prepares for UK DMCC, proposed from 1 Jan 2027) | "Your Replywise year renews on 12 Mar for €39.99." |
+| Trial ends tomorrow | 24 h before the trial converts (Day 2 of 3), if the paywall switch "Remind me before the trial ends" was on when the trial started, or the user turned it on in Settings. If notification permission is denied: an in-app banner on Home and the keyboard's last-trial-day bar (§3.5) instead | iOS: "Your free trial ends tomorrow. Then €29.99/year. Cancel anytime in your App Store subscriptions." Android: "…in your Google Play subscriptions." (price from the store) |
+| Annual renewal soon | 7 days before an annual renewal (prepares for UK DMCC, proposed from 1 Jan 2027) | "Your Replywise year renews on 12 Mar for €29.99." (price from the store) |
 | Free replies are back | Optional, off by default, at most once a day, only if the user ran out the day before | "Your 3 free replies are back." |
 
 No marketing pushes. Rescheduled on every app open from RevenueCat customer info.
 
 ## 9. Safety
 
-- 18+ gate (screen 2). App Store and Play age rating 18+.
+- 18+ gate (screen 1). App Store and Play age rating 18+.
 - No sexual or explicit replies at any setting (Apple 1.1.4). Flirt level tops out at Playful.
-- Refuse and return a neutral note for requests that would harass, threaten, stalk, deceive for money, pressure someone into sex, or target a person who appears to be a minor. If the incoming message suggests the other person is a minor, never flirt.
+- Refuse and return a neutral note for requests that would harass, threaten, stalk, deceive for money, pressure someone into sex, or target a person who appears to be a minor. If the incoming message suggests the other person is a minor, never flirt. A server-side check also catches an incoming message that states, in the first person, an age under 18 or a school year of a minor: replies to a Match or Partner are refused (and refunded) before any AI call, unless the message suggests a crisis; for everyone else Flirty is replaced by Warm.
 - **Crisis:** if the copied message or draft suggests self-harm, suicide or immediate danger, replies are calm and supportive, and a card shows: "If someone is in danger, call 112." plus a country line (UK Samaritans 116 123; DE TelefonSeelsorge 0800 111 0 111; FR 3114; ES 024; IT Telefono Amico 02 2327 2327; verify all numbers before launch). A server-side keyword check in all five languages also triggers the card if the AI's own signal is missing. Nothing about a crisis is stored per user; only an anonymous daily count (date, language, source) is kept to check the feature works.
 - No medical, legal or therapy claims. No "coach" persona that pretends to be human.
 - Abuse: reports through "Write to the maker"; per-user rate limit 20 requests/minute.
@@ -150,7 +166,8 @@ No marketing pushes. Rescheduled on every app open from RevenueCat customer info
 | Data | Where | Retention |
 |---|---|---|
 | Settings, chips, last choices, counter cache, consent mirror, trial end date, I am / They are | Device (App Group / SharedPreferences) | Until uninstall or Delete my data |
-| Anonymous user ID, app language, time zone (for the daily reset), age confirmation timestamp | Server `profiles` | Until deletion, or 12 months without sign-in or reply request (accounts with an active subscription or a lifetime purchase are kept) |
+| User ID (anonymous until the user signs in), app language, time zone (for the daily reset), age confirmation timestamp | Server `profiles` | Until deletion, or 12 months without sign-in or reply request (accounts with an active subscription are kept) |
+| The Apple or Google account identity, if the user signs in: provider user ID and the email the provider shares (with Apple this can be a private relay address). No password: sign-in is Apple or Google only. Supabase also copies the provider's name and avatar URL into `identity_data` / `raw_user_meta_data`: we request no name scope and strip any name or avatar the provider still sends right after sign-in | Supabase Auth (`auth.users`, `auth.identities`) | Until account deletion: "Delete my data" deletes the auth user; the 12-month inactive-account purge above deletes it too |
 | Consent records (kind, policy version, granted/withdrawn timestamps) | Server `consents` | Until deletion (decided 2026-11-02; confirm with counsel) |
 | Device keys (hash only) | Server `device_keys` | Until rotated or deletion |
 | Daily usage counter, starter and bonus credits, per-reply spend and refund rows | Server `usage_days`, `credit_ledger` | 90 days for days; spend and refund rows folded into one balance row after 90 days; grants until deletion |
@@ -162,7 +179,7 @@ No marketing pushes. Rescheduled on every app open from RevenueCat customer info
 | Support messages (what the user wrote to us), app version, OS, language, plan | Server `support_messages` + inbox | 12 months |
 | **Chat text (copied message, draft, replies) and I am / They are** | **Memory only during the request; sent to the AI provider with no retention** (production: Bedrock EU / Mistral EU; the direct Claude API used on staging has its own retention and is not EU-only, see `docs/processors.md`) | **Never stored, never used for training, never logged** |
 
-No contacts, photos, location, phone number, email (unless the user gives one for a support reply), ad identifiers.
+No contacts, photos, location, phone number or ad identifiers. No email unless the user signs in with Apple or Google (the email they share) or gives one for a support reply. Replywise sends no email (no marketing, no account emails).
 
 ## 11. Languages
 
@@ -170,18 +187,18 @@ English (UK), German, French, Spanish (Spain), Italian for the app, both keyboar
 
 ## 12. Analytics events (PostHog, no personal data, no text)
 
-App (client): `onboarding_step_viewed {step}`, `age_gate {passed}`, `ai_consent {granted}`, `try_it_reply_shown`, `keyboard_added`, `full_access_granted`, `paywall_viewed {source}`, `paywall_closed`, `plan_selected {product}`, `trial_started`, `purchase {product}`, `reminder_opt_in {granted}`, `lifetime_upgrade_card_viewed`, `referral_shared`, `referral_redeemed`, `support_sent`, `consent_withdrawn`, `data_deleted`.
+App (client): `onboarding_step_viewed {step}`, `age_gate {passed}`, `ai_consent {granted}`, `try_it_reply_shown`, `keyboard_added`, `full_access_granted`, `paywall_viewed {source}`, `paywall_closed`, `trial_started`, `purchase {product}`, `reminder_opt_in {granted}`, `referral_shared`, `referral_redeemed`, `support_sent`, `consent_withdrawn`, `data_deleted`.
 
-Server (from Edge Functions, keyed by anonymous user ID): `reply_requested {kind, lang, tone, relationship, closeness, formality, source: keyboard|app}`, `reply_shown {latency_ms, provider}`, `reply_inserted {card_index}`, `reply_feedback {rating}`, `quota_hit {plan}`, `provider_fallback`, `safety_flag {type}`.
+Server (from Edge Functions, keyed by user ID, never by email): `reply_requested {kind, lang, tone, relationship, closeness, formality, source: keyboard|app}`, `reply_shown {latency_ms, provider}`, `reply_inserted {card_index}`, `reply_feedback {rating}`, `quota_hit {plan}`, `provider_fallback`, `safety_flag {type}`.
 
 ## 13. Compliance must-haves
 
-- Apple 4.4.1 keyboard rules (typing without Full Access, next-keyboard key, AI as an extra); 5.1.2(i) explicit AI-sharing consent; 3.1.2 subscription disclosures; no rating incentives; 1.1.4 no sexual content; age rating 18+.
-- Google Play: IME and clipboard policies, data safety form, subscriptions policy (clear trial terms).
+- Apple 4.4.1 keyboard rules (typing without Full Access, next-keyboard key, AI as an extra); 5.1.2(i) explicit AI-sharing consent; 3.1.2 subscription disclosures; 4.8 Login Services (Sign in with Apple is offered on iOS because Google sign-in is); 5.1.1(v) in-app account deletion ("Delete my data" deletes the auth user); no rating incentives; 1.1.4 no sexual content; age rating 18+.
+- Google Play: IME and clipboard policies, data safety form (the email Apple or Google shares, for account management, if the user signs in), account deletion in the app and through a web link, subscriptions policy (clear trial terms).
 - EU AI Act Art. 50(1): users told replies are AI-generated (labels, onboarding line). Art. 50(2) machine-readable marking of plain text and whether recipients must be told: open, to verify with counsel before 2 Dec 2026.
 - GDPR: privacy notice covering the other person's messages, lawful basis, DPIA, deletion in Settings, processor agreements.
 - Consumer: Apple runs the EU 14-day withdrawal for App Store purchases (link to it; don't promise our own); no fake scarcity or countdowns (UCPD Annex I No 7); no "free" that hides the post-trial price (Annex I No 20); DE cancel entry labelled "Verträge hier kündigen" opening store management (§312k BGB scope for store billing unsettled); UK DMCC reminders (proposed 1 Jan 2027).
-- App Privacy label: no tracking; data not linked to identity.
+- App Privacy label: no tracking. Contact info (the email Apple or Google shares) is linked to the user for app functionality and account management when they sign in. Usage data and diagnostics: to decide (privacy-compliance). PostHog server events and RevenueCat use the user ID, which becomes linked once the user signs in; options in `docs/decisions.md`.
 
 ## 14. Out of scope for v1
 

@@ -20,7 +20,7 @@ select is(public.consume_reply(:'s_u', null, '2026-11-01', 'reply', 'app') ->> '
 select isnt((select last_reply_at from public.profiles where id = :'s_u'), null, 'a request stamps profiles.last_reply_at');
 
 -- ---------------------------------------------------------------------------------------------
--- Inactive accounts: no activity for 12 months, unless subscribed or lifetime. Clock 2026-12-31.
+-- Inactive accounts: no activity for 12 months, unless subscribed (annual, active). Clock 2026-12-31.
 create function tests.old_user(p_created timestamptz)
 returns uuid
 language plpgsql
@@ -38,34 +38,36 @@ select tests.old_user('2025-06-01T00:00:00Z') as u \gset signedin_
 select tests.old_user('2025-06-01T00:00:00Z') as u \gset keyused_
 select tests.old_user('2025-06-01T00:00:00Z') as u \gset sub_
 select tests.old_user('2025-06-01T00:00:00Z') as u \gset expired_
-select tests.old_user('2025-06-01T00:00:00Z') as u \gset life_
-select tests.old_user('2025-06-01T00:00:00Z') as u \gset upgrade_
+select tests.old_user('2025-06-01T00:00:00Z') as u \gset trial_
+select tests.old_user('2025-06-01T00:00:00Z') as u \gset cancelled_
 select tests.old_user('2026-06-01T00:00:00Z') as u \gset young_
 
 insert into public.ai_requests (user_id, kind, source, status, created_at) values (:'replied_u', 'reply', 'app', 'ok', '2026-03-01T00:00:00Z');
 update auth.users set last_sign_in_at = '2026-02-01T00:00:00Z' where id = :'signedin_u';
 insert into public.device_keys (user_id, key_hash, platform, last_used_at) values (:'keyused_u', tests.fake_hash('inactive-key'), 'ios', '2026-05-01T00:00:00Z');
 insert into public.entitlements (user_id, product, active, expires_at, will_renew) values
-  (:'sub_u', 'weekly', true, '2027-01-05T00:00:00Z', true),
-  (:'expired_u', 'annual', true, '2026-06-01T00:00:00Z', false);
-insert into public.entitlements (user_id, product, active) values (:'life_u', 'lifetime', false), (:'upgrade_u', 'lifetime_upgrade', true);
+  (:'sub_u', 'annual', true, '2027-01-05T00:00:00Z', true),
+  (:'expired_u', 'annual', true, '2026-06-01T00:00:00Z', false),
+  (:'cancelled_u', 'annual', false, '2027-03-01T00:00:00Z', false);
+insert into public.entitlements (user_id, product, active, is_trial, trial_ends_at, expires_at, will_renew) values
+  (:'trial_u', 'annual', true, true, '2027-01-02T00:00:00Z', '2027-01-02T00:00:00Z', true);
 insert into public.consents (user_id, kind, policy_version) values (:'gone_u', 'ai_sharing', '2026-11-01');
 
 select set_eq(
   format($$ select a from public.inactive_accounts('2026-12-31T12:00:00Z') a where a in (%L, %L, %L, %L, %L, %L, %L, %L, %L) $$,
-    :'gone_u', :'replied_u', :'signedin_u', :'keyused_u', :'sub_u', :'expired_u', :'life_u', :'upgrade_u', :'young_u'),
-  format($$ values (%L::uuid), (%L::uuid) $$, :'gone_u', :'expired_u'),
-  'inactive: no sign-in, reply or key use for 12 months, and no active subscription or lifetime');
+    :'gone_u', :'replied_u', :'signedin_u', :'keyused_u', :'sub_u', :'expired_u', :'trial_u', :'cancelled_u', :'young_u'),
+  format($$ values (%L::uuid), (%L::uuid), (%L::uuid) $$, :'gone_u', :'expired_u', :'cancelled_u'),
+  'inactive: no sign-in, reply or key use for 12 months, and no active annual subscription (a trial counts; expired or inactive rows do not)');
 
 select tests.as_service();
-select ok((public.run_retention('2026-12-31T12:00:00Z') ->> 'inactive_accounts')::int >= 2, 'run_retention deletes inactive accounts');
+select ok((public.run_retention('2026-12-31T12:00:00Z') ->> 'inactive_accounts')::int >= 3, 'run_retention deletes inactive accounts');
 reset role;
 select tests.clear_claims();
-select is_empty(format($$ select 1 from auth.users where id in (%L, %L) $$, :'gone_u', :'expired_u'), 'the inactive auth users are gone');
+select is_empty(format($$ select 1 from auth.users where id in (%L, %L, %L) $$, :'gone_u', :'expired_u', :'cancelled_u'), 'the inactive auth users are gone');
 select is_empty(format($$ select 1 from public.profiles where id = %1$L union all select 1 from public.consents where user_id = %1$L union all select 1 from public.credit_ledger where user_id = %1$L $$, :'gone_u'),
   'their rows went with them (cascade), consents included');
-select is((select count(*)::int from auth.users where id in (:'replied_u', :'signedin_u', :'keyused_u', :'sub_u', :'life_u', :'upgrade_u', :'young_u')), 7,
-  'active, subscribed, lifetime and young accounts stay');
+select is((select count(*)::int from auth.users where id in (:'replied_u', :'signedin_u', :'keyused_u', :'sub_u', :'trial_u', :'young_u')), 6,
+  'active, subscribed (trial included) and young accounts stay');
 select tests.as_user(:'young_u');
 select throws_ok($$ select public.inactive_accounts(now()) $$, '42501', null, 'users cannot list inactive accounts');
 reset role;

@@ -2,7 +2,7 @@
 // run in Deno tests (evals/lib/checks.test.ts). They are deliberately stricter than the
 // pipeline's post-check (supabase/functions/_shared/postcheck.ts), which only drops cards that
 // are confidently wrong: an eval should flag doubtful output for a human to look at.
-import { normalize } from '../../supabase/functions/_shared/postcheck.ts';
+import { cardWords, normalize, sameOpener } from '../../supabase/functions/_shared/postcheck.ts';
 import {
   BANNED_PHRASES,
   EXPLICIT_TERMS,
@@ -203,10 +203,25 @@ const MARKERS: Record<Lang, Markers> = {
   },
 };
 
-/** Markers in `text` that belong to the register opposite to `expected`. */
-export function formalityViolations(text: string, lang: Lang, expected: Formality): string[] {
+/**
+ * Markers in `text` that belong to the register opposite to `expected`.
+ *
+ * `plural`: the text speaks to a group. Singular casual forms (tu, du, tú, tu) are then wrong in
+ * both registers, because the address must stay plural. In French, casual plural and formal are
+ * the same word (vous, votre, vos), so vous is never a violation for a group; in German, Spanish
+ * and Italian the group plural (ihr/euch, vosotros/os, voi/vi) differs from the formal one, so
+ * Sie, usted(es) and Lei still count as formal in a casual group reply.
+ */
+export function formalityViolations(
+  text: string,
+  lang: Lang,
+  expected: Formality,
+  plural = false,
+): string[] {
   if (lang === 'en') return expected === 'formal' ? MARKERS.en.formal(text) : [];
-  return expected === 'casual' ? MARKERS[lang].formal(text) : MARKERS[lang].casual(text);
+  if (expected === 'formal') return MARKERS[lang].casual(text);
+  if (!plural) return MARKERS[lang].formal(text);
+  return [...MARKERS[lang].casual(text), ...(lang === 'fr' ? [] : MARKERS[lang].formal(text))];
 }
 
 /** Markers of the expected register (info only: neutral cards are fine). */
@@ -290,18 +305,48 @@ export function formatProblems(text: string): string[] {
   if (/(?<![\p{L}\p{N}&])#\p{L}/u.test(text)) problems.push('hashtag');
   if (/^\s*["“„«']/.test(text) && /["”“»']\s*$/.test(text)) problems.push('wrapped in quotes');
   if (/\b(?:R[1-3]|META|L|W)\|/.test(text)) problems.push('format tag inside text');
-  if (/\n/.test(text)) problems.push('line break');
+  return problems;
+}
+
+/** Non-empty lines of a text (blank lines between paragraphs don't count). */
+export function textLines(text: string): string[] {
+  return text
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+}
+
+/**
+ * Line breaks (spec decision 2026-11-03: Polish keeps the draft's line breaks; reply cards are
+ * one line). Reply: any newline is a problem. Polish light edit: the same number of non-empty
+ * lines and of paragraphs as the draft. Polish rewrite: free to reword, but a multi-line draft
+ * keeps at least one break. A one-line draft gets one-line Polish cards.
+ */
+export function lineBreakProblems(
+  variant: 'reply' | 'light' | 'rewrite',
+  card: string,
+  draft: string,
+): string[] {
+  const hasBreak = /\n/.test(card);
+  if (variant === 'reply') return hasBreak ? ['line break in a reply card'] : [];
+  const draftLines = textLines(draft).length;
+  const cardLines = textLines(card).length;
+  if (draftLines <= 1) return cardLines > 1 ? ['line break added to a one-line draft'] : [];
+  if (variant === 'rewrite') return hasBreak ? [] : ['line breaks of the draft lost'];
+  const paragraphs = (t: string) => t.split(/\n\s*\n/).filter((p) => p.trim()).length;
+  const problems: string[] = [];
+  if (cardLines !== draftLines) problems.push(`${cardLines} lines, draft has ${draftLines}`);
+  if (paragraphs(card) !== paragraphs(draft))
+    problems.push(`${paragraphs(card)} paragraphs, draft has ${paragraphs(draft)}`);
   return problems;
 }
 
 // ---------------------------------------------------------------------------------------------
 // Distinctness (teardown complaint: repetitive lines) and placeholders
 
-function words(text: string): string[] {
-  return normalize(text)
-    .split(/[^\p{L}\p{N}']+/u)
-    .filter(Boolean);
-}
+// Word split and opener rule are the pipeline's (postcheck.ts), which drops a reply card that
+// opens like an earlier one; the eval still flags it, e.g. when a run predates the net.
+const words = cardWords;
 
 /** Jaccard similarity of word sets. */
 export function similarity(a: string, b: string): number {
@@ -321,10 +366,10 @@ export function distinctProblems(cards: readonly string[]): string[] {
       const a = cards[i]!;
       const b = cards[j]!;
       if (similarity(a, b) >= 0.6) problems.push(`cards ${i + 1} and ${j + 1} are near-duplicates`);
-      const sa = words(a).slice(0, 2).join(' ');
-      const sb = words(b).slice(0, 2).join(' ');
-      if (sa !== '' && sa === sb && words(a).length > 2) {
-        problems.push(`cards ${i + 1} and ${j + 1} start the same ("${sa}")`);
+      if (sameOpener(a, b)) {
+        problems.push(
+          `cards ${i + 1} and ${j + 1} start the same ("${words(a).slice(0, 2).join(' ')}")`,
+        );
       }
     }
   }

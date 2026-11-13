@@ -5,9 +5,9 @@ import {
   FIRST_TOKEN_TIMEOUT_MS,
   LAST_PROVIDER_FIRST_TOKEN_TIMEOUT_MS,
 } from '../_shared/llm/runner.ts';
-import { PROMPT_VERSION } from '../_shared/prompts/index.ts';
+import { PROMPT_SETS, PROMPT_VERSION } from '../_shared/prompts/index.ts';
 import { RateLimiter } from '../_shared/rate-limit.ts';
-import { device, jsonRequest } from '../_shared/testing/helpers.ts';
+import { captureConsole, device, jsonRequest } from '../_shared/testing/helpers.ts';
 import {
   aiUser,
   cardTexts,
@@ -208,7 +208,7 @@ Deno.test(
   async () => {
     const { store, handler } = setupReply();
     const { token, userId } = await aiUser(store);
-    store.entitlements.push({ userId, product: 'weekly', active: true, expiresAt: null });
+    store.entitlements.push({ userId, product: 'annual', active: true, expiresAt: null });
     const other = setupReply({ store });
     for (let i = 0; i < 20; i++) await readEvents(await other.handler(replyRequest(token)));
     // This instance's limiter has seen nothing; consume_reply still refuses.
@@ -217,15 +217,15 @@ Deno.test(
   },
 );
 
-Deno.test('reply: 429 fair_use at the lifetime cap of 100 a day', async () => {
+Deno.test('reply: 429 fair_use at the subscriber cap of 100 a day', async () => {
   const { store, handler } = setupReply({ rateLimiter: new RateLimiter(1000) });
   const { token, userId } = await aiUser(store);
-  store.entitlements.push({ userId, product: 'lifetime', active: true, expiresAt: null });
+  store.entitlements.push({ userId, product: 'annual', active: true, expiresAt: null });
   store.usage.set(`${userId}|${new Date().toISOString().slice(0, 10)}`, 99);
   const ok = await handler(replyRequest(token));
   const events = await readEvents(ok);
   assertEquals(events.find((e) => e.event === 'quota')!.data, {
-    plan: 'lifetime',
+    plan: 'annual',
     leftToday: null,
     resetAt: events.find((e) => e.event === 'quota')!.data.resetAt,
     fairUseLeft: 0,
@@ -472,6 +472,24 @@ Deno.test('reply: personal data is redacted before the model sees it', async () 
   ]);
 });
 
+Deno.test(
+  'reply: deps.promptVersion builds that version and is logged with the request',
+  async () => {
+    const fake = new FakeProvider();
+    const { store, handler, deps } = setupReply({ providers: [fake] });
+    assertFalse(PROMPT_VERSION === 'v1', 'test needs a non-default version');
+    deps.promptVersion = 'v1';
+    const { token } = await aiUser(store);
+    const res = await handler(replyRequest(token));
+    await readEvents(res);
+    const system = fake.calls[0]!.system;
+    assert(system.startsWith(PROMPT_SETS.v1.safety.reply), 'v1 safety rules sent');
+    assertFalse(system.startsWith(PROMPT_SETS[PROMPT_VERSION].safety.reply), 'not the default');
+    const row = store.requests.get(res.headers.get('x-request-id')!)!;
+    assertEquals(row.finish!.promptVersion, 'v1');
+  },
+);
+
 Deno.test('reply: user text is wrapped in a random tag and cannot close it', async () => {
   const fake = new FakeProvider();
   const { store, handler, deps } = setupReply({ providers: [fake] });
@@ -520,10 +538,18 @@ Deno.test('reply: only one retry; still too few cards → partial', async () => 
   const fake = new FakeProvider({ script: ['explicit', 'explicit'] });
   const { store, handler } = setupReply({ providers: [fake] });
   const { token } = await aiUser(store);
-  const res = await handler(replyRequest(token));
-  const events = await readEvents(res);
+  const { result: res, lines: before } = await captureConsole(() => handler(replyRequest(token)));
+  const { result: events, lines } = await captureConsole(() => readEvents(res));
   assertEquals(fake.calls.length, 2);
-  assertEquals(cardTexts(events).length, 2);
+  // The retry's only clean card repeats the first one word for word: dropped as a duplicate
+  // (before the repeat rule, the user got the same card twice).
+  assertEquals(cardTexts(events).length, 1);
+  assertEquals(
+    [...before, ...lines]
+      .filter((l) => l.includes('"card_dropped"'))
+      .map((l) => (JSON.parse(l) as { reason: string }).reason),
+    ['explicit', 'explicit', 'duplicate', 'explicit', 'explicit'],
+  );
   assertEquals(store.requests.get(res.headers.get('x-request-id')!)!.status, 'partial');
 });
 

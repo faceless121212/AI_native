@@ -1,7 +1,5 @@
 {
-  "trialTimeline": "Heute: kostenlos · Tag 2: wir erinnern dich · Tag 3: {{price}}/Woche beginnt",
-  "perWeek": "{{price}} pro Woche",
-  "lifetimeLine": "Einmal zahlen. Unbegrenzte Antworten, so lange es die App gibt.",
-  "fairUse": "Faire Nutzung: bis zu 100 Antworten pro Tag.",
-  "plansLabel": "Wähle einen Tarif"
+  "reminderSwitch": "Erinnere mich vor dem Ende der Testphase",
+  "fairUse_one": "Faire Nutzung: bis zu {{count}} Antwort pro Tag.",
+  "fairUse_other": "Faire Nutzung: bis zu {{count}} Antworten pro Tag."
 }

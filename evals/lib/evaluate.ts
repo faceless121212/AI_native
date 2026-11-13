@@ -10,6 +10,7 @@ import {
   formatProblems,
   frenchSpacingProblem,
   langVerdict,
+  lineBreakProblems,
   missingPlaceholders,
   petNameHits,
   phraseHits,
@@ -30,6 +31,7 @@ export const CHECKS = [
   'emoji',
   'punctuation',
   'format',
+  'linebreaks',
   'distinct',
   'placeholders',
   'refund',
@@ -121,6 +123,7 @@ export function evaluate(c: EvalCase, run: CaseRun, opts: EvaluateOptions): Case
       'emoji',
       'punctuation',
       'format',
+      'linebreaks',
       'distinct',
       'placeholders',
     ] as const) {
@@ -159,8 +162,9 @@ export function evaluate(c: EvalCase, run: CaseRun, opts: EvaluateOptions): Case
         verdict(
           'formality',
           subject.flatMap((x) =>
-            formalityViolations(x.text, lang, e.formality!).map(
-              (m) => `${x.variant} card: "${m}" in a ${e.formality} reply`,
+            formalityViolations(x.text, lang, e.formality!, e.plural).map(
+              (m) =>
+                `${x.variant} card: "${m}" in a ${e.formality}${e.plural ? ' plural' : ''} reply`,
             ),
           ),
         ),
@@ -216,6 +220,17 @@ export function evaluate(c: EvalCase, run: CaseRun, opts: EvaluateOptions): Case
       verdict(
         'format',
         perCard((t) => formatProblems(t)),
+      ),
+    );
+    // Polish keeps the draft's line breaks; reply cards are one line.
+    checks.push(
+      verdict(
+        'linebreaks',
+        run.cards.flatMap((x, i) => {
+          const variant =
+            c.kind === 'reply' ? 'reply' : x.variant === 'light' ? 'light' : 'rewrite';
+          return lineBreakProblems(variant, x.text, c.text).map((p) => `card ${i + 1}: ${p}`);
+        }),
       ),
     );
     checks.push(

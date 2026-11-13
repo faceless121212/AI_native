@@ -9,7 +9,10 @@
     "close": "Chiudi",
     "reply": "Rispondi",
     "polish": "Migliora",
-    "more": "↻ Altre"
+    "more": "↻ Altre",
+    "signIn": "Accedi",
+    "signOut": "Esci",
+    "manageSubscription": "Gestisci abbonamento"
   },
   "status": {
     "loading": "Caricamento",
@@ -20,5 +23,13 @@
     "error": "Errore",
     "stepDone": "completato",
     "stepCurrent": "passaggio attuale"
+  },
+  "deleteData": {
+    "subscriptionWarningIos": "Eliminare i tuoi dati non annulla l’abbonamento. Annullalo prima nei tuoi abbonamenti dell’App Store.",
+    "subscriptionWarningAndroid": "Eliminare i tuoi dati non annulla l’abbonamento. Annullalo prima nei tuoi abbonamenti di Google Play."
+  },
+  "signedOutCard": {
+    "title": "Accedi per le risposte IA",
+    "body": "Hai effettuato l’uscita, quindi le risposte IA sono disattivate. Puoi continuare a scrivere. Accedi con Apple o Google per riavere il tuo piano."
   }
 }

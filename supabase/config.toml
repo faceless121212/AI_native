@@ -219,7 +219,8 @@ web3 = 30
 
 [auth.email]
 # Allow/disallow new user signups via email to your project.
-# Replywise v1 has no email accounts: anonymous sign-in only (inventory.md, Supabase row).
+# Stays off: sign-in is Apple / Google only and Replywise sends no email (decided 2026-11-13,
+# docs/decisions.md). Prompt 8b turns on enable_manual_linking and the apple / google providers.
 enable_signup = false
 # If enabled, a user will be required to confirm any email change on both the old, and new email
 # addresses. If disabled, only the new email is required to confirm.

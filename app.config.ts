@@ -28,10 +28,16 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       // Set APPLE_TEAM_ID in .env; without it `expo prebuild --clean` drops the team every time.
       appleTeamId: process.env.APPLE_TEAM_ID,
       supportsTablet: false,
-      deploymentTarget: '16.0',
+      deploymentTarget: '16.4',
       entitlements: {
         'com.apple.security.application-groups': [APP_GROUP],
         'keychain-access-groups': [APP_KEYCHAIN_GROUP, KEYCHAIN_GROUP],
+      },
+      infoPlist: {
+        // Team prefix ("ABCDE12345.") for modules/keyboard-bridge, which writes the device key to
+        // the shared keychain group $(AppIdentifierPrefix)<bundle ID>.shared at runtime. Xcode
+        // expands it from the signing team; the bridge falls back to a keychain probe if empty.
+        AppIdentifierPrefix: '$(AppIdentifierPrefix)',
       },
     },
     android: {

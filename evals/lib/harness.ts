@@ -12,13 +12,17 @@ import {
   type EnvReader,
   readLlmConfig,
 } from '../../supabase/functions/_shared/llm/config.ts';
-import { FakeProvider } from '../../supabase/functions/_shared/llm/fake.ts';
+import { FakeProvider, type FakeScenario } from '../../supabase/functions/_shared/llm/fake.ts';
 import { MemoryProviderHealth } from '../../supabase/functions/_shared/llm/health.ts';
 import type {
   LiveProviderName,
   LlmProvider,
 } from '../../supabase/functions/_shared/llm/provider.ts';
 import { DEFAULT_TIMING } from '../../supabase/functions/_shared/llm/runner.ts';
+import {
+  PROMPT_VERSION,
+  type PromptVersion,
+} from '../../supabase/functions/_shared/prompts/index.ts';
 import { CURRENT_AI_POLICY_VERSION } from '../../supabase/functions/_shared/policy.ts';
 import { RateLimiter } from '../../supabase/functions/_shared/rate-limit.ts';
 import { redact } from '../../supabase/functions/_shared/redact.ts';
@@ -30,6 +34,7 @@ import {
 import { readSse } from '../../supabase/functions/_shared/sse.ts';
 import { MemoryStore } from '../../supabase/functions/_shared/testing/memory-store.ts';
 import { handleReplyRoute, type ReplyDeps } from '../../supabase/functions/reply/handler.ts';
+import type { CardTrace } from '../../supabase/functions/reply/pipeline.ts';
 import type { EvalCase } from './cases.ts';
 
 export const EVAL_PROVIDERS = ['fake', 'anthropic', 'bedrock', 'mistral'] as const;
@@ -59,6 +64,8 @@ export async function makeProviders(
 }
 
 export interface CaseRun {
+  /** Post-check trace per line (codes and numbers only, never text), for --trace. */
+  traces: CardTrace[];
   /** Request text actually sent (with the fake marker, if any). */
   sentText: string;
   /** What the prompt saw after redaction (for the placeholder check). */
@@ -90,12 +97,16 @@ export interface CaseRun {
 
 export class Harness {
   private readonly store = new MemoryStore();
+  private traces: CardTrace[] = [];
   private readonly deps: ReplyDeps;
   private readonly handler: (req: Request) => Promise<Response>;
 
   constructor(
     providers: readonly LlmProvider[],
     private readonly provider: EvalProvider,
+    promptVersion: PromptVersion = PROMPT_VERSION,
+    /** fakeScenario: fake provider only, replaces each case's own `fake` scenario. */
+    private readonly opts: { fakeScenario?: FakeScenario } = {},
   ) {
     this.store.rateLimit = 1000;
     this.deps = {
@@ -105,6 +116,8 @@ export class Harness {
       health: new MemoryProviderHealth(),
       rateLimiter: new RateLimiter(1000),
       timing: DEFAULT_TIMING,
+      promptVersion,
+      cardTrace: (trace) => this.traces.push(trace),
     };
     this.handler = withErrors('reply', (req) => handleReplyRoute(req, this.deps));
   }
@@ -114,7 +127,9 @@ export class Harness {
     await this.store.patchProfile(user.userId, { ageConfirmed: true });
     await this.store.grantAiConsent(user.userId, CURRENT_AI_POLICY_VERSION);
 
-    const scenario = this.provider === 'fake' ? (c.fake ?? 'metafirst') : null;
+    const scenario =
+      this.provider === 'fake' ? (this.opts.fakeScenario ?? c.fake ?? 'metafirst') : null;
+    this.traces = [];
     const sentText = scenario ? `${c.text} [[fake:${scenario}]]` : c.text;
     const body: ReplyRequest = {
       kind: c.kind,
@@ -166,6 +181,7 @@ export class Harness {
     const started = performance.now();
     let msFirstCard: number | null = null;
     const run: CaseRun = {
+      traces: this.traces,
       sentText,
       redactedText: redact(c.text).text,
       httpStatus: 0,

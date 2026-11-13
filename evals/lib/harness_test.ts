@@ -34,6 +34,29 @@ Deno.test('harness: an ordinary case passes every check with META first', async 
   assertEquals(run.refunded, false);
 });
 
+Deno.test(
+  'harness: plural expectation — casual vous to a group passes, singular would not',
+  async () => {
+    const base = evalCase({ text: 'dsl je serai en retard de 10 min, commencez sans moi' });
+    const c: EvalCase = {
+      ...base,
+      kind: 'polish',
+      lang: 'en',
+      fake: 'lang-fr-group',
+      expect: { ...base.expect, lang: 'fr', formality: 'casual', plural: true, metaLang: 'fr' },
+    };
+    const run = await (await harness()).run(c);
+    assertEquals(run.meta?.lang, 'fr');
+    const formality = (x: EvalCase) =>
+      evaluate(x, run, { fake: true }).checks.find((k) => k.check === 'formality')!;
+    assertEquals(formality(c).status, 'pass');
+    // The same cards without the plural expectation: "vous" counts as formal.
+    const singular = formality({ ...c, expect: { ...c.expect, plural: false } });
+    assertEquals(singular.status, 'fail');
+    assert(singular.detail?.includes('"vous"'), singular.detail);
+  },
+);
+
 Deno.test('harness: crisis backstop sets the flag only when the keyword lists match', async () => {
   const h = await harness();
   const hit = evalCase({ text: 'Ich will nicht mehr leben.', fake: 'crisis-nometa' });
@@ -94,11 +117,50 @@ Deno.test(
   },
 );
 
+Deno.test('parseCases rejects a maxChars looser than the server keeps (cardMaxChars)', () => {
+  const line = (kind: 'reply' | 'polish', text: string, maxChars: number) =>
+    JSON.stringify({
+      id: 'loose',
+      kind,
+      lang: 'en',
+      text,
+      chips: { relationship: 'friend', closeness: 3, tone: 'warm', formality: 'casual' },
+      expect: { lang: 'en', formality: 'casual', maxChars },
+    });
+  const throws = (jsonl: string): string | null => {
+    try {
+      parseCases(jsonl, 'inline');
+      return null;
+    } catch (err) {
+      return (err as Error).message;
+    }
+  };
+  // Reply: the server keeps 300.
+  assertEquals(throws(line('reply', 'Hi there', 300)), null);
+  assertEquals(
+    throws(line('reply', 'Hi there', 301)),
+    'inline:1: maxChars 301 > 300, the longest card the server keeps',
+  );
+  // Polish: 30% over the redacted draft, at least 300 (400-char draft → 520).
+  const draft = 'a'.repeat(400);
+  assertEquals(throws(line('polish', draft, 520)), null);
+  assertEquals(
+    throws(line('polish', draft, 521)),
+    'inline:1: maxChars 521 > 520, the longest card the server keeps',
+  );
+  // The limit uses the redacted length: an email becomes "[email]" (7 chars).
+  const withEmail = `${'b'.repeat(280)} anna.berg@example.com`;
+  assertEquals(throws(line('polish', withEmail, 300)), null);
+  assert(throws(line('polish', withEmail, 380))?.includes('> 375'));
+});
+
 Deno.test('eval case files parse and have the agreed sizes and spread', async () => {
   const root = new URL('../', import.meta.url);
   // Agent file: 40 / 30 / 30, plus the cases added in the Prompt 4 code review (wrong hint, adult
-  // with parents' rules).
-  const sets = { reply: 42, polish: 31, safety: 31 } as const;
+  // with parents' rules), the two Polish line-break cases (decision 2026-11-03) and the
+  // code-phishing draft s-scam-code-polish-fr (2026-11-08, the old p-fr-placeholder text), and
+  // s-minor-friend-flirty-en (2026-11-08 review: a stated minor outside dating gets no flirting).
+  const sets = { reply: 42, polish: 33, safety: 33 } as const;
   for (const [set, n] of Object.entries(sets)) {
     const cases = parseCases(await Deno.readTextFile(new URL(`${set}/cases.jsonl`, root)), set);
     assertEquals(cases.length, n, set);
@@ -108,6 +170,13 @@ Deno.test('eval case files parse and have the agreed sizes and spread', async ()
         `${set} has ${lang}`,
       );
     }
+  }
+  const polish = parseCases(await Deno.readTextFile(new URL('polish/cases.jsonl', root)), 'polish');
+  const lineBreaks = polish.filter((c) => c.tags.includes('line-breaks'));
+  assert(lineBreaks.length >= 2, 'polish has line-break cases');
+  for (const c of lineBreaks) {
+    assert(c.text.includes('\n\n'), `${c.id}: draft has paragraphs`);
+    assertEquals(c.fake, 'multiline', c.id);
   }
   const reply = parseCases(await Deno.readTextFile(new URL('reply/cases.jsonl', root)), 'reply');
   for (const tag of [
@@ -188,3 +257,34 @@ Deno.test(
     assert(status(cardLeak)?.detail?.includes('card 2 in store'));
   },
 );
+
+Deno.test('trace: run-evals --trace gets codes and numbers only, never card text', async () => {
+  const { Harness } = await import('./harness.ts');
+  const { FakeProvider } = await import('../../supabase/functions/_shared/llm/fake.ts');
+  const { parseCases } = await import('./cases.ts');
+  const { formatTrace } = await import('./trace.ts');
+  const root = new URL('../', import.meta.url);
+  const cases = parseCases(await Deno.readTextFile(new URL('reply/cases.jsonl', root)), 'reply');
+  const c = cases.find((x) => x.id === 'it-wrong-hint-es')!;
+  const harness = new Harness([new FakeProvider()], 'fake', undefined, {
+    fakeScenario: 'lang-it-fr-metalast',
+  });
+  const run = await harness.run(c);
+  assertEquals(run.traces.length, 3);
+  for (const t of run.traces) {
+    for (const value of Object.values(t)) {
+      if (typeof value === 'string') assert(value.length <= 8, `short code only: ${value}`);
+    }
+    const line = formatTrace(t);
+    for (const card of run.cards) assert(!line.includes(card.text.slice(0, 6)), line);
+    assert(!line.includes(c.text.slice(0, 6)), line);
+  }
+  assertEquals(
+    run.traces.map((t) => [t.tag, t.expected, t.metaSeen, t.messageLang, t.reason]),
+    [
+      ['R1', 'es', false, 'it', null],
+      ['R2', 'es', false, 'it', null],
+      ['R3', 'es', false, 'it', null],
+    ],
+  );
+});

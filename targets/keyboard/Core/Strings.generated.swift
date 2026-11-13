@@ -11,6 +11,7 @@ public struct KeyboardStrings: Sendable {
     public let actionsReply: String
     public let actionsPolish: String
     public let actionsMore: String
+    public let actionsOpenApp: String
     let counterLeftTodayOne: String
     let counterLeftTodayOther: String
     public let barNoFullAccess: String
@@ -22,6 +23,7 @@ public struct KeyboardStrings: Sendable {
     public let barFairUse: String
     public let barProviderDown: String
     let barLastTrialDayTemplate: String
+    public let barSignedOut: String
     public let chipRowsWho: String
     public let chipRowsCloseness: String
     public let chipRowsTone: String
@@ -50,6 +52,25 @@ public struct KeyboardStrings: Sendable {
     public let flirtPlayful: String
     public let formalityCasual: String
     public let formalityFormal: String
+    public let keysShift: String
+    public let keysCapsLock: String
+    public let keysShiftOn: String
+    public let keysShiftOff: String
+    public let keysDelete: String
+    public let keysSpace: String
+    public let keysNumbers: String
+    public let keysLetters: String
+    public let keysMoreSymbols: String
+    public let returnKeyDefault: String
+    public let returnKeyGo: String
+    public let returnKeySearch: String
+    public let returnKeySend: String
+    public let returnKeyDone: String
+    public let returnKeyNext: String
+    public let returnKeyJoin: String
+    public let returnKeyRoute: String
+    public let returnKeyContinue: String
+    public let returnKeyEmergencyCall: String
 
     public func counterLeftToday(count: Int) -> String {
         let template = language.isPluralOne(count) ? counterLeftTodayOne : counterLeftTodayOther
@@ -79,6 +100,7 @@ extension KeyboardStrings {
         actionsReply: "Reply",
         actionsPolish: "Polish",
         actionsMore: "↻ More",
+        actionsOpenApp: "Open app",
         counterLeftTodayOne: "{{count}} left today",
         counterLeftTodayOther: "{{count}} left today",
         barNoFullAccess: "Turn on Full Access in Settings for AI replies. Typing works without it.",
@@ -89,7 +111,8 @@ extension KeyboardStrings {
         barQuotaEmpty: "Out of free replies. More tomorrow, or go unlimited in the Replywise app.",
         barFairUse: "Daily limit reached. Back tomorrow.",
         barProviderDown: "AI replies are having trouble. Try again in a minute.",
-        barLastTrialDayTemplate: "Your free trial ends tomorrow: {{price}}/week after that. Manage in the Replywise app.",
+        barLastTrialDayTemplate: "Your free trial ends tomorrow: {{price}}/year after that. Manage in the Replywise app.",
+        barSignedOut: "Sign in to use AI replies.",
         chipRowsWho: "Who",
         chipRowsCloseness: "Closeness",
         chipRowsTone: "Tone",
@@ -117,7 +140,26 @@ extension KeyboardStrings {
         flirtLight: "Light",
         flirtPlayful: "Playful",
         formalityCasual: "Casual",
-        formalityFormal: "Formal"
+        formalityFormal: "Formal",
+        keysShift: "Shift",
+        keysCapsLock: "Caps lock",
+        keysShiftOn: "on",
+        keysShiftOff: "off",
+        keysDelete: "Delete",
+        keysSpace: "space",
+        keysNumbers: "Numbers",
+        keysLetters: "Letters",
+        keysMoreSymbols: "More symbols",
+        returnKeyDefault: "return",
+        returnKeyGo: "go",
+        returnKeySearch: "search",
+        returnKeySend: "send",
+        returnKeyDone: "done",
+        returnKeyNext: "next",
+        returnKeyJoin: "join",
+        returnKeyRoute: "route",
+        returnKeyContinue: "continue",
+        returnKeyEmergencyCall: "emergency call"
     )
 
     public static let de = KeyboardStrings(
@@ -128,6 +170,7 @@ extension KeyboardStrings {
         actionsReply: "Antworten",
         actionsPolish: "Verbessern",
         actionsMore: "↻ Mehr",
+        actionsOpenApp: "App öffnen",
         counterLeftTodayOne: "Heute noch {{count}}",
         counterLeftTodayOther: "Heute noch {{count}}",
         barNoFullAccess: "Erlaube in den Einstellungen vollen Zugriff für KI-Antworten. Tippen geht auch ohne.",
@@ -138,7 +181,8 @@ extension KeyboardStrings {
         barQuotaEmpty: "Keine Gratis-Antworten mehr. Morgen gibt’s neue – oder unbegrenzt in der Replywise-App.",
         barFairUse: "Tageslimit erreicht. Morgen geht’s weiter.",
         barProviderDown: "KI-Antworten haben gerade Probleme. Versuch es gleich noch mal.",
-        barLastTrialDayTemplate: "Deine Testphase endet morgen, danach {{price}}/Woche. Verwalten in der Replywise-App.",
+        barLastTrialDayTemplate: "Deine Testphase endet morgen, danach {{price}}/Jahr. Verwalten in der Replywise-App.",
+        barSignedOut: "Melde dich an, um KI-Antworten zu nutzen.",
         chipRowsWho: "Wer",
         chipRowsCloseness: "Nähe",
         chipRowsTone: "Ton",
@@ -166,7 +210,26 @@ extension KeyboardStrings {
         flirtLight: "Leicht",
         flirtPlayful: "Verspielt",
         formalityCasual: "Locker",
-        formalityFormal: "Förmlich"
+        formalityFormal: "Förmlich",
+        keysShift: "Umschalt",
+        keysCapsLock: "Feststelltaste",
+        keysShiftOn: "ein",
+        keysShiftOff: "aus",
+        keysDelete: "Löschen",
+        keysSpace: "Leerzeichen",
+        keysNumbers: "Zahlen",
+        keysLetters: "Buchstaben",
+        keysMoreSymbols: "Weitere Symbole",
+        returnKeyDefault: "Return",
+        returnKeyGo: "Öffnen",
+        returnKeySearch: "Suchen",
+        returnKeySend: "Senden",
+        returnKeyDone: "Fertig",
+        returnKeyNext: "Weiter",
+        returnKeyJoin: "Verbinden",
+        returnKeyRoute: "Route",
+        returnKeyContinue: "Weiter",
+        returnKeyEmergencyCall: "Notruf"
     )
 
     public static let fr = KeyboardStrings(
@@ -177,6 +240,7 @@ extension KeyboardStrings {
         actionsReply: "Répondre",
         actionsPolish: "Peaufiner",
         actionsMore: "↻ Autres",
+        actionsOpenApp: "Ouvrir l’app",
         counterLeftTodayOne: "{{count}} restante",
         counterLeftTodayOther: "{{count}} restantes",
         barNoFullAccess: "Autorise l’accès complet dans Réglages pour les réponses IA. La saisie marche sans.",
@@ -187,7 +251,8 @@ extension KeyboardStrings {
         barQuotaEmpty: "Plus de réponses gratuites. D’autres demain, ou passe en illimité dans l’app Replywise.",
         barFairUse: "Limite du jour atteinte. Reviens demain.",
         barProviderDown: "Les réponses IA ont un souci. Réessaie dans une minute.",
-        barLastTrialDayTemplate: "Ton essai gratuit se termine demain, puis {{price}}/semaine. Gère-le dans l’app Replywise.",
+        barLastTrialDayTemplate: "Ton essai gratuit se termine demain, puis {{price}}/an. Gère-le dans l’app Replywise.",
+        barSignedOut: "Connecte-toi pour utiliser les réponses IA.",
         chipRowsWho: "Qui",
         chipRowsCloseness: "Proximité",
         chipRowsTone: "Ton",
@@ -215,7 +280,26 @@ extension KeyboardStrings {
         flirtLight: "Léger",
         flirtPlayful: "Taquin",
         formalityCasual: "Décontracté",
-        formalityFormal: "Formel"
+        formalityFormal: "Formel",
+        keysShift: "Majuscule",
+        keysCapsLock: "Verrouillage des majuscules",
+        keysShiftOn: "activé",
+        keysShiftOff: "désactivé",
+        keysDelete: "Supprimer",
+        keysSpace: "espace",
+        keysNumbers: "Chiffres",
+        keysLetters: "Lettres",
+        keysMoreSymbols: "Plus de symboles",
+        returnKeyDefault: "retour",
+        returnKeyGo: "aller",
+        returnKeySearch: "rechercher",
+        returnKeySend: "envoyer",
+        returnKeyDone: "OK",
+        returnKeyNext: "suivant",
+        returnKeyJoin: "rejoindre",
+        returnKeyRoute: "itinéraire",
+        returnKeyContinue: "continuer",
+        returnKeyEmergencyCall: "appel d’urgence"
     )
 
     public static let es = KeyboardStrings(
@@ -226,6 +310,7 @@ extension KeyboardStrings {
         actionsReply: "Responder",
         actionsPolish: "Pulir",
         actionsMore: "↻ Más",
+        actionsOpenApp: "Abrir la app",
         counterLeftTodayOne: "Queda {{count}}",
         counterLeftTodayOther: "Quedan {{count}}",
         barNoFullAccess: "Activa el acceso total en Ajustes para respuestas con IA. Puedes escribir sin él.",
@@ -236,7 +321,8 @@ extension KeyboardStrings {
         barQuotaEmpty: "Sin respuestas gratis. Más mañana, o pásate al plan ilimitado en la app Replywise.",
         barFairUse: "Límite diario alcanzado. Vuelve mañana.",
         barProviderDown: "Las respuestas con IA tienen problemas. Inténtalo en un minuto.",
-        barLastTrialDayTemplate: "Tu prueba gratis acaba mañana; luego, {{price}}/semana. Gestiónala en la app Replywise.",
+        barLastTrialDayTemplate: "Tu prueba gratis acaba mañana; luego, {{price}}/año. Gestiónala en la app Replywise.",
+        barSignedOut: "Inicia sesión para usar las respuestas con IA.",
         chipRowsWho: "Quién",
         chipRowsCloseness: "Confianza",
         chipRowsTone: "Tono",
@@ -264,7 +350,26 @@ extension KeyboardStrings {
         flirtLight: "Ligero",
         flirtPlayful: "Juguetón",
         formalityCasual: "Informal",
-        formalityFormal: "Formal"
+        formalityFormal: "Formal",
+        keysShift: "Mayúsculas",
+        keysCapsLock: "Bloqueo de mayúsculas",
+        keysShiftOn: "activado",
+        keysShiftOff: "desactivado",
+        keysDelete: "Borrar",
+        keysSpace: "espacio",
+        keysNumbers: "Números",
+        keysLetters: "Letras",
+        keysMoreSymbols: "Más símbolos",
+        returnKeyDefault: "intro",
+        returnKeyGo: "ir",
+        returnKeySearch: "buscar",
+        returnKeySend: "enviar",
+        returnKeyDone: "OK",
+        returnKeyNext: "siguiente",
+        returnKeyJoin: "conectarse",
+        returnKeyRoute: "ruta",
+        returnKeyContinue: "continuar",
+        returnKeyEmergencyCall: "emergencia"
     )
 
     public static let it = KeyboardStrings(
@@ -275,6 +380,7 @@ extension KeyboardStrings {
         actionsReply: "Rispondi",
         actionsPolish: "Migliora",
         actionsMore: "↻ Altre",
+        actionsOpenApp: "Apri l’app",
         counterLeftTodayOne: "Ancora {{count}}",
         counterLeftTodayOther: "Ancora {{count}}",
         barNoFullAccess: "Attiva l’accesso completo in Impostazioni per le risposte IA. Puoi scrivere anche senza.",
@@ -285,7 +391,8 @@ extension KeyboardStrings {
         barQuotaEmpty: "Risposte gratis finite. Altre domani, o passa all’illimitato nell’app Replywise.",
         barFairUse: "Limite giornaliero raggiunto. Torna domani.",
         barProviderDown: "Le risposte IA hanno qualche problema. Riprova tra un minuto.",
-        barLastTrialDayTemplate: "La prova gratuita finisce domani, poi {{price}}/settimana. Gestiscila nell’app Replywise.",
+        barLastTrialDayTemplate: "La prova gratuita finisce domani, poi {{price}}/anno. Gestiscila nell’app Replywise.",
+        barSignedOut: "Accedi per usare le risposte IA.",
         chipRowsWho: "Chi",
         chipRowsCloseness: "Vicinanza",
         chipRowsTone: "Tono",
@@ -313,7 +420,26 @@ extension KeyboardStrings {
         flirtLight: "Leggero",
         flirtPlayful: "Giocoso",
         formalityCasual: "Informale",
-        formalityFormal: "Formale"
+        formalityFormal: "Formale",
+        keysShift: "Maiuscole",
+        keysCapsLock: "Blocco maiuscole",
+        keysShiftOn: "attivo",
+        keysShiftOff: "disattivato",
+        keysDelete: "Elimina",
+        keysSpace: "spazio",
+        keysNumbers: "Numeri",
+        keysLetters: "Lettere",
+        keysMoreSymbols: "Altri simboli",
+        returnKeyDefault: "invio",
+        returnKeyGo: "vai",
+        returnKeySearch: "cerca",
+        returnKeySend: "invia",
+        returnKeyDone: "fine",
+        returnKeyNext: "avanti",
+        returnKeyJoin: "accedi",
+        returnKeyRoute: "percorso",
+        returnKeyContinue: "continua",
+        returnKeyEmergencyCall: "emergenza"
     )
 
     public static func forLanguage(_ language: SupportedLanguage) -> KeyboardStrings {

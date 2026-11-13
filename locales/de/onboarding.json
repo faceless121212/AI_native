@@ -8,5 +8,25 @@
   "actions": {
     "allowAi": "KI-Antworten erlauben",
     "notNow": "Nicht jetzt"
+  },
+  "age": {
+    "actions": {
+      "adult": "Ich bin 18+, los geht’s",
+      "under18": "Ich bin unter 18"
+    },
+    "under18Stop": "Replywise ist für Erwachsene. KI-Antworten sind aus."
+  },
+  "keyboardSetup": {
+    "actions": {
+      "openSettings": "Einstellungen öffnen",
+      "done": "Hab ich gemacht"
+    }
+  },
+  "signIn": {
+    "actions": {
+      "google": "Weiter mit Google"
+    },
+    "notice": "Wir nutzen deine Anmeldung mit Apple oder Google nur, damit dein Abo auf all deinen Geräten gilt.",
+    "privacyLink": "Datenschutz"
   }
 }

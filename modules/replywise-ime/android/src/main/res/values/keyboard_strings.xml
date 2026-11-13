@@ -7,6 +7,7 @@
     <string name="kb_actions_reply">Reply</string>
     <string name="kb_actions_polish">Polish</string>
     <string name="kb_actions_more">↻ More</string>
+    <string name="kb_actions_open_app">Open app</string>
     <plurals name="kb_counter_left_today">
         <item quantity="one">%1$d left today</item>
         <item quantity="other">%1$d left today</item>
@@ -19,7 +20,8 @@
     <string name="kb_bar_quota_empty">Out of free replies. More tomorrow, or go unlimited in the Replywise app.</string>
     <string name="kb_bar_fair_use">Daily limit reached. Back tomorrow.</string>
     <string name="kb_bar_provider_down">AI replies are having trouble. Try again in a minute.</string>
-    <string name="kb_bar_last_trial_day">Your free trial ends tomorrow: %1$s/week after that. Manage in the Replywise app.</string>
+    <string name="kb_bar_last_trial_day">Your free trial ends tomorrow: %1$s/year after that. Manage in the Replywise app.</string>
+    <string name="kb_bar_signed_out">Sign in to use AI replies.</string>
     <string name="kb_chip_rows_who">Who</string>
     <string name="kb_chip_rows_closeness">Closeness</string>
     <string name="kb_chip_rows_tone">Tone</string>
@@ -48,4 +50,23 @@
     <string name="kb_flirt_playful">Playful</string>
     <string name="kb_formality_casual">Casual</string>
     <string name="kb_formality_formal">Formal</string>
+    <string name="kb_keys_shift">Shift</string>
+    <string name="kb_keys_caps_lock">Caps lock</string>
+    <string name="kb_keys_shift_on">on</string>
+    <string name="kb_keys_shift_off">off</string>
+    <string name="kb_keys_delete">Delete</string>
+    <string name="kb_keys_space">space</string>
+    <string name="kb_keys_numbers">Numbers</string>
+    <string name="kb_keys_letters">Letters</string>
+    <string name="kb_keys_more_symbols">More symbols</string>
+    <string name="kb_return_key_default">return</string>
+    <string name="kb_return_key_go">go</string>
+    <string name="kb_return_key_search">search</string>
+    <string name="kb_return_key_send">send</string>
+    <string name="kb_return_key_done">done</string>
+    <string name="kb_return_key_next">next</string>
+    <string name="kb_return_key_join">join</string>
+    <string name="kb_return_key_route">route</string>
+    <string name="kb_return_key_continue">continue</string>
+    <string name="kb_return_key_emergency_call">emergency call</string>
 </resources>

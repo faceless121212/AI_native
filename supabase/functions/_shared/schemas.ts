@@ -56,8 +56,8 @@ export type RequestSource = z.infer<typeof RequestSource>;
 export const Platform = z.enum(['ios', 'android']);
 export type Platform = z.infer<typeof Platform>;
 
-/** Plan as seen by clients; lifetime_upgrade counts as lifetime. */
-export const Plan = z.enum(['free', 'weekly', 'annual', 'lifetime']);
+/** Plan as seen by clients. Annual is the only paid product (decision 2026-11-13, spec §6). */
+export const Plan = z.enum(['free', 'annual']);
 export type Plan = z.infer<typeof Plan>;
 
 /**
@@ -262,7 +262,11 @@ export function cardMaxChars(kind: 'reply' | 'polish', inputChars: number): numb
   );
 }
 
-/** SSE `card`: one suggestion, sent as soon as its line is complete. Reply: index 0–2; Polish: 0 = light edit, 1 = rewrite. */
+/**
+ * SSE `card`: one suggestion, sent as soon as its line is complete. Reply: index 0–2; Polish: 0 =
+ * light edit, 1 = rewrite. Polish card text may contain "\n" newlines (the draft's paragraph and
+ * line breaks, kept when the draft is replaced); reply cards never do.
+ */
 export const CardEvent = z.object({
   index: z.number().int().min(0).max(2),
   variant: z.enum(['reply', 'light', 'rewrite']),
@@ -271,7 +275,7 @@ export const CardEvent = z.object({
     .min(1)
     .max(POLISH_CARD_TEXT_MAX_CHARS * 2)
     .describe(
-      'Server post-check keeps reply cards to CARD_TEXT_MAX_CHARS code points and Polish cards to cardMaxChars (≤ POLISH_CARD_TEXT_MAX_CHARS); label it "AI suggestion".',
+      'Server post-check keeps reply cards to CARD_TEXT_MAX_CHARS code points and Polish cards to cardMaxChars (≤ POLISH_CARD_TEXT_MAX_CHARS; a newline counts as one); label it "AI suggestion". Polish cards (light, rewrite) may contain "\\n" newlines from the draft\'s line breaks; insert them as-is. Reply cards never contain a newline.',
     ),
 });
 export type CardEvent = z.infer<typeof CardEvent>;

@@ -3,7 +3,7 @@
 -- supabase/functions/_shared/repo-supabase.integration.test.ts (pgTAP runs in one transaction).
 begin;
 \ir _helpers.psql
-select plan(64);
+select plan(65);
 
 -- Consumes one reply for p_user at p_now; returns the jsonb result.
 create function tests.consume(p_user uuid, p_now timestamptz default now(), p_kind text default 'reply')
@@ -98,7 +98,13 @@ select isnt((select refunded_at from public.ai_requests where id = :'daily_id'),
 update public.usage_days set used = 3 where user_id = :'a_u' and local_date = '2026-11-03';
 select (tests.consume(:'a_u', '2026-11-03T09:00:00Z')) ->> 'request_id' as id \gset bonus_
 select is((select charge from public.ai_requests where id = :'bonus_id'), 'bonus', 'charged a bonus credit');
-select is((public.refund_reply(:'bonus_id') -> 'quota' ->> 'left_today')::int, 9, 'refund of a bonus credit returns the new quota');
+-- refund_reply reports the quota as of the real clock (now()), not the test's fixed dates, so
+-- compare it with quota_state at now(); the bonus balance itself is checked at the fixed time.
+select (public.refund_reply(:'bonus_id') -> 'quota' ->> 'left_today')::int as left_after \gset bonus_refund_
+select is(:bonus_refund_left_after, (public.quota_state(:'a_u', now()) ->> 'left_today')::int,
+  'refund of a bonus credit returns the current quota');
+select is((public.quota_state(:'a_u', '2026-11-03T09:00:01Z') ->> 'left_today')::int, 9,
+  'refund of a bonus credit gives the bonus credit back (9 left on 2026-11-03, daily used up)');
 select results_eq(format($$ select delta from public.credit_ledger where request_id = %L order by id $$, :'bonus_id'),
   $$ values (-1), (1) $$, 'bonus refund is a +1 refund row linked to the request');
 select is(public.refund_reply(gen_random_uuid()) ->> 'status', 'not_found', 'unknown request → not_found');
@@ -140,28 +146,27 @@ select is((tests.consume(:'l_u', '2026-10-25T23:59:59Z')) ->> 'status', 'quota_e
 select is((tests.consume(:'l_u', '2026-10-26T00:00:00Z')) ->> 'status', 'ok', 'London: allowance back at 00:00 GMT');
 
 -- ---------------------------------------------------------------------------------------------
--- Paid: lifetime 100/day, subscriptions 300/day; credits untouched.
-select tests.ai_user('Europe/Berlin', true) as u \gset life_
-insert into public.entitlements (user_id, product, active) values (:'life_u', 'lifetime', true);
-select is((tests.consume(:'life_u', '2026-11-02T10:00:00Z')) ->> 'charge', 'paid', 'lifetime: charged against fair use, not credits');
-select results_eq(format($$ select r ->> 'plan', r -> 'left_today', (r ->> 'fair_use_left')::int from (select public.quota_state(%L, '2026-11-02T10:00:01Z') r) q $$, :'life_u'),
-  $$ values ('lifetime'::text, 'null'::jsonb, 99) $$, 'lifetime: 99 fair-use left, left_today null');
-select is((public.reply_credits(:'life_u')).starter_left, 10, 'starter credits are not used by paid plans');
-update public.usage_days set used = 99 where user_id = :'life_u' and local_date = '2026-11-02';
-select is((tests.consume(:'life_u', '2026-11-02T10:05:00Z')) ->> 'fair_use_left', '0', 'lifetime: 100th reply ok, 0 left');
-select is((tests.consume(:'life_u', '2026-11-02T10:06:00Z')) ->> 'status', 'fair_use', 'lifetime: 101st → fair_use');
+-- Paid (annual only since 2026-11-13): a fair-use cap of 100/day (was 300 until 2026-11-13); credits untouched.
+select tests.ai_user('Europe/Berlin', true) as u \gset paid_
+insert into public.entitlements (user_id, product, active) values (:'paid_u', 'annual', true);
+select is((tests.consume(:'paid_u', '2026-11-02T10:00:00Z')) ->> 'charge', 'paid', 'annual: charged against fair use, not credits');
+select results_eq(format($$ select r ->> 'plan', r -> 'left_today', (r ->> 'fair_use_left')::int from (select public.quota_state(%L, '2026-11-02T10:00:01Z') r) q $$, :'paid_u'),
+  $$ values ('annual'::text, 'null'::jsonb, 99) $$, 'annual: 99 fair-use left, left_today null');
+select is((public.reply_credits(:'paid_u')).starter_left, 10, 'starter credits are not used by paid plans');
+update public.usage_days set used = 99 where user_id = :'paid_u' and local_date = '2026-11-02';
+select is((tests.consume(:'paid_u', '2026-11-02T10:05:00Z')) ->> 'fair_use_left', '0', 'annual: 100th reply ok, 0 left');
+select is((tests.consume(:'paid_u', '2026-11-02T10:06:00Z')) ->> 'status', 'fair_use', 'annual: 101st → fair_use');
 
 select tests.ai_user('Europe/London', false) as u \gset sub_
-insert into public.entitlements (user_id, product, active, expires_at, will_renew) values (:'sub_u', 'weekly', true, '2026-11-09T00:00:00Z', true);
-insert into public.usage_days (user_id, local_date, used) values (:'sub_u', '2026-11-02', 299);
-select is((tests.consume(:'sub_u', '2026-11-02T10:00:00Z')) ->> 'plan', 'weekly', 'weekly subscription plan');
-select is((tests.consume(:'sub_u', '2026-11-02T10:01:00Z')) ->> 'status', 'fair_use', 'subscription: 300/day cap');
+insert into public.entitlements (user_id, product, active, expires_at, will_renew) values (:'sub_u', 'annual', true, '2026-11-09T00:00:00Z', true);
+insert into public.usage_days (user_id, local_date, used) values (:'sub_u', '2026-11-02', 99);
+select is((tests.consume(:'sub_u', '2026-11-02T10:00:00Z')) ->> 'plan', 'annual', 'annual subscription plan');
+select is((tests.consume(:'sub_u', '2026-11-02T10:01:00Z')) ->> 'status', 'fair_use', 'subscription: 100/day cap');
 select is((tests.consume(:'sub_u', '2026-11-10T10:00:00Z')) ->> 'plan', 'free', 'expired subscription → free');
 
-insert into public.entitlements (user_id, product, active) values (:'sub_u', 'lifetime_upgrade', true);
-select results_eq(format($$ select r ->> 'plan', (r ->> 'fair_use_left')::int from (select public.quota_state(%L, '2026-11-02T12:00:00Z') r) q $$, :'sub_u'),
-  $$ values ('lifetime'::text, 0) $$, 'lifetime_upgrade counts as lifetime; with an active weekly the larger cap (300) applies');
-update public.entitlements set active = false where user_id = :'sub_u' and product = 'lifetime_upgrade';
+update public.entitlements set active = false where user_id = :'sub_u';
+select results_eq(format($$ select r ->> 'plan', r ->> 'fair_use_left' from (select public.quota_state(%L, '2026-11-02T12:00:00Z') r) q $$, :'sub_u'),
+  $$ values ('free'::text, null::text) $$, 'an inactive annual row (cancelled or refunded) → free, no fair-use cap');
 
 -- ---------------------------------------------------------------------------------------------
 -- Rate limit: 20 charged requests per 60 s, across instances (counted in ai_requests).

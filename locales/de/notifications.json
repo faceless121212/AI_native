@@ -1,6 +1,6 @@
 {
-  "trialEndsTomorrowIos": "Deine kostenlose Testphase endet morgen. Danach {{price}}/Woche. Du kannst jederzeit in deinen Abonnements im App Store kündigen.",
-  "trialEndsTomorrowAndroid": "Deine kostenlose Testphase endet morgen. Danach {{price}}/Woche. Du kannst jederzeit in deinen Abos bei Google Play kündigen.",
+  "trialEndsTomorrowIos": "Deine kostenlose Testphase endet morgen. Danach {{price}}/Jahr. Du kannst jederzeit in deinen Abonnements im App Store kündigen.",
+  "trialEndsTomorrowAndroid": "Deine kostenlose Testphase endet morgen. Danach {{price}}/Jahr. Du kannst jederzeit in deinen Abos bei Google Play kündigen.",
   "annualRenewal": "Dein Replywise-Jahr verlängert sich am {{date}} für {{price}}.",
   "freeRepliesBack_one": "Du hast wieder {{count}} Gratis-Antwort.",
   "freeRepliesBack_other": "Du hast wieder {{count}} Gratis-Antworten."

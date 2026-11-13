@@ -9,6 +9,7 @@ import {
   formatProblems,
   frenchSpacingProblem,
   langVerdict,
+  lineBreakProblems,
   missingPlaceholders,
   petNameHits,
   phraseHits,
@@ -56,6 +57,36 @@ Deno.test("formality: French tu vs vous, including elided t'", () => {
   assertEquals(formalityViolations('Tu me dis si ça va ?', 'fr', 'formal'), ['Tu']);
   assertEquals(formalityViolations('Merci pour votre message !', 'fr', 'casual'), ['votre']);
   assertEquals(formalityViolations('Merci pour ton message !', 'fr', 'casual'), []);
+});
+
+Deno.test('formality: plural to a group (casual vous is not formal; singular tu is wrong)', () => {
+  // French: casual group plural and formal are the same word.
+  assertEquals(
+    formalityViolations('Commencez sans moi, je vous rejoins !', 'fr', 'casual', true),
+    [],
+  );
+  assertEquals(formalityViolations('Commence sans moi, je te rejoins !', 'fr', 'casual', true), [
+    'te',
+  ]);
+  // Without plural, casual vous stays a violation.
+  assertEquals(formalityViolations('Je vous rejoins !', 'fr', 'casual'), ['vous']);
+  // German, Spanish, Italian: the group plural differs from the formal form.
+  assertEquals(
+    formalityViolations('Fangt ohne mich an, ich komme gleich zu euch.', 'de', 'casual', true),
+    [],
+  );
+  assertEquals(
+    formalityViolations('Fangen Sie ohne mich an, ich komme zu Ihnen.', 'de', 'casual', true),
+    ['Ihnen', 'Sie'],
+  );
+  assertEquals(formalityViolations('Empezad sin mí, ahora os veo.', 'es', 'casual', true), []);
+  assertEquals(formalityViolations('Empezad sin mí, ¿vale? Te veo ahora.', 'es', 'casual', true), [
+    'Te',
+  ]);
+  assertEquals(
+    formalityViolations('Iniziate senza di me, vi raggiungo.', 'it', 'casual', true),
+    [],
+  );
 });
 
 Deno.test('formality: Spanish tú vs usted', () => {
@@ -131,6 +162,38 @@ Deno.test('UK spelling and format problems', () => {
   assertEquals(formatProblems('"Sounds good"'), ['wrapped in quotes']);
   assertEquals(formatProblems('Sure R2|again'), ['format tag inside text']);
   assertEquals(formatProblems("I'm in, see you at 8"), []);
+});
+
+Deno.test("line breaks: replies one line; Polish keeps the draft's lines and paragraphs", () => {
+  const draft = 'hi sam,\n\nthanks ill be there\nat 8\n\nalex';
+  // Reply cards never break; formatProblems no longer flags breaks (Polish may have them).
+  assertEquals(lineBreakProblems('reply', 'See you at 8\nAlex', draft), [
+    'line break in a reply card',
+  ]);
+  assertEquals(lineBreakProblems('reply', 'See you at 8', draft), []);
+  assertEquals(formatProblems('Hi Sam,\n\nsee you at 8'), []);
+  // Light edit: same 4 lines in 3 paragraphs.
+  assertEquals(
+    lineBreakProblems('light', "Hi Sam,\n\nthanks, I'll be there\nat 8.\n\nAlex", draft),
+    [],
+  );
+  assertEquals(lineBreakProblems('light', "Hi Sam, thanks, I'll be there at 8. Alex", draft), [
+    '1 lines, draft has 4',
+    '1 paragraphs, draft has 3',
+  ]);
+  assertEquals(lineBreakProblems('light', "Hi Sam,\nthanks, I'll be there\nat 8.\nAlex", draft), [
+    '1 paragraphs, draft has 3',
+  ]);
+  // Rewrite: may reword, must keep a break.
+  assertEquals(lineBreakProblems('rewrite', "Hey Sam!\n\nI'll be there at 8.", draft), []);
+  assertEquals(lineBreakProblems('rewrite', "Hey Sam! I'll be there at 8.", draft), [
+    'line breaks of the draft lost',
+  ]);
+  // One-line draft: no breaks added; trailing newline / blank lines in the draft don't count.
+  assertEquals(lineBreakProblems('light', 'See you\nat 8', 'see u at 8'), [
+    'line break added to a one-line draft',
+  ]);
+  assertEquals(lineBreakProblems('rewrite', 'See you at 8!', 'see u at 8\n'), []);
 });
 
 Deno.test('distinct: near-duplicates and identical openings are flagged', () => {
