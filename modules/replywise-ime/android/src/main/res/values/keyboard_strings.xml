@@ -19,7 +19,7 @@
     <string name="kb_bar_quota_empty">Out of free replies. More tomorrow, or go unlimited in the Replywise app.</string>
     <string name="kb_bar_fair_use">Daily limit reached. Back tomorrow.</string>
     <string name="kb_bar_provider_down">AI replies are having trouble. Try again in a minute.</string>
-    <string name="kb_bar_last_trial_day">Your free trial ends tomorrow: %1$s/week after that. Manage in the Replywise app.</string>
+    <string name="kb_bar_last_trial_day">Your free trial ends tomorrow: %1$s/year after that. Manage in the Replywise app.</string>
     <string name="kb_chip_rows_who">Who</string>
     <string name="kb_chip_rows_closeness">Closeness</string>
     <string name="kb_chip_rows_tone">Tone</string>

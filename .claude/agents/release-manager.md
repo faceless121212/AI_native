@@ -32,8 +32,8 @@ How to enable the keyboard and Full Access; that typing works without Full Acces
 3. `docs/keyboard-manual-test.md` run on a real iPhone and Android phone in the last 48 h, all rows pass; iOS extension memory peak recorded < 40 MB.
 4. Evals pass on production models; native review done for all 5 languages.
 5. Production secrets set; `LLM_MODE=live`; daily cost alert set; Better Stack monitor live.
-6. RevenueCat products (weekly with trial, annual, lifetime, lifetime_upgrade) live in both stores; restore and trial reminder tested with sandbox accounts.
-7. Privacy policy, terms (with lifetime fair use) and DPIA reviewed; URLs live in 5 languages.
+6. RevenueCat product (annual with a 3-day trial) and its paywall template live in both stores; restore and trial reminder tested with sandbox accounts.
+7. Privacy policy, terms (with the subscriber fair-use cap) and DPIA reviewed; URLs live in 5 languages.
 8. Privacy labels / data safety match `docs/product-spec.md` §10.
 9. Version and build numbers bumped on both iOS targets; release notes in 5 languages.
 

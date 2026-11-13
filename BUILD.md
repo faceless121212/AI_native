@@ -20,7 +20,7 @@ A keyboard that writes the reply for you, in any chat app. Copy the other person
 
 - **Platforms:** iOS and Android. The containing app is Expo (React Native, TypeScript). The keyboards are native: an iOS Keyboard Extension in Swift/SwiftUI and an Android `InputMethodService` in Kotlin. React Native never runs inside a keyboard.
 - **Markets:** UK, Germany, France, Spain, Italy. Five languages at launch. Age 18+.
-- **Model:** typing is always free. AI replies: 10 starter replies, then 3 free per day. Unlimited: Weekly €4.99 (3-day free trial), Annual €39.99 (pre-selected), Lifetime €59.99 (one-time, fair use up to 100 replies a day).
+- **Model:** typing is always free. AI replies: 10 starter replies, then 3 free per day. Unlimited: Annual €29.99/year with a 3-day free trial (EUR reference price; the app shows the store's price). Weekly and Lifetime were dropped on 2026-11-13 (`docs/decisions.md`, `docs/pricing.md`).
 - **Privacy promise:** nothing you type leaves your phone unless you tap Reply or Polish. Then only the copied message and your draft go to an EU-hosted AI. We don't keep your chats. No keystroke logging, ever.
 
 The product is based on a teardown of the Chinese reply keyboards (Lovekey #4 in CN Utilities top-grossing, 高情商键盘 #16 in Reference, single-day chart pull on 25 Oct 2026) and the Western screenshot apps. See `docs/teardown.md`.
@@ -31,7 +31,7 @@ The product is based on a teardown of the Chinese reply keyboards (Lovekey #4 in
 |---|---|---|
 | `README.md` | Part A of this document | You |
 | `inventory.md` | Every tool, service and account to use, with why, cost and setup order | You |
-| `BUILD.md` | This document; Part C has the 16 build prompts | You → Claude Code |
+| `BUILD.md` | This document; Part C has the build prompts | You → Claude Code |
 | `CLAUDE.md` | Project rules Claude Code loads automatically every session | Claude Code |
 | `AGENTS.md` | Short pointer for other AI tools (Cursor, Codex) to the same rules | Other AI tools |
 | `.claude/agents/*.md` | 9 specialist sub-agents: tests, code review, keyboard extension, prompts, backend, translations, privacy, accessibility, release | Claude Code |
@@ -49,7 +49,7 @@ Open the accounts in `inventory.md` §8 (AWS Bedrock model access and the Apple 
 - **The keyboard types without Full Access and without network.** AI is an extra on top of a working keyboard (Apple 4.4.1).
 - **Nothing leaves the phone unless the user taps Reply or Polish.** No keystroke logging, no reading other apps, no analytics SDK inside the keyboard.
 - **The app and keyboard never call the AI directly.** One Edge Function holds the keys, checks the quota and logs cost, never message text.
-- **Honest money.** Visible ✕ on the paywall, exact trial terms, a reminder before the charge, a lifetime that stays lifetime.
+- **Honest money.** Visible ✕ on the paywall, exact trial terms, a reminder before the charge, the price per period from the store.
 - **No sexual content, 18+ only, every suggestion labelled as AI.**
 
 ## Build order at a glance
@@ -59,7 +59,7 @@ Open the accounts in `inventory.md` §8 (AWS Bedrock model access and the Apple 
 | Foundation | 0–2 | Repo with app + keyboard targets, design system, 5 languages, Supabase schema with security rules |
 | AI core | 3–4 | The AI proxy with quotas and fallback, versioned prompts and an eval set |
 | iOS keyboard | 5–6 | Native keyboard that types offline, then the reply bar with streaming replies |
-| App | 7–10 | Onboarding with consent and keyboard setup, paywall with trial reminder and lifetime, free counter and referral, home and settings |
+| App | 7–10 | Onboarding with consent and keyboard setup, RevenueCat paywall with trial reminder, optional sign-in, free counter and referral, home and settings |
 | Android | 11 | Native Android keyboard with the same reply bar |
 | Trust | 12–14 | AI quality and safety pass, monitoring and cost, accessibility and translation pass |
 | Launch | 15 | Store listings, privacy labels, builds ready to submit |
@@ -80,6 +80,8 @@ When the user says "do Step 0":
 ---
 
 # Part B: Files to create
+
+> **Snapshot.** Part B is the content Step 0 wrote on day one. The files in the repo have moved on since (for example the 2026-11-13 decisions in `docs/decisions.md`: Annual only, 4-screen onboarding, sign-in after the paywall, RevenueCat Paywalls). Where Part B and a repo file disagree, the repo file wins; don't re-run Step 0 over an existing repo.
 
 
 ## File: `CLAUDE.md`
@@ -1317,23 +1319,21 @@ Then the keyboard-extension-engineer agent reviews and measures on my iPhone: me
 
 ---
 
-## Prompt 7: Onboarding with consent, Try it and keyboard setup
+## Prompt 7: Onboarding with consent, keyboard setup and Try it
 
 ```
-Read docs/product-spec.md §2 and §7, and docs/architecture.md §4–5. Use keyboard-extension-engineer for the setup detection, privacy-compliance to review consent, accessibility-auditor on the screens.
+Read docs/product-spec.md §2 and §7, docs/decisions.md (2026-11-13), and docs/architecture.md §4–5. Use keyboard-extension-engineer for the setup detection, privacy-compliance to review consent, accessibility-auditor on the screens, i18n-localizer for every new string.
 
-Build app/(onboarding) screens 1–7 and 10 (8 and 9 come in prompt 8; route through a placeholder):
-1. Welcome with a 3-second looping demo of the keyboard bar inserting a reply (Reanimated; static image with Reduce Motion). Continue. No rating or push ask.
-2. Age check. No → stop screen; set a local flag so AI is never enabled on this install; keyboard still types.
-3. "Who do you text most?" multi-select chips, Skip. Saves the default relationship to v1.defaults.
-4. "What Replywise can see": three lines naming the provider and EU processing. "Allow AI replies" → consent function (policy_version from a constant), then device-key, store the key in the shared keychain (iOS) / EncryptedSharedPreferences (Android), write v1.aiEnabled = true. "Not now" → skip 5, keep AI off.
-5. Try it: field pre-filled with a sample message in the device language, chips, Reply → stream 3 cards via the reply function with the app's JWT, "AI suggestion" labels. Uses 1 starter reply.
-6. Add the keyboard: StepGuide with 3 steps, "Open Settings" (iOS: Linking.openSettings() to the app's page, which shows Keyboards → Replywise; Android: ACTION_INPUT_METHOD_SETTINGS via keyboard-bridge). On return to foreground, check keyboard-bridge.getStatus() and show a success tick. Android: then offer the keyboard picker.
-7. Allow Full Access (iOS): StepGuide, the explanation from spec §2, detect via heartbeat (ask the user to open the keyboard once in the Try-it field), "Skip for now". Android: explain the system warning instead.
-8. Done screen with the 3-step how-to and replies left.
-9. Progress indicator, back navigation, state kept if the app is closed mid-onboarding.
-10. Analytics hooks as no-op functions (wired in prompt 13): onboarding_step_viewed, age_gate, ai_consent, try_it_reply_shown, keyboard_added, full_access_granted.
-11. RNTL tests for each screen's states; Maestro flow: consent yes path and consent no path.
+Build app/(onboarding) screens 1–4 (5 Paywall comes in prompt 8 and 6 Sign in in prompt 8b; route through placeholders that lead to Home):
+1. Welcome + age on one screen: "The right reply, in any chat" with a 3-second looping demo of the keyboard bar inserting a reply (Reanimated; static image with Reduce Motion). Buttons "I'm 18+, let's go" (stores age_confirmed_at through the profile function) and "I'm under 18" (stop screen "Replywise is for adults. AI replies are off."; set a local flag so AI is never enabled on this install; keyboard still types). No rating or push ask. Strings: onboarding:age.*.
+2. "What Replywise can see": three lines naming the provider and EU processing. "Allow AI replies" → consent function (policy_version from a constant), then device-key, store the key in the shared keychain (iOS) / EncryptedSharedPreferences (Android), write v1.aiEnabled = true. "Not now" → skip 4, keep AI off.
+3. Turn on the keyboard, one screen: a StepGuide with (a) add the keyboard and (b) Allow Full Access (iOS), the Full Access explanation from spec §2, buttons "Open Settings" and "I've done it" (onboarding:keyboardSetup.actions.*). iOS: Linking.openSettings() to the app's page, which shows Keyboards → Replywise and the Full Access switch. Android: ACTION_INPUT_METHOD_SETTINGS via keyboard-bridge, then the keyboard picker; explain the system warning instead of Full Access. On return to foreground, check keyboard-bridge.getStatus() / the heartbeat and tick what's confirmed. "I've done it" always moves on: Full Access is skippable and typing works without it.
+4. Try it: field pre-filled with a sample message in the device language, a tone picker (relationship Friend, the default), Reply → stream 3 cards via the reply function with the app's JWT, each labelled "AI suggestion". Uses 1 starter reply. Skipped after "Not now". Invite the user to open the new keyboard in this field once (gives the iOS app the Full Access heartbeat).
+5. The default relationship is Friend (v1.defaults); there is no "Who do you text most" screen.
+6. Home (placeholder until prompt 10) shows the 3-step how-to and replies left; there is no Done screen.
+7. Progress indicator, back navigation, state kept if the app is closed mid-onboarding.
+8. Analytics hooks as no-op functions (wired in prompt 13): onboarding_step_viewed, age_gate, ai_consent, try_it_reply_shown, keyboard_added, full_access_granted.
+9. RNTL tests for each screen's states; Maestro flows: consent yes path, consent no path (Try it skipped), under-18 path.
 
 Plan first.
 ```
@@ -1342,26 +1342,46 @@ Plan first.
 
 ---
 
-## Prompt 8: Paywall, trial reminder and lifetime
+## Prompt 8: Paywall (RevenueCat Paywalls) and trial reminder
 
 ```
-Read docs/product-spec.md §6 and §8, inventory.md §4 and docs/architecture.md §11. Use privacy-compliance to review the paywall against the consumer rules, and accessibility-auditor on the screen.
+Read docs/product-spec.md §6 and §8, docs/pricing.md, inventory.md §4 and docs/architecture.md §11. Use privacy-compliance to review the paywall template against CLAUDE.md rule 8 and the consumer rules, accessibility-auditor on the screen, i18n-localizer for the app's strings and the template's 5 languages.
 
-1. Integrate RevenueCat (react-native-purchases). Products weekly (3-day free trial as introductory offer), annual, lifetime (non-consumable / one-time), lifetime_upgrade; entitlement "unlimited"; one offering. Give me a checklist of exactly what to create in App Store Connect, Play Console and RevenueCat, with EUR prices €4.99 / €39.99 / €59.99 and GBP tiers.
-2. Paywall screen (onboarding screen 8 and app route): ✕ top-left visible from the first frame (44 pt), ✕ → free tier, never replays intro. Three PlanCards with store prices in local currency, Annual pre-selected with "€0.77 a week" as a secondary line computed from the store price, Lifetime with the "Pay once…" and fair-use lines. Trial timeline row when Weekly is selected. Terms, Privacy, Restore, Manage subscription, auto-renew text. No countdown, no scarcity.
-3. Screen 9: only after a trial starts, "Want a reminder before you're charged?" → notification permission → local notification 24 h before the trial ends (from RevenueCat customer info). Also write v1.trialEndsAt to the App Group for the keyboard banner.
-4. Annual renewal reminder 7 days before renewal when will_renew is true. Reschedule all reminders on every app open.
-5. webhooks-revenuecat → entitlements (shared secret, idempotent, renewal_count, trial_ends_at). Server quota reads it.
-6. Upgrade-to-lifetime card on Home for weekly subscribers after the 2nd renewal; after purchase, the "Cancel your weekly plan" screen with a button to showManageSubscriptions / Play subscriptions.
+1. Integrate RevenueCat (react-native-purchases + react-native-purchases-ui), app user ID = the Supabase user ID. One product: annual, 3-day free trial as introductory offer; entitlement "unlimited"; one offering. Give me a checklist of exactly what to create in App Store Connect, Play Console and RevenueCat, with €29.99/year as the EUR reference price and the store price tiers for GBP and the other currencies.
+2. The paywall is a RevenueCat Paywall: an app route (onboarding screen 5 and "Go unlimited" from Home, Settings and the out-of-replies card) that embeds RevenueCatUI.Paywall for the current offering. Configure the template exactly to spec §6 "Required template settings": ✕ shown from the first frame with no delay, 44 pt; the billed €X/year from RevenueCat's store price variables as the most prominent price, never smaller than "3 days free"; no "free" headline without the post-trial price; a CTA that never says only "Try free"; no per-day/week/month or relative-discount variables, no countdown, no scarcity, no strikethrough; trial timeline "Today: free · {date}: charged {price}/year" with no reminder promise; renewal text "3 days free, then {price} per year. Renews until you cancel in App Store subscriptions." (Google Play on Android) and the no-trial variant; Terms, Privacy, Restore purchases. All 5 languages in the RevenueCat dashboard, matching a reviewed copy in locales/<lang>/paywall-template.md (i18n-localizer and privacy-compliance sign off every dashboard change; dashboard access restricted).
+3. ✕ (onDismiss) → onboarding: Sign in (prompt 8b), then Home on the free tier; elsewhere: back to where the user came from. Never replays the intro.
+4. Under the paywall, in its own row not tied to the CTA, the app's switch "Remind me before the trial ends" (paywall:reminderSwitch), on by default and hidden when the user isn't eligible for the trial, plus the fair-use line (paywall:fairUse with the server's cap as count). When a purchase that starts a trial completes (onPurchaseCompleted + customer info), and only if the switch is on: ask for notification permission, then schedule a local notification 24 h before the trial ends. If permission is denied: show an in-app banner on Home on the last trial day instead. Always write v1.trialEndsAt to the App Group for the keyboard's last-trial-day bar.
+5. Annual renewal reminder 7 days before renewal when will_renew is true. Reschedule all reminders on every app open. Settings → Reminders can turn the trial reminder on or off later.
+6. webhooks-revenuecat → entitlements (shared secret, idempotent, renewal_count, trial_ends_at). Store product IDs map to 'annual' (the only product the entitlements table accepts); any other product ID is acknowledged and ignored. Server quota reads it.
 7. Settings: Manage or cancel subscription (DE label "Verträge hier kündigen"), Request a refund (Apple reportaproblem link on iOS, Play order history on Android), Restore purchases.
 8. Mirror plan to v1.quota so the keyboard hides the counter for unlimited.
-9. Analytics hooks: paywall_viewed {source}, paywall_closed, plan_selected, trial_started, purchase, reminder_opt_in, lifetime_upgrade_card_viewed.
-10. Tests: Jest for reminder times (including a DST change), upgrade eligibility, per-week secondary line; RNTL for ✕ present and timeline only for weekly; Deno for the webhook; a lifetime user never loses unlimited when a subscription event arrives.
+9. Analytics hooks: paywall_viewed {source}, paywall_closed, trial_started, purchase, reminder_opt_in.
+10. Tests: Jest for reminder times (including a DST change) and for "switch off → no permission prompt, nothing scheduled"; RNTL for the switch default and the ✕ path to Sign in; Deno for the webhook (bad secret, duplicate event, trial start, renewal count, expiration, unknown product); Maestro e2e/paywall-close.yaml: the ✕ is visible on the first frame and leads to the free tier (runs on every build and on a schedule against the production offering, so it catches a dashboard change).
 
 Plan first.
 ```
 
-**Done when:** with a sandbox account you can start the weekly trial, get the reminder notification at the right time (use a short sandbox trial), buy lifetime, restore on a second device, and close the paywall to the free tier on the first frame.
+**Done when:** with a sandbox account you can start the annual trial, get the reminder notification at the right time (use a short sandbox trial), restore on a second device, and close the paywall to the free tier on the first frame; with the switch off no notification prompt appears; with permission denied the Home banner and keyboard bar show on the last trial day.
+
+---
+
+## Prompt 8b: Sign in (Apple, Google, email), skippable
+
+```
+Read docs/product-spec.md §2 (screen 6), §7 and §10, docs/architecture.md §4.1, inventory.md §1 (sign-in rows) and docs/decisions.md (2026-11-13, open questions). Use privacy-compliance (new personal data: email and Apple / Google identity), backend-engineer for Supabase Auth settings and delete-me, accessibility-auditor on the screen, i18n-localizer for strings.
+
+1. Sign-in screen after the paywall (onboarding screen 6) and from Settings, hidden on an under-18 install (the local flag also keeps AI off whatever account signs in): "Continue with Apple" (iOS, the system AppleAuthenticationButton from expo-apple-authentication), "Continue with Google" (@react-native-google-signin/google-signin), "Continue with email" (email + password, "Forgot password?"), "Not now" → Home. The one-line notice "We use your email only to sign you in and send account emails." with a Privacy link. Apple: email scope only, no full name; Google: no extra scopes. Strip any name / avatar Supabase stores in identity_data / raw_user_meta_data. Strings: onboarding:signIn.*.
+2. Link, don't replace: link the Apple / Google ID token or the email + password to the current anonymous Supabase user, so the user ID, device key, consent, quota, credits and entitlements stay. Then Purchases.logIn(<supabase user id>). Confirm in current supabase-js docs how ID-token linking works; tell me before falling back to a browser OAuth flow.
+3. Identity already linked to another account (reinstall, new phone): sign in to that account in a non-persisted client, delete the anonymous account right away by calling delete-me with its own JWT, then switch the session, Purchases.logIn with the existing ID, new device key if that account's consent is valid. Show what happened. Stop and ask me if this needs anything not in architecture §4.1.
+4. Supabase config: anonymous sign-ins on, manual linking on, email sign-up on, Apple and Google providers with the app's client IDs (supabase/config.toml for local; give me the dashboard checklist for staging and production, plus the custom SMTP sender for confirmation and reset emails).
+5. Settings: Sign in / Sign out (common:actions.signIn / signOut). Sign out revokes the device key and clears it, signs out of Supabase and RevenueCat; ask me what happens next (open question in docs/decisions.md) before building it.
+6. Apple token storage and revocation: an Edge Function exchanges the Sign in with Apple authorization code with Apple's REST API and stores the refresh token encrypted, so delete-me can revoke it. Handle Apple's server-to-server notifications for Sign in with Apple. Delete my data (prompt 10) then revokes the Apple token, deletes the RevenueCat customer, purges auth.audit_log_entries and deletes the auth user (architecture §4.1 step 6).
+7. Tests: Jest for the link / already-linked / cancelled paths with mocked SDKs; RNTL for the screen (Apple button only on iOS, Not now); Deno or integration test that a linked user keeps the same user ID, consent and credits; Maestro: skip sign-in path.
+
+Plan first.
+```
+
+**Done when:** on a real iPhone you can skip sign-in, then sign in later from Settings with Apple and keep your replies left, consent and subscription; on a second phone signing in with the same Apple ID restores the subscription; Delete my data removes the auth user.
 
 ---
 
@@ -1370,10 +1390,10 @@ Plan first.
 ```
 Read docs/product-spec.md §5 and §7 (Invite friends). Use backend-engineer for the server parts.
 
-1. App Home and Done screen show replies left today and when they come back ("Back at midnight"). Out-of-replies card in the app with "Go unlimited".
+1. App Home shows replies left today and when they come back ("Back at midnight"). Out-of-replies card in the app with "Go unlimited".
 2. Keyboard counter chip and QUOTA_EMPTY message stay in sync with the server: quota function on app foreground writes v1.quota; reply SSE quota events update it from the keyboard.
 3. Referral: referral function creates an 8-character code per user; invite screen shares https://replywise.app/r/<code> via the share sheet. Static landing page in web/ (5 languages) shows the code and store buttons, no tracking.
-4. "Enter a friend's code" in Settings and on the Done screen. One redemption per user, no self-redeem. When the redeemer's first reply_inserted event arrives, +10 credits for both (credit_ledger reason referral), once.
+4. "Enter a friend's code" in Settings. One redemption per user, no self-redeem. When the redeemer's first reply_inserted event arrives, +10 credits for both (credit_ledger reason referral), once.
 5. Optional notification "Your 3 free replies are back", off by default, at most once a day, only after a day the user ran out.
 6. Analytics: referral_shared, referral_redeemed, quota_hit (server).
 7. Tests: pgTAP for referral rules and reward once; Deno for redeem and reward trigger; Jest for counter display.
@@ -1390,14 +1410,14 @@ Plan first.
 ```
 Read docs/product-spec.md §7, §10 and §13. Use privacy-compliance to review and accessibility-auditor on the screens.
 
-1. Home: keyboard status card (Added, Full Access, with Fix buttons reopening the guides), replies left, Try-it field, Go unlimited, upgrade card, provider-down banner (from health).
+1. Home: the 3-step how-to, keyboard status card (Added, Full Access, with Fix buttons reopening the setup guide), replies left, Try-it field, Go unlimited, provider-down banner (from health).
 2. Settings, exactly the list in spec §7. App language and keyboard language/layout write to v1.defaults and v1.uiLang. I am / They are. Formality default.
 3. Allow AI replies toggle: off → consent withdraw, revoke device key, clear keychain, v1.aiEnabled = false; the keyboard shows AI_OFF on next open. On → consent screen again, new device key.
 4. Write to the maker: support function stores the message with app version, OS, language, plan (never chat text) and forwards it to the support inbox by email; confirmation "We reply within 48 hours".
-5. Delete my data: two-step confirmation in the app; delete-me function removes every row for the user, revokes device keys; app clears App Group, keychain, MMKV, signs out and returns to Welcome. Explain that store subscriptions are cancelled in the store and link to it.
+5. Delete my data: two-step confirmation in the app, first warning that deleting data doesn't cancel the subscription with a Manage subscription link (common:deleteData.*); delete-me revokes the Sign in with Apple token (Apple REST API), deletes the RevenueCat customer (REST API), purges the user's auth.audit_log_entries, revokes device keys and deletes the auth user (every row cascades); app clears App Group, keychain, MMKV, signs out and returns to Welcome. Add the Google Play account-deletion web page (web/, https://replywise.app/delete). Move the inactive-account purge from SQL to a scheduled Edge Function that runs the same steps (or record it as a follow-up if it doesn't fit this prompt).
 6. Upload MetricKit payloads (iOS) and the IME crash file (Android) from the App Group to Sentry when the app opens (Sentry is wired in prompt 13; queue them until then).
-7. Optional Sign in with Apple / Google to keep the account on a new phone (link to the anonymous user).
-8. Tests: Deno for delete-me (no rows left in any table), consent withdraw → reply returns 403 and device key fails; RNTL for settings states; Maestro: withdraw consent and delete my data.
+7. Sign in / Sign out in Settings comes from prompt 8b; Delete my data must delete the auth user (email and linked identities).
+8. Tests: Deno for delete-me (no rows left in any table, Apple revoke and RevenueCat delete called with a fake client, audit rows gone), consent withdraw → reply returns 403 and device key fails; RNTL for settings states; Maestro: withdraw consent and delete my data.
 
 Plan first.
 ```
@@ -1456,7 +1476,7 @@ Read inventory.md §5 and docs/product-spec.md §12.
 
 1. Sentry (EU) in the app and Edge Functions; beforeSend strips request bodies, clipboard text, drafts and replies. Upload queued MetricKit and IME crash payloads.
 2. PostHog (EU) in the app with only the client events in spec §12; server events from Edge Functions via the capture API (_shared/analytics.ts), no text, keyed by anonymous user ID. Wire all no-op hooks.
-3. Cost: admin SQL view daily_cost (requests, tokens, cost per provider, per language, per plan); a daily pg_cron job that emails or pings me if cost exceeds DAILY_COST_ALERT_EUR; cost per free user and per lifetime user per month.
+3. Cost: admin SQL view daily_cost (requests, tokens, cost per provider, per language, per plan); a daily pg_cron job that emails or pings me if cost exceeds DAILY_COST_ALERT_EUR; cost per free user and per annual subscriber per month (compare with docs/pricing.md).
 4. Better Stack: monitor the health endpoint; alert if both providers are down or p95 first-card latency > 3 s over 15 minutes (scheduled SQL check pinging a second monitor).
 5. Keyboard health from server data: daily reply requests, insert rate, thumbs-down rate per language and tone, fallback rate.
 6. docs/runbook.md: provider down, cost spike, keyboard crash spike after a release, a privacy incident (text found in logs).
@@ -1475,7 +1495,7 @@ Run the accessibility-auditor agent on every app screen, both keyboards and the 
 
 Also:
 - Check every screen and the keyboard bar at the largest text size and in German and French (longest strings) on a small iPhone (SE size) and a small Android phone.
-- Check the paywall in all 5 languages: the ✕, the trial timeline, the lifetime fair-use line and the auto-renew text all visible without scrolling on a small phone.
+- Check the RevenueCat paywall in all 5 languages: the ✕, the price per year, the trial timeline, the renewal text and the reminder switch all visible without scrolling on a small phone.
 - Write docs/a11y-manual-test.md: VoiceOver and TalkBack steps for onboarding, the paywall, switching to the keyboard, tapping Reply and inserting a card.
 
 Report what you changed and what still needs a human check.
@@ -1492,7 +1512,7 @@ Use the release-manager agent and the privacy-compliance agent.
 
 1. Final app.config.ts and eas.json for production. Version 1.0.0 for the app and the keyboard target.
 2. store/<lang>/ listing text for en, de, fr, es, it: name, subtitle, description (promise first; then what is sent and when, and that typing works without Full Access; then plan terms), keywords, what's new. No "rizz", no sexual framing, no competitor names. Age rating 18+.
-3. Screenshot plan: 6 per platform (keyboard in a chat with 3 replies, formality switch du/Sie, tone chips, "What Replywise can see", paywall with ✕ and timeline, lifetime) with caption text per language. Give me the exact device sizes needed.
+3. Screenshot plan: 6 per platform (keyboard in a chat with 3 replies, formality switch du/Sie, tone chips, "What Replywise can see", paywall with ✕ and timeline, Home with replies left) with caption text per language. Give me the exact device sizes needed.
 4. App Store privacy label and Google Play data safety answers that match docs/product-spec.md §10 exactly.
 5. Apple review notes (see release-manager): enabling the keyboard and Full Access, what is sent, the consent screen, the provider and EU processing, a demo path with a sample message to copy, restore purchases.
 6. Run the release-manager pre-release checklist and report each item.
@@ -1510,6 +1530,6 @@ Use the release-manager agent and the privacy-compliance agent.
 - **Emoji in replies** matching the chat's style (backlog item 13).
 - **Word prediction, haptics and three good themes** so people keep Replywise as the default keyboard (backlog item 16).
 - **"My voice" tone** learned from 10 replies the user approved; per-contact memory (backlog items 15 and 18).
-- **Launch-week lifetime intro price** with a fixed end date, and Family Sharing for lifetime (item 1 "Later").
+- **Family Sharing** for the annual plan (item 1 "Later"). Weekly and Lifetime were dropped on 2026-11-13; bring them back only as a new decision.
 - **Regional variants** (es-MX, fr-CA, de-CH, en-US) and on-device redaction before sending (items 2 and 7 "Later").
 - Each of these: start with "Read docs/teardown.md backlog item N and docs/product-spec.md, then propose a plan." For all images and icons use fal.ai (API key in `.env` as `FAL_KEY`, never committed).

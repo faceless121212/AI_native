@@ -9,7 +9,10 @@
     "close": "Close",
     "reply": "Reply",
     "polish": "Polish",
-    "more": "↻ More"
+    "more": "↻ More",
+    "signIn": "Sign in",
+    "signOut": "Sign out",
+    "manageSubscription": "Manage subscription"
   },
   "status": {
     "loading": "Loading",
@@ -20,5 +23,9 @@
     "error": "Error",
     "stepDone": "done",
     "stepCurrent": "current step"
+  },
+  "deleteData": {
+    "subscriptionWarningIos": "Deleting your data doesn't cancel your subscription. Cancel it in your App Store subscriptions first.",
+    "subscriptionWarningAndroid": "Deleting your data doesn't cancel your subscription. Cancel it in your Google Play subscriptions first."
   }
 }

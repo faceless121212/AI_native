@@ -19,7 +19,7 @@
     <string name="kb_bar_quota_empty">Keine Gratis-Antworten mehr. Morgen gibt’s neue – oder unbegrenzt in der Replywise-App.</string>
     <string name="kb_bar_fair_use">Tageslimit erreicht. Morgen geht’s weiter.</string>
     <string name="kb_bar_provider_down">KI-Antworten haben gerade Probleme. Versuch es gleich noch mal.</string>
-    <string name="kb_bar_last_trial_day">Deine Testphase endet morgen, danach %1$s/Woche. Verwalten in der Replywise-App.</string>
+    <string name="kb_bar_last_trial_day">Deine Testphase endet morgen, danach %1$s/Jahr. Verwalten in der Replywise-App.</string>
     <string name="kb_chip_rows_who">Wer</string>
     <string name="kb_chip_rows_closeness">Nähe</string>
     <string name="kb_chip_rows_tone">Ton</string>

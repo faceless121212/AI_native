@@ -16,6 +16,9 @@ Picking rule: TypeScript for the app and server, Swift and Kotlin only where the
 | Local storage | **react-native-mmkv** (settings cache), **expo-secure-store** (device key, with `accessGroup` set to the shared keychain group on iOS; check the option name in current docs) | | |
 | Shared with keyboard | Local Expo module **`modules/keyboard-bridge`** (Swift + Kotlin): read/write App Group `UserDefaults(suiteName:)` on iOS and `SharedPreferences` on Android; keyboard status (added, Full Access, default IME) | One small module we own instead of a third-party package | |
 | Forms | **react-hook-form** + **zod** | Same zod schemas as the server | Only the support form and Try-it field |
+| Sign in with Apple | **expo-apple-authentication** | Native system button and sheet ("Continue with Apple", localised by iOS); returns an identity token that Supabase Auth links to the anonymous user | iOS only. Required because Google sign-in is offered (App Store 4.8). Request the email scope only (no full name). Pass a hashed nonce; send the authorization code to an Edge Function that stores Apple's refresh token encrypted, so `delete-me` can revoke it; Apple shares the email (or a private relay address) only on the first sign-in |
+| Sign in with Google | **@react-native-google-signin/google-signin** (free version) | Picked over Supabase OAuth through **expo-auth-session**: a native account picker instead of a browser round-trip, no redirect-URL handling, and it is the path Supabase documents for Expo (`signInWithIdToken` / linking with the ID token). expo-auth-session stays a fallback if native ID-token linking turns out not to be supported | Needs a config plugin (iOS URL scheme from the iOS client ID) and a development build. No scopes beyond the default sign-in. Use the web client ID as the ID token audience; Supabase's Google provider lists the iOS, Android and web client IDs. Check current docs on the iOS nonce (Supabase's `skip_nonce_check`) |
+| Sign in with email | **supabase-js** Auth (`updateUser`, `signInWithPassword`, `resetPasswordForEmail`) | No extra library | Email + password, with "Forgot password?" (reset link back into the app via `replywise://`). Production needs a custom SMTP sender (EU); provider to pick |
 | Notifications | **expo-notifications**, local only | Trial-ends reminder, annual renewal reminder, optional "free replies are back" | No remote push in v1, so no push tokens |
 | Localization | **i18next** + **react-i18next** + **expo-localization** | en-GB, de, fr, es, it; plurals | Strings in `locales/<lang>/*.json`; a script generates keyboard string files |
 | Animation | **react-native-reanimated** | Keyboard setup guide animation, demo loop | Respect Reduce Motion |
@@ -43,22 +46,23 @@ Picking rule: TypeScript for the app and server, Swift and Kotlin only where the
 | Need | Use | Why | Notes |
 |---|---|---|---|
 | Database, auth, API | **Supabase**, region **Frankfurt (eu-central-1)** | Postgres + RLS + auth + Edge Functions; EU hosting | Free tier for dev, **Pro ($25/mo)** before launch |
-| User accounts | Supabase **anonymous sign-in** in the app, later linked to **Sign in with Apple / Google** | No email, phone or password in v1 | The keyboard uses a separate device key (architecture §4) |
+| User accounts | Supabase **anonymous sign-in** on first launch; after the paywall the user can sign in with **Apple** (iOS), **Google** or **email + password**, linked to the same user so the device key, consent, quota and RevenueCat app user ID are kept (decided 2026-11-13) | Sign-in is optional ("Not now"); it keeps the account and subscription on a new phone | Supabase Auth then holds the email and the Apple / Google identity (spec §10). The keyboard uses a separate device key (architecture §4) |
 | Server code | Supabase **Edge Functions** (Deno, TypeScript) | `reply`, `device-key`, `quota`, `consent`, `referral`, `support`, `webhooks-revenuecat`, `delete-me` | Invoke `reply` pinned to Frankfurt (region header `x-region: eu-central-1`; check current Supabase docs) |
 | LLM, primary | **Anthropic Claude on Amazon Bedrock** (SDK: `npm:@anthropic-ai/bedrock-sdk` with its `@aws-sdk/*` dependencies, in the `reply` Edge Function only) through the **EU cross-region inference profile** (model IDs start with `eu.`), source region Frankfurt (`eu-central-1`). A small fast model for replies (a current Claude Haiku-class model; check current model names in the Bedrock console) | EU geography processing; per AWS, model providers have no access to prompts and completions; no training on inputs | Check the account's Bedrock data-retention mode (AWS documents a `data_retention` setting and abuse-detection storage for some models) and pick the setting that stores nothing. Sign the AWS DPA (part of the AWS customer agreement) |
 | LLM, fallback | **Mistral AI La Plateforme** (Paris), a current Mistral Small-class model (check current model names) | EU company, EU hosting | Ask Mistral for zero data retention on the API account and confirm in writing before launch; sign their DPA |
 | LLM, development and staging | **Anthropic Claude API, direct** (`npm:@anthropic-ai/sdk` in the `reply` Edge Function), Claude Haiku 5.5 (`claude-haiku-5-5`) | The key the team has today; same Claude models as the Bedrock plan, so prompts carry over | **Not for production as it stands:** the direct API's `inference_geo` offers only `"global"` or `"us"`, so it can't back the "processed in the EU" promise. The `reply` function always refuses this provider when `APP_ENV=production` (and on hosted Supabase a missing `APP_ENV` counts as production). Data retention per Anthropic's commercial terms (confirm). Secret `ANTHROPIC_API_KEY` only in Edge Function secrets |
 | Prompt files | `supabase/functions/_shared/prompts/*.v1.md` | Versioned, reviewed like code | |
 | Evals | `evals/<prompt>/cases.jsonl` + `scripts/run-evals.ts` (Deno) | 20–40 cases per prompt, run on every prompt change | |
-| Cost guide | Log input/output tokens and cost per request in `ai_requests` | Budget assumption: a reply call is ~700 input + ~200 output tokens; multiply by current per-token prices | LLM cost per reply per language is unknown until measured in prompt 3; it decides the free allowance and the lifetime fair-use cap |
+| Cost guide | Log input/output tokens and cost per request in `ai_requests` | Measured: ≈2,624 input + 168 output tokens per reply on Claude Haiku 5.5, ≈€0.0003 per reply at direct-API prices | Worked numbers and the subscriber cap question are in `docs/pricing.md`; re-check with Bedrock (EU) and Mistral prices before launch |
 
 ## 4. Money
 
 | Need | Use | Why | Notes |
 |---|---|---|---|
-| Purchases | **RevenueCat** (`react-native-purchases` + `react-native-purchases-ui` for nothing but restore and manage; our own paywall screen) | One API over StoreKit 2 and Google Play Billing, webhooks to Supabase | Free until ~$2.5k monthly revenue, then ~1% (check current) |
-| Products | `weekly` €4.99 with 3-day free trial (introductory offer); `annual` €39.99; `lifetime` €59.99 non-consumable (Play: one-time in-app product); `lifetime_upgrade` (price to decide, only offered to weekly subscribers) | From the teardown v1 scope | Set GBP and other prices via store price tiers |
-| Entitlement | `unlimited` | One entitlement; weekly, annual, lifetime and lifetime_upgrade all grant it | Lifetime has a fair-use cap of 100 replies/day; subscriptions a silent abuse cap of 300/day |
+| Purchases | **RevenueCat** (`react-native-purchases`) | One API over StoreKit 2 and Google Play Billing, webhooks to Supabase | Free until ~$2.5k monthly revenue, then ~1% (check current). App user ID = the Supabase user ID; `Purchases.logIn` after sign-in |
+| Paywall | **RevenueCat Paywalls** (`react-native-purchases-ui`: `RevenueCatUI.Paywall` embedded in the app's paywall route) | Template and copy configured remotely in the RevenueCat dashboard (all 5 languages), store prices filled in by RevenueCat; replaces our own paywall screen (decided 2026-11-13) | The template must keep CLAUDE.md rule 8: ✕ shown from the first frame (no delay), price per billing period from the store, no countdown, no per-day headline (spec §6 lists every required setting). A Maestro flow checks the ✕. The app renders the "Remind me before the trial ends" switch under the paywall. `presentPaywall` isn't used because it can't hold the switch |
+| Products | `annual` only: €29.99/year with a 3-day free trial (introductory offer). Weekly and lifetime were removed on 2026-11-13 | €29.99 is the EUR reference price for App Store Connect and Play Console; reasoning in `docs/pricing.md` | GBP and other currencies via the stores' price tiers; the app always shows the store's price |
+| Entitlement | `unlimited` | One entitlement, granted by `annual` | Subscribers have a disclosed fair-use cap of 300 replies/day (`docs/pricing.md` recommends 100; open) |
 | Subscription management | StoreKit `showManageSubscriptions` (iOS), Play subscriptions deep link (Android); Apple refund link `reportaproblem.apple.com` | Settings "Manage or cancel", "Request a refund" | DE label "Verträge hier kündigen" |
 
 ## 5. Quality, monitoring, analytics
@@ -93,7 +97,7 @@ Picking rule: TypeScript for the app and server, Swift and Kotlin only where the
 
 | Need | Use | Notes |
 |---|---|---|
-| Privacy policy and terms | **iubenda** or a lawyer | Must cover the other person's messages, AI providers (AWS, Mistral), Supabase, RevenueCat, Sentry, PostHog, Expo; lifetime fair-use line |
+| Privacy policy and terms | **iubenda** or a lawyer | Must cover the other person's messages, AI providers (AWS, Mistral), Supabase (including Auth: email and Apple / Google identity for signed-in users), RevenueCat, Sentry, PostHog, Expo; the subscriber fair-use cap |
 | DPIA | `docs/dpia.md` drafted in prompt 12, reviewed by a lawyer | Chats can contain special-category data (GDPR Art. 9) |
 | Data processing agreements | Sign each vendor's DPA | List in `docs/processors.md` |
 | Domain and DNS | **Cloudflare** | Privacy pages, referral landing `/r/<code>`, support email |
@@ -107,7 +111,7 @@ Picking rule: TypeScript for the app and server, Swift and Kotlin only where the
 4. **Supabase**: free project in Frankfurt for dev; a second project for production later.
 5. **AWS account**: enable Amazon Bedrock in `eu-central-1`, request access to the Claude model you'll use, create an IAM user with `bedrock:InvokeModelWithResponseStream` on the EU inference profile only. Model access approval can take time; start now.
 6. **Mistral AI** La Plateforme: API key; request zero data retention.
-7. **RevenueCat**: free; connect App Store Connect and Play Console in prompt 8.
+7. **RevenueCat**: free; connect App Store Connect and Play Console in prompt 8; build the paywall template there. For sign-in (prompt 8b): a **Google Cloud** project with OAuth client IDs (iOS, Android, web), and the **Sign in with Apple** capability on the App ID.
 8. **Sentry** (EU) and **PostHog** (EU): free tiers.
 9. **Better Stack**: free tier.
 10. **GitHub**: private repo.
@@ -128,7 +132,6 @@ Node LTS, Git, Xcode (latest, with iOS simulator), Android Studio (with emulator
 | Firebase Analytics, Meta SDK, AppsFlyer, Adjust | Ad tracking → ATT prompt; 高情商键盘's tracking SDKs are a trust risk in the teardown |
 | Contacts, photos, location, phone number | Not needed for a reply keyboard; GDPR minimisation; Lovekey reviewers question it |
 | Screenshot/OCR input in v1 | Backlog item 14; more data, more cost |
-| Email + password login | Anonymous + Apple/Google is enough |
 | Remote push | Only local reminders are needed in v1 |
 
 ## 11. Monthly running cost at launch (rough, check current)

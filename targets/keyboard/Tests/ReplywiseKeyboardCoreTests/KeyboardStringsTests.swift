@@ -41,8 +41,8 @@ final class KeyboardStringsTests: XCTestCase {
     func testPlaceholdersAreFilled() {
         for language in SupportedLanguage.allCases {
             let strings = KeyboardStrings.forLanguage(language)
-            let trial = strings.barLastTrialDay(price: "€4.99")
-            XCTAssertTrue(trial.contains("€4.99"), "\(language)")
+            let trial = strings.barLastTrialDay(price: "€29.99")
+            XCTAssertTrue(trial.contains("€29.99"), "\(language)")
             XCTAssertFalse(trial.contains("{{"), "\(language)")
             XCTAssertTrue(strings.counterLeftToday(count: 3).contains("3"), "\(language)")
         }

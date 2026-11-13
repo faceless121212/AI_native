@@ -100,7 +100,7 @@ Deno.test('SSE payloads', () => {
     fairUseLeft: null,
   });
   ok(QuotaEvent, {
-    plan: 'lifetime',
+    plan: 'annual',
     leftToday: null,
     resetAt: '2026-11-01T00:00:00Z',
     fairUseLeft: 99,
@@ -117,6 +117,10 @@ Deno.test('SSE payloads', () => {
     resetAt: '2026-11-01T00:00:00Z',
     fairUseLeft: null,
   });
+  // Weekly and lifetime were removed on 2026-11-13 (annual only).
+  for (const plan of ['weekly', 'lifetime']) {
+    bad(QuotaEvent, { plan, leftToday: null, resetAt: '2026-11-01T00:00:00Z', fairUseLeft: 99 });
+  }
   ok(DoneEvent, { requestId, cards: 3 });
   ok(ErrorEvent, { error: 'provider_down', message: 'AI replies are having trouble.' });
   bad(ErrorEvent, { error: 'teapot', message: '' });

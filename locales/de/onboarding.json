@@ -8,5 +8,29 @@
   "actions": {
     "allowAi": "KI-Antworten erlauben",
     "notNow": "Nicht jetzt"
+  },
+  "age": {
+    "actions": {
+      "adult": "Ich bin 18+, los geht’s",
+      "under18": "Ich bin unter 18"
+    },
+    "under18Stop": "Replywise ist für Erwachsene. KI-Antworten sind aus."
+  },
+  "keyboardSetup": {
+    "actions": {
+      "openSettings": "Einstellungen öffnen",
+      "done": "Hab ich gemacht"
+    }
+  },
+  "signIn": {
+    "actions": {
+      "google": "Weiter mit Google",
+      "email": "Weiter mit E-Mail",
+      "forgotPassword": "Passwort vergessen?"
+    },
+    "emailLabel": "E-Mail",
+    "passwordLabel": "Passwort",
+    "notice": "Wir nutzen deine E-Mail-Adresse nur für die Anmeldung und für E-Mails zu deinem Konto.",
+    "privacyLink": "Datenschutz"
   }
 }

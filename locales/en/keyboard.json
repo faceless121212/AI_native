@@ -20,7 +20,7 @@
     "quotaEmpty": "Out of free replies. More tomorrow, or go unlimited in the Replywise app.",
     "fairUse": "Daily limit reached. Back tomorrow.",
     "providerDown": "AI replies are having trouble. Try again in a minute.",
-    "lastTrialDay": "Your free trial ends tomorrow: {{price}}/week after that. Manage in the Replywise app."
+    "lastTrialDay": "Your free trial ends tomorrow: {{price}}/year after that. Manage in the Replywise app."
   },
   "chipRows": {
     "who": "Who",

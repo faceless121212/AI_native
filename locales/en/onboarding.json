@@ -8,5 +8,29 @@
   "actions": {
     "allowAi": "Allow AI replies",
     "notNow": "Not now"
+  },
+  "age": {
+    "actions": {
+      "adult": "I'm 18+, let's go",
+      "under18": "I'm under 18"
+    },
+    "under18Stop": "Replywise is for adults. AI replies are off."
+  },
+  "keyboardSetup": {
+    "actions": {
+      "openSettings": "Open Settings",
+      "done": "I've done it"
+    }
+  },
+  "signIn": {
+    "actions": {
+      "google": "Continue with Google",
+      "email": "Continue with email",
+      "forgotPassword": "Forgot password?"
+    },
+    "emailLabel": "Email",
+    "passwordLabel": "Password",
+    "notice": "We use your email only to sign you in and send account emails.",
+    "privacyLink": "Privacy"
   }
 }

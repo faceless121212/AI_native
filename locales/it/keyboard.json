@@ -20,7 +20,7 @@
     "quotaEmpty": "Risposte gratis finite. Altre domani, o passa all’illimitato nell’app Replywise.",
     "fairUse": "Limite giornaliero raggiunto. Torna domani.",
     "providerDown": "Le risposte IA hanno qualche problema. Riprova tra un minuto.",
-    "lastTrialDay": "La prova gratuita finisce domani, poi {{price}}/settimana. Gestiscila nell’app Replywise."
+    "lastTrialDay": "La prova gratuita finisce domani, poi {{price}}/anno. Gestiscila nell’app Replywise."
   },
   "chipRows": {
     "who": "Chi",

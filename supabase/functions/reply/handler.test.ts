@@ -208,7 +208,7 @@ Deno.test(
   async () => {
     const { store, handler } = setupReply();
     const { token, userId } = await aiUser(store);
-    store.entitlements.push({ userId, product: 'weekly', active: true, expiresAt: null });
+    store.entitlements.push({ userId, product: 'annual', active: true, expiresAt: null });
     const other = setupReply({ store });
     for (let i = 0; i < 20; i++) await readEvents(await other.handler(replyRequest(token)));
     // This instance's limiter has seen nothing; consume_reply still refuses.
@@ -217,15 +217,15 @@ Deno.test(
   },
 );
 
-Deno.test('reply: 429 fair_use at the lifetime cap of 100 a day', async () => {
+Deno.test('reply: 429 fair_use at the subscriber cap of 300 a day', async () => {
   const { store, handler } = setupReply({ rateLimiter: new RateLimiter(1000) });
   const { token, userId } = await aiUser(store);
-  store.entitlements.push({ userId, product: 'lifetime', active: true, expiresAt: null });
-  store.usage.set(`${userId}|${new Date().toISOString().slice(0, 10)}`, 99);
+  store.entitlements.push({ userId, product: 'annual', active: true, expiresAt: null });
+  store.usage.set(`${userId}|${new Date().toISOString().slice(0, 10)}`, 299);
   const ok = await handler(replyRequest(token));
   const events = await readEvents(ok);
   assertEquals(events.find((e) => e.event === 'quota')!.data, {
-    plan: 'lifetime',
+    plan: 'annual',
     leftToday: null,
     resetAt: events.find((e) => e.event === 'quota')!.data.resetAt,
     fairUseLeft: 0,

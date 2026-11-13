@@ -3,7 +3,7 @@
 -- metadata-only constraints.
 begin;
 \ir _helpers.psql
-select plan(35);
+select plan(36);
 
 select tests.create_user() as a \gset user_a_
 select tests.create_user() as b \gset user_b_
@@ -72,6 +72,7 @@ select throws_ok(format($$ insert into public.ai_requests (user_id, kind, source
 select throws_ok(format($$ insert into public.reply_events (user_id, card_index, type) values (%L, 3, 'up') $$, :'user_a_a'), '23514', null, 'reply_events.card_index is 0–2');
 select throws_ok(format($$ insert into public.support_messages (user_id, body) values (%L, repeat('x', 2001)) $$, :'user_a_a'), '23514', null, 'support body is at most 2000 chars');
 select throws_ok(format($$ insert into public.support_messages (user_id, body, reply_email) values (%L, 'hi', 'not an email') $$, :'user_a_a'), '23514', null, 'reply_email must look like an email');
+select throws_ok(format($$ insert into public.support_messages (user_id, body, app_version, os, ui_lang, plan) values (%L, 'hi', '0.1.0', 'iOS 26.1', 'en', 'lifetime') $$, :'user_a_a'), '23514', null, 'support plan is free or annual (weekly and lifetime removed 2026-11-13)');
 
 -- Feedback outlives its request row (12 months vs 90 days).
 delete from public.ai_requests where id = '11111111-1111-4111-8111-111111111111';

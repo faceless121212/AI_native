@@ -2,7 +2,7 @@
 -- anon reads nothing; table constraints.
 begin;
 \ir _helpers.psql
-select plan(38);
+select plan(40);
 
 select tests.create_user() as a \gset user_a_
 select tests.create_user() as b \gset user_b_
@@ -15,7 +15,7 @@ insert into public.usage_days (user_id, local_date, used) values
 insert into public.credit_ledger (user_id, delta, reason) values
   (:'user_a_a', 10, 'starter'), (:'user_b_b', 10, 'referral');
 insert into public.entitlements (user_id, product, active) values
-  (:'user_a_a', 'lifetime', true), (:'user_b_b', 'annual', true);
+  (:'user_a_a', 'annual', true), (:'user_b_b', 'annual', true);
 insert into public.referrals (code, owner_id) values ('AAAA2222', :'user_a_a'), ('BBBB3333', :'user_b_b');
 
 -- Per table: A sees only A, B sees only B, A cannot write, anon cannot read.
@@ -30,7 +30,7 @@ select throws_ok(format($$ update public.usage_days set used = 0 where user_id =
 select throws_ok(format($$ delete from public.usage_days where user_id = %L $$, :'user_b_b'), '42501', null, 'usage_days: no client delete');
 select throws_ok(format($$ insert into public.credit_ledger (user_id, delta, reason) values (%L, 100, 'admin') $$, :'user_a_a'), '42501', null, 'credit_ledger: no client insert');
 select throws_ok(format($$ delete from public.credit_ledger where user_id = %L $$, :'user_a_a'), '42501', null, 'credit_ledger: no client delete');
-select throws_ok(format($$ insert into public.entitlements (user_id, product, active) values (%L, 'weekly', true) $$, :'user_a_a'), '42501', null, 'entitlements: no client insert');
+select throws_ok(format($$ insert into public.entitlements (user_id, product, active) values (%L, 'annual', true) $$, :'user_a_a'), '42501', null, 'entitlements: no client insert');
 select throws_ok(format($$ update public.entitlements set active = true where user_id = %L $$, :'user_b_b'), '42501', null, 'entitlements: no client update');
 select throws_ok(format($$ insert into public.referrals (code, owner_id) values ('CCCC4444', %L) $$, :'user_a_a'), '42501', null, 'referrals: no client insert');
 select throws_ok(format($$ update public.referrals set redeemed_by = %L where code = 'BBBB3333' $$, :'user_a_a'), '42501', null, 'referrals: no client redeem');
@@ -68,9 +68,11 @@ select throws_ok(format($$ insert into public.credit_ledger (user_id, delta, rea
 select throws_ok(format($$ insert into public.credit_ledger (user_id, delta, reason) values (%L, 5, 'gift') $$, :'user_a_a'), '23514', null, 'credit_ledger.reason is from the list');
 select throws_ok(format($$ insert into public.credit_ledger (user_id, delta, reason) values (%L, -10, 'starter') $$, :'user_b_b'), '23514', null, 'starter credits are positive');
 select throws_ok(format($$ update public.credit_ledger set delta = 99 where user_id = %L $$, :'user_a_a'), '23001', null, 'credit_ledger is append-only');
-select throws_ok(format($$ update public.entitlements set expires_at = now() where user_id = %L and product = 'lifetime' $$, :'user_a_a'), '23514', null, 'lifetime never expires');
-select throws_ok(format($$ insert into public.entitlements (user_id, product, is_trial) values (%L, 'annual', true) $$, :'user_a_a'), '23514', null, 'only weekly has a trial');
+select throws_ok(format($$ insert into public.entitlements (user_id, product) values (%L, 'weekly') $$, :'user_a_a'), '23514', null, 'weekly was removed (annual only, 2026-11-13)');
+select throws_ok(format($$ insert into public.entitlements (user_id, product) values (%L, 'lifetime') $$, :'user_a_a'), '23514', null, 'lifetime was removed (annual only, 2026-11-13)');
 select throws_ok(format($$ insert into public.entitlements (user_id, product) values (%L, 'monthly') $$, :'user_a_a'), '23514', null, 'unknown product rejected');
+select lives_ok(format($$ update public.entitlements set is_trial = true, trial_ends_at = now() + interval '3 days' where user_id = %L and product = 'annual' $$, :'user_a_a'), 'annual carries the 3-day trial');
+select throws_ok(format($$ update public.entitlements set is_trial = true, trial_ends_at = null where user_id = %L and product = 'annual' $$, :'user_a_a'), '23514', null, 'a trial needs an end date');
 select throws_ok(format($$ insert into public.referrals (code, owner_id) values ('short', %L) $$, :'user_a_a'), '23514', null, 'referral code is 8 chars from the safe alphabet');
 select throws_ok(format($$ insert into public.referrals (code, owner_id) values ('OOOO1111', %L) $$, :'user_a_a'), '23514', null, 'look-alike characters are not used in codes');
 select throws_ok(format($$ update public.referrals set redeemed_by = %L, redeemed_at = now() where code = 'AAAA2222' $$, :'user_a_a'), '23514', null, 'no self-redeem');

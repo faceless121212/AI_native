@@ -27,8 +27,7 @@ Notes that apply to more than one language:
 | de | keyboard:chipRows.formality | Förmlichkeit | Alternative "Anrede", since it maps to du/Sie |
 | de | common:actions.polish | Verbessern | "Polish" button; alternatives "Feinschliff", "Aufpolieren" |
 | de | keyboard:counter.leftToday_* | Heute noch {{count}} | Bare number with no noun; is it clear on a chip? |
-| de | keyboard:bar.lastTrialDay | Deine Testphase endet morgen, danach {{price}}/Woche. Verwalten in der Replywise-App. | "Verwalten" is an infinitive used as an instruction |
-| de | paywall:fairUse | Faire Nutzung: bis zu 100 Antworten pro Tag. | "Fair Use" is also common in German |
+| de | keyboard:bar.lastTrialDay | Deine Testphase endet morgen, danach {{price}}/Jahr. Verwalten in der Replywise-App. | "Verwalten" is an infinitive used as an instruction |
 | fr | keyboard:tone.warm | Chaleureux | Tone chip; agrees with "ton" (masc.) |
 | fr | keyboard:tone.funny | Drôle | Tone chip |
 | fr | keyboard:tone.flirty | Flirt | Tone chip; noun to avoid "Charmeur/Charmeuse" |
@@ -75,7 +74,6 @@ Notes that apply to more than one language:
 | it | keyboard:flirt.off | Spento | Alternative "No" |
 | it | common:actions.polish | Migliora | "Polish" button; alternative "Rifinisci" |
 | it | common:status.stepOf | Passaggio {{current}} di {{total}} | Alternative "Fase" |
-| it | paywall:fairUse | Uso corretto: fino a 100 risposte al giorno. | Alternative "Uso equo" |
 | all | keyboard:bar.noFullAccessPath | see note above | Full Access toggle label not confirmed from an Apple source |
 
 ## Added after review (main session, needs a native check)
@@ -87,7 +85,6 @@ Notes that apply to more than one language:
 | it | keyboard:counter.leftToday_one / _other | Ancora {{count}} | Same: "oggi" dropped to fit 14 characters |
 | de/fr/es/it | common:status.info, success, warning, error | see common.json | Screen-reader words for banner severity |
 | de/fr/es/it | common:status.stepDone, stepCurrent | see common.json | Screen-reader state of a setup step; fr "terminée" agrees with "étape" |
-| de/fr/es/it | paywall:plansLabel | see paywall.json | Screen-reader name of the plan list (radio group) |
 
 ## Copy change: data line and trial reminder (needs a native check)
 
@@ -154,3 +151,31 @@ Casing: German capitalises its nouns and verbs on keys. fr, es and it use lower 
 | fr | keyboard:keys.shiftOn / shiftOff | activé / désactivé | Same; masculine agrees with « le Maj » |
 | es | keyboard:keys.shiftOn / shiftOff | activado / desactivado | Same |
 | it | keyboard:keys.shiftOn / shiftOff | attivo / disattivato | Same; check whether VoiceOver says "attivato" |
+
+## Product decisions 2026-11-13: annual only, new onboarding, sign-in (needs a native check)
+
+Removed with the weekly and lifetime plans and the in-app paywall (the paywall is now a RevenueCat Paywall; its copy is localised in the RevenueCat dashboard, not here): `paywall:trialTimeline`, `paywall:perWeek`, `paywall:lifetimeLine`, `paywall:fairUse`, `paywall:plansLabel`.
+
+Changed: the price period in `keyboard:bar.lastTrialDay`, `notifications:trialEndsTomorrowIos` and `notifications:trialEndsTomorrowAndroid` is now per year (en /year, de /Jahr, fr /an, es /año, it /anno).
+
+New (first drafts by Claude, no native review yet). The "Continue with Apple" button is the system `AppleAuthenticationButton`, localised by iOS, so it has no string here.
+
+| Language | Key | Translation | Why check |
+|---|---|---|---|
+| de | onboarding:age.actions.adult | Ich bin 18+, los geht’s | Button (23 of 24) |
+| fr | onboarding:age.actions.adult | J’ai 18 ans ou plus | Drops "let's go": "J’ai 18+, c’est parti" reads oddly and longer forms pass 24 |
+| es | onboarding:age.actions.adult | Tengo 18 o más, ¡vamos! | Button (23 of 24) |
+| it | onboarding:age.actions.adult | Ho 18+ anni, iniziamo | "18+ anni" is informal; alternative "Sono maggiorenne" |
+| de/fr/es/it | onboarding:age.under18Stop | see onboarding.json | Spec §2 stop-screen copy |
+| de | onboarding:keyboardSetup.actions.done | Hab ich gemacht | "I've done it"; alternative "Erledigt" |
+| fr | onboarding:keyboardSetup.actions.openSettings | Ouvrir les réglages | iOS app is "Réglages", Android "Paramètres"; one label for both |
+| es | onboarding:keyboardSetup.actions.openSettings | Abrir Ajustes | iOS "Ajustes"; Android "Ajustes" too on most phones |
+| it | onboarding:keyboardSetup.actions.done | Fatto | Short; alternative "L’ho fatto" |
+| fr | paywall:reminderSwitch | Me rappeler avant la fin de l’essai | Switch label on the paywall |
+| es | onboarding:signIn.actions.email | Continuar con correo | "con email" is also common in Spain |
+| es | onboarding:signIn.actions.forgotPassword | ¿Contraseña olvidada? | "¿Has olvidado la contraseña?" is 28, over the 24 button limit |
+| it | onboarding:signIn.actions.email | Continua con l’email | |
+| de/fr/es/it | common:actions.signIn / signOut | Anmelden/Abmelden · Se connecter/Se déconnecter · Iniciar sesión/Cerrar sesión · Accedi/Esci | Settings row |
+| de/fr/es/it | paywall:fairUse_one / _other | see paywall.json | Fair-use line under the paywall; reuses the earlier fairUse wording, now with {{count}} |
+| de/fr/es/it | onboarding:signIn.notice / privacyLink | see onboarding.json | Sign-in privacy notice (privacy review) |
+| de/fr/es/it | common:deleteData.subscriptionWarningIos / Android, common:actions.manageSubscription | see common.json | Warning before Delete my data; store screen names as in the trial notifications |

@@ -8,5 +8,29 @@
   "actions": {
     "allowAi": "Consenti risposte IA",
     "notNow": "Non ora"
+  },
+  "age": {
+    "actions": {
+      "adult": "Ho 18+ anni, iniziamo",
+      "under18": "Ho meno di 18 anni"
+    },
+    "under18Stop": "Replywise è per adulti. Le risposte IA sono disattivate."
+  },
+  "keyboardSetup": {
+    "actions": {
+      "openSettings": "Apri Impostazioni",
+      "done": "Fatto"
+    }
+  },
+  "signIn": {
+    "actions": {
+      "google": "Continua con Google",
+      "email": "Continua con l’email",
+      "forgotPassword": "Password dimenticata?"
+    },
+    "emailLabel": "Email",
+    "passwordLabel": "Password",
+    "notice": "Usiamo la tua email solo per farti accedere e inviarti email sul tuo account.",
+    "privacyLink": "Privacy"
   }
 }

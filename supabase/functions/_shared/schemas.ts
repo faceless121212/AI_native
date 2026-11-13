@@ -56,8 +56,8 @@ export type RequestSource = z.infer<typeof RequestSource>;
 export const Platform = z.enum(['ios', 'android']);
 export type Platform = z.infer<typeof Platform>;
 
-/** Plan as seen by clients; lifetime_upgrade counts as lifetime. */
-export const Plan = z.enum(['free', 'weekly', 'annual', 'lifetime']);
+/** Plan as seen by clients. Annual is the only paid product (decision 2026-11-13, spec §6). */
+export const Plan = z.enum(['free', 'annual']);
 export type Plan = z.infer<typeof Plan>;
 
 /**

@@ -9,7 +9,10 @@
     "close": "Fermer",
     "reply": "Répondre",
     "polish": "Peaufiner",
-    "more": "↻ Autres"
+    "more": "↻ Autres",
+    "signIn": "Se connecter",
+    "signOut": "Se déconnecter",
+    "manageSubscription": "Gérer l’abonnement"
   },
   "status": {
     "loading": "Chargement",
@@ -20,5 +23,9 @@
     "error": "Erreur",
     "stepDone": "terminée",
     "stepCurrent": "étape en cours"
+  },
+  "deleteData": {
+    "subscriptionWarningIos": "Supprimer tes données n’annule pas ton abonnement. Annule-le d’abord dans tes abonnements App Store.",
+    "subscriptionWarningAndroid": "Supprimer tes données n’annule pas ton abonnement. Annule-le d’abord dans tes abonnements Google Play."
   }
 }

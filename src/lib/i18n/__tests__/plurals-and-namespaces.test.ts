@@ -20,7 +20,9 @@ describe('plurals', () => {
   });
 
   it('fills placeholders', () => {
-    expect(i18n.t('paywall:perWeek', { lng: 'de', price: '0,77 €' })).toContain('0,77 €');
+    expect(i18n.t('keyboard:bar.lastTrialDay', { lng: 'de', price: '29,99 €' })).toContain(
+      '29,99 €/Jahr',
+    );
   });
 });
 
