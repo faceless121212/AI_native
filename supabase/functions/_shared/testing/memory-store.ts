@@ -304,8 +304,8 @@ export class MemoryStore implements AuthDeps, ConsentRepo, ProfileRepo, DeviceKe
         e.userId === userId && e.active && (e.expiresAt === null || Date.parse(e.expiresAt) > now),
     );
     if (active.length === 0) return { plan: 'free', cap: null };
-    // Annual is the only product; subscribers have a silent 300/day abuse cap (reply_plan).
-    return { plan: 'annual', cap: 300 };
+    // Annual is the only product; subscribers have a fair-use cap of 100/day (reply_plan).
+    return { plan: 'annual', cap: 100 };
   }
 
   private creditsOf(userId: string): { starter: number; bonus: number } {

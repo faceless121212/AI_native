@@ -24,13 +24,9 @@
   },
   "signIn": {
     "actions": {
-      "google": "Continuar con Google",
-      "email": "Continuar con correo",
-      "forgotPassword": "¿Contraseña olvidada?"
+      "google": "Continuar con Google"
     },
-    "emailLabel": "Correo electrónico",
-    "passwordLabel": "Contraseña",
-    "notice": "Usamos tu correo solo para iniciar sesión y enviarte emails sobre tu cuenta.",
+    "notice": "Usamos tu inicio de sesión con Apple o Google solo para mantener tu plan en todos tus dispositivos.",
     "privacyLink": "Privacidad"
   }
 }

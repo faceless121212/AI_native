@@ -6,7 +6,7 @@ Decided by the user on 2026-11-13 (`docs/decisions.md`). Behaviour lives in `doc
 
 - One paid plan: **Annual, 3-day free trial**. EUR reference price **€29.99/year** for App Store Connect and Play Console; other currencies use the stores' price tiers. The app always shows the store's price at runtime, never this number.
 - Free tier unchanged: 10 starter replies, then 3 a day.
-- Subscribers: a fair-use cap of **300 replies a day** today, disclosed on the paywall and in the terms (spec §5, SQL `reply_plan`). See "The subscriber cap" below.
+- Subscribers: a fair-use cap of **100 replies a day** (decided 2026-11-13; was 300), disclosed on the paywall and in the terms (spec §5, SQL `reply_plan`). See "The subscriber cap" below.
 
 ## Cost per reply
 
@@ -26,8 +26,8 @@ One "reply" is one Reply, ↻ More, chip update or Polish request (spec §5). Th
 |---|---|---|
 | Free user at the daily limit (3/day) | 1,095 (+10 starter) | ≈€0.33 |
 | Heavy subscriber (30/day) | 10,950 | ≈€3.30, call it **≈€3.50** with headroom |
-| Subscriber at a 100/day cap, every day | 36,500 | **≈€11** |
-| Subscriber at the current 300/day cap, every day (worst case) | 109,500 | **≈€33** |
+| Subscriber at the 100/day cap, every day (worst case) | 36,500 | **≈€11** |
+| For comparison: the old 300/day cap, every day | 109,500 | ≈€33 |
 
 ## Revenue per subscriber
 
@@ -44,10 +44,10 @@ Not included: RevenueCat's fee (~1% of tracked revenue above its free tier), tri
 ## The subscriber cap
 
 - At 30 replies a day a subscriber costs ≈€3.50 a year against ≈€21 net: a healthy margin.
-- At the current 300/day cap, one subscriber who maxes it out every day costs ≈€33 a year, **more than they pay** (≈€21 net).
+- At the old 300/day cap, one subscriber who maxed it out every day would have cost ≈€33 a year, **more than they pay** (≈€21 net).
 - At 100/day the worst case is ≈€11 a year, still covered by the ≈€21 net, and 100 replies a day is far above real use (a heavy user is ~30).
 
-**Recommendation: lower the subscriber cap from 300 to 100 a day.** Not applied: the user kept the cap unchanged on 2026-11-13, so this is an open question. Changing it means one SQL change (`reply_plan`), the in-memory test store, the pgTAP and Deno tests that assert 300, spec §5, and the privacy policy and terms (the cap must be disclosed before purchase).
+**Decided 2026-11-13: the subscriber cap is 100 replies a day** (migration `20261113130000_fair_use_cap_100.sql`). It is disclosed before purchase on the paywall ("Fair use: up to 100 replies a day") and must be in the terms.
 
 ## Production providers price differently
 

@@ -146,22 +146,22 @@ select is((tests.consume(:'l_u', '2026-10-25T23:59:59Z')) ->> 'status', 'quota_e
 select is((tests.consume(:'l_u', '2026-10-26T00:00:00Z')) ->> 'status', 'ok', 'London: allowance back at 00:00 GMT');
 
 -- ---------------------------------------------------------------------------------------------
--- Paid (annual only since 2026-11-13): a silent 300/day abuse cap; credits untouched.
+-- Paid (annual only since 2026-11-13): a fair-use cap of 100/day (was 300 until 2026-11-13); credits untouched.
 select tests.ai_user('Europe/Berlin', true) as u \gset paid_
 insert into public.entitlements (user_id, product, active) values (:'paid_u', 'annual', true);
 select is((tests.consume(:'paid_u', '2026-11-02T10:00:00Z')) ->> 'charge', 'paid', 'annual: charged against fair use, not credits');
 select results_eq(format($$ select r ->> 'plan', r -> 'left_today', (r ->> 'fair_use_left')::int from (select public.quota_state(%L, '2026-11-02T10:00:01Z') r) q $$, :'paid_u'),
-  $$ values ('annual'::text, 'null'::jsonb, 299) $$, 'annual: 299 fair-use left, left_today null');
+  $$ values ('annual'::text, 'null'::jsonb, 99) $$, 'annual: 99 fair-use left, left_today null');
 select is((public.reply_credits(:'paid_u')).starter_left, 10, 'starter credits are not used by paid plans');
-update public.usage_days set used = 299 where user_id = :'paid_u' and local_date = '2026-11-02';
-select is((tests.consume(:'paid_u', '2026-11-02T10:05:00Z')) ->> 'fair_use_left', '0', 'annual: 300th reply ok, 0 left');
-select is((tests.consume(:'paid_u', '2026-11-02T10:06:00Z')) ->> 'status', 'fair_use', 'annual: 301st → fair_use');
+update public.usage_days set used = 99 where user_id = :'paid_u' and local_date = '2026-11-02';
+select is((tests.consume(:'paid_u', '2026-11-02T10:05:00Z')) ->> 'fair_use_left', '0', 'annual: 100th reply ok, 0 left');
+select is((tests.consume(:'paid_u', '2026-11-02T10:06:00Z')) ->> 'status', 'fair_use', 'annual: 101st → fair_use');
 
 select tests.ai_user('Europe/London', false) as u \gset sub_
 insert into public.entitlements (user_id, product, active, expires_at, will_renew) values (:'sub_u', 'annual', true, '2026-11-09T00:00:00Z', true);
-insert into public.usage_days (user_id, local_date, used) values (:'sub_u', '2026-11-02', 299);
+insert into public.usage_days (user_id, local_date, used) values (:'sub_u', '2026-11-02', 99);
 select is((tests.consume(:'sub_u', '2026-11-02T10:00:00Z')) ->> 'plan', 'annual', 'annual subscription plan');
-select is((tests.consume(:'sub_u', '2026-11-02T10:01:00Z')) ->> 'status', 'fair_use', 'subscription: 300/day cap');
+select is((tests.consume(:'sub_u', '2026-11-02T10:01:00Z')) ->> 'status', 'fair_use', 'subscription: 100/day cap');
 select is((tests.consume(:'sub_u', '2026-11-10T10:00:00Z')) ->> 'plan', 'free', 'expired subscription → free');
 
 update public.entitlements set active = false where user_id = :'sub_u';

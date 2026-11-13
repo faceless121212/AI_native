@@ -172,10 +172,19 @@ New (first drafts by Claude, no native review yet). The "Continue with Apple" bu
 | es | onboarding:keyboardSetup.actions.openSettings | Abrir Ajustes | iOS "Ajustes"; Android "Ajustes" too on most phones |
 | it | onboarding:keyboardSetup.actions.done | Fatto | Short; alternative "L’ho fatto" |
 | fr | paywall:reminderSwitch | Me rappeler avant la fin de l’essai | Switch label on the paywall |
-| es | onboarding:signIn.actions.email | Continuar con correo | "con email" is also common in Spain |
-| es | onboarding:signIn.actions.forgotPassword | ¿Contraseña olvidada? | "¿Has olvidado la contraseña?" is 28, over the 24 button limit |
-| it | onboarding:signIn.actions.email | Continua con l’email | |
 | de/fr/es/it | common:actions.signIn / signOut | Anmelden/Abmelden · Se connecter/Se déconnecter · Iniciar sesión/Cerrar sesión · Accedi/Esci | Settings row |
 | de/fr/es/it | paywall:fairUse_one / _other | see paywall.json | Fair-use line under the paywall; reuses the earlier fairUse wording, now with {{count}} |
-| de/fr/es/it | onboarding:signIn.notice / privacyLink | see onboarding.json | Sign-in privacy notice (privacy review) |
+| de/fr/es/it | onboarding:signIn.notice / privacyLink | see onboarding.json | Sign-in notice, changed 2026-11-13 to "We use your Apple or Google sign-in only to keep your plan on all your devices."; de/fr use "Abo" / "abonnement" for "plan" |
 | de/fr/es/it | common:deleteData.subscriptionWarningIos / Android, common:actions.manageSubscription | see common.json | Warning before Delete my data; store screen names as in the trial notifications |
+
+## 2026-11-13 answers: Apple / Google sign-in only, signed-out state (needs a native check)
+
+Removed with email + password sign-in: `onboarding:signIn.actions.email`, `onboarding:signIn.actions.forgotPassword`, `onboarding:signIn.emailLabel`, `onboarding:signIn.passwordLabel`.
+
+| Language | Key | Translation | Why check |
+|---|---|---|---|
+| de/fr/es/it | keyboard:bar.signedOut | see keyboard.json | Keyboard bar message after Sign out |
+| de/fr/es/it | keyboard:actions.openApp | App öffnen · Ouvrir l’app · Abrir la app · Apri l’app | Bar action |
+| fr | common:signedOutCard.body | Ta session est fermée, … | Avoids a gendered participle ("déconnecté·e") |
+| it | common:signedOutCard.body | Hai effettuato l’uscita, … | Avoids the gendered "uscito/a" |
+| de/fr/es/it | common:signedOutCard.title / body | see common.json | Home sign-in card after Sign out |

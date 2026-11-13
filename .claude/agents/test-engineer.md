@@ -13,7 +13,7 @@ Read `CLAUDE.md`, `docs/product-spec.md` and `docs/architecture.md` first.
 
 | Layer | Tool | Location | Must cover |
 |---|---|---|---|
-| Quota | pgTAP + Deno | `supabase/tests`, `supabase/functions/reply/` | Starter 10 → daily 3 → bonus; reset at local midnight in Europe/London, Berlin, Madrid; concurrent taps don't over-consume; refund on failure before first card; lifetime 100/day; subscription 300/day |
+| Quota | pgTAP + Deno | `supabase/tests`, `supabase/functions/reply/` | Starter 10 → daily 3 → bonus; reset at local midnight in Europe/London, Berlin, Madrid; concurrent taps don't over-consume; refund on failure before first card; subscription 100/day |
 | Reply function | Deno, fake provider | `supabase/functions/reply/*.test.ts` | 401 without auth; device key revoked → 401; 403 without consent or age; 402/429 paths; SSE events order; fallback on timeout and error; card post-checks drop bad cards; no text in any log call (spy on console); Flirty forced off for Colleague |
 | Webhook | Deno | `webhooks-revenuecat/` | Bad secret; duplicate event; trial start; renewal count; non-annual product ignored; expiration |
 | RLS | pgTAP | `supabase/tests/rls_*.sql` | User A can't read B in every table; client can't read `ai_requests`, `device_keys`, `support_messages` |

@@ -7,6 +7,7 @@
     <string name="kb_actions_reply">Responder</string>
     <string name="kb_actions_polish">Pulir</string>
     <string name="kb_actions_more">↻ Más</string>
+    <string name="kb_actions_open_app">Abrir la app</string>
     <plurals name="kb_counter_left_today">
         <item quantity="one">Queda %1$d</item>
         <item quantity="other">Quedan %1$d</item>
@@ -20,6 +21,7 @@
     <string name="kb_bar_fair_use">Límite diario alcanzado. Vuelve mañana.</string>
     <string name="kb_bar_provider_down">Las respuestas con IA tienen problemas. Inténtalo en un minuto.</string>
     <string name="kb_bar_last_trial_day">Tu prueba gratis acaba mañana; luego, %1$s/año. Gestiónala en la app Replywise.</string>
+    <string name="kb_bar_signed_out">Inicia sesión para usar las respuestas con IA.</string>
     <string name="kb_chip_rows_who">Quién</string>
     <string name="kb_chip_rows_closeness">Confianza</string>
     <string name="kb_chip_rows_tone">Tono</string>

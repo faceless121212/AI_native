@@ -5,7 +5,8 @@
   "actions": {
     "reply": "Répondre",
     "polish": "Peaufiner",
-    "more": "↻ Autres"
+    "more": "↻ Autres",
+    "openApp": "Ouvrir l’app"
   },
   "counter": {
     "leftToday_one": "{{count}} restante",
@@ -20,7 +21,8 @@
     "quotaEmpty": "Plus de réponses gratuites. D’autres demain, ou passe en illimité dans l’app Replywise.",
     "fairUse": "Limite du jour atteinte. Reviens demain.",
     "providerDown": "Les réponses IA ont un souci. Réessaie dans une minute.",
-    "lastTrialDay": "Ton essai gratuit se termine demain, puis {{price}}/an. Gère-le dans l’app Replywise."
+    "lastTrialDay": "Ton essai gratuit se termine demain, puis {{price}}/an. Gère-le dans l’app Replywise.",
+    "signedOut": "Connecte-toi pour utiliser les réponses IA."
   },
   "chipRows": {
     "who": "Qui",

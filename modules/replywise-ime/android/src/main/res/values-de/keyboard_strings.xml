@@ -7,6 +7,7 @@
     <string name="kb_actions_reply">Antworten</string>
     <string name="kb_actions_polish">Verbessern</string>
     <string name="kb_actions_more">↻ Mehr</string>
+    <string name="kb_actions_open_app">App öffnen</string>
     <plurals name="kb_counter_left_today">
         <item quantity="one">Heute noch %1$d</item>
         <item quantity="other">Heute noch %1$d</item>
@@ -20,6 +21,7 @@
     <string name="kb_bar_fair_use">Tageslimit erreicht. Morgen geht’s weiter.</string>
     <string name="kb_bar_provider_down">KI-Antworten haben gerade Probleme. Versuch es gleich noch mal.</string>
     <string name="kb_bar_last_trial_day">Deine Testphase endet morgen, danach %1$s/Jahr. Verwalten in der Replywise-App.</string>
+    <string name="kb_bar_signed_out">Melde dich an, um KI-Antworten zu nutzen.</string>
     <string name="kb_chip_rows_who">Wer</string>
     <string name="kb_chip_rows_closeness">Nähe</string>
     <string name="kb_chip_rows_tone">Ton</string>

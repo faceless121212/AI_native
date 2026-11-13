@@ -5,7 +5,8 @@
   "actions": {
     "reply": "Antworten",
     "polish": "Verbessern",
-    "more": "↻ Mehr"
+    "more": "↻ Mehr",
+    "openApp": "App öffnen"
   },
   "counter": {
     "leftToday_one": "Heute noch {{count}}",
@@ -20,7 +21,8 @@
     "quotaEmpty": "Keine Gratis-Antworten mehr. Morgen gibt’s neue – oder unbegrenzt in der Replywise-App.",
     "fairUse": "Tageslimit erreicht. Morgen geht’s weiter.",
     "providerDown": "KI-Antworten haben gerade Probleme. Versuch es gleich noch mal.",
-    "lastTrialDay": "Deine Testphase endet morgen, danach {{price}}/Jahr. Verwalten in der Replywise-App."
+    "lastTrialDay": "Deine Testphase endet morgen, danach {{price}}/Jahr. Verwalten in der Replywise-App.",
+    "signedOut": "Melde dich an, um KI-Antworten zu nutzen."
   },
   "chipRows": {
     "who": "Wer",

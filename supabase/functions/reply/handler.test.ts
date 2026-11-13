@@ -217,11 +217,11 @@ Deno.test(
   },
 );
 
-Deno.test('reply: 429 fair_use at the subscriber cap of 300 a day', async () => {
+Deno.test('reply: 429 fair_use at the subscriber cap of 100 a day', async () => {
   const { store, handler } = setupReply({ rateLimiter: new RateLimiter(1000) });
   const { token, userId } = await aiUser(store);
   store.entitlements.push({ userId, product: 'annual', active: true, expiresAt: null });
-  store.usage.set(`${userId}|${new Date().toISOString().slice(0, 10)}`, 299);
+  store.usage.set(`${userId}|${new Date().toISOString().slice(0, 10)}`, 99);
   const ok = await handler(replyRequest(token));
   const events = await readEvents(ok);
   assertEquals(events.find((e) => e.event === 'quota')!.data, {

@@ -24,13 +24,9 @@
   },
   "signIn": {
     "actions": {
-      "google": "Continue with Google",
-      "email": "Continue with email",
-      "forgotPassword": "Forgot password?"
+      "google": "Continue with Google"
     },
-    "emailLabel": "Email",
-    "passwordLabel": "Password",
-    "notice": "We use your email only to sign you in and send account emails.",
+    "notice": "We use your Apple or Google sign-in only to keep your plan on all your devices.",
     "privacyLink": "Privacy"
   }
 }

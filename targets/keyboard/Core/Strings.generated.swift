@@ -11,6 +11,7 @@ public struct KeyboardStrings: Sendable {
     public let actionsReply: String
     public let actionsPolish: String
     public let actionsMore: String
+    public let actionsOpenApp: String
     let counterLeftTodayOne: String
     let counterLeftTodayOther: String
     public let barNoFullAccess: String
@@ -22,6 +23,7 @@ public struct KeyboardStrings: Sendable {
     public let barFairUse: String
     public let barProviderDown: String
     let barLastTrialDayTemplate: String
+    public let barSignedOut: String
     public let chipRowsWho: String
     public let chipRowsCloseness: String
     public let chipRowsTone: String
@@ -98,6 +100,7 @@ extension KeyboardStrings {
         actionsReply: "Reply",
         actionsPolish: "Polish",
         actionsMore: "↻ More",
+        actionsOpenApp: "Open app",
         counterLeftTodayOne: "{{count}} left today",
         counterLeftTodayOther: "{{count}} left today",
         barNoFullAccess: "Turn on Full Access in Settings for AI replies. Typing works without it.",
@@ -109,6 +112,7 @@ extension KeyboardStrings {
         barFairUse: "Daily limit reached. Back tomorrow.",
         barProviderDown: "AI replies are having trouble. Try again in a minute.",
         barLastTrialDayTemplate: "Your free trial ends tomorrow: {{price}}/year after that. Manage in the Replywise app.",
+        barSignedOut: "Sign in to use AI replies.",
         chipRowsWho: "Who",
         chipRowsCloseness: "Closeness",
         chipRowsTone: "Tone",
@@ -166,6 +170,7 @@ extension KeyboardStrings {
         actionsReply: "Antworten",
         actionsPolish: "Verbessern",
         actionsMore: "↻ Mehr",
+        actionsOpenApp: "App öffnen",
         counterLeftTodayOne: "Heute noch {{count}}",
         counterLeftTodayOther: "Heute noch {{count}}",
         barNoFullAccess: "Erlaube in den Einstellungen vollen Zugriff für KI-Antworten. Tippen geht auch ohne.",
@@ -177,6 +182,7 @@ extension KeyboardStrings {
         barFairUse: "Tageslimit erreicht. Morgen geht’s weiter.",
         barProviderDown: "KI-Antworten haben gerade Probleme. Versuch es gleich noch mal.",
         barLastTrialDayTemplate: "Deine Testphase endet morgen, danach {{price}}/Jahr. Verwalten in der Replywise-App.",
+        barSignedOut: "Melde dich an, um KI-Antworten zu nutzen.",
         chipRowsWho: "Wer",
         chipRowsCloseness: "Nähe",
         chipRowsTone: "Ton",
@@ -234,6 +240,7 @@ extension KeyboardStrings {
         actionsReply: "Répondre",
         actionsPolish: "Peaufiner",
         actionsMore: "↻ Autres",
+        actionsOpenApp: "Ouvrir l’app",
         counterLeftTodayOne: "{{count}} restante",
         counterLeftTodayOther: "{{count}} restantes",
         barNoFullAccess: "Autorise l’accès complet dans Réglages pour les réponses IA. La saisie marche sans.",
@@ -245,6 +252,7 @@ extension KeyboardStrings {
         barFairUse: "Limite du jour atteinte. Reviens demain.",
         barProviderDown: "Les réponses IA ont un souci. Réessaie dans une minute.",
         barLastTrialDayTemplate: "Ton essai gratuit se termine demain, puis {{price}}/an. Gère-le dans l’app Replywise.",
+        barSignedOut: "Connecte-toi pour utiliser les réponses IA.",
         chipRowsWho: "Qui",
         chipRowsCloseness: "Proximité",
         chipRowsTone: "Ton",
@@ -302,6 +310,7 @@ extension KeyboardStrings {
         actionsReply: "Responder",
         actionsPolish: "Pulir",
         actionsMore: "↻ Más",
+        actionsOpenApp: "Abrir la app",
         counterLeftTodayOne: "Queda {{count}}",
         counterLeftTodayOther: "Quedan {{count}}",
         barNoFullAccess: "Activa el acceso total en Ajustes para respuestas con IA. Puedes escribir sin él.",
@@ -313,6 +322,7 @@ extension KeyboardStrings {
         barFairUse: "Límite diario alcanzado. Vuelve mañana.",
         barProviderDown: "Las respuestas con IA tienen problemas. Inténtalo en un minuto.",
         barLastTrialDayTemplate: "Tu prueba gratis acaba mañana; luego, {{price}}/año. Gestiónala en la app Replywise.",
+        barSignedOut: "Inicia sesión para usar las respuestas con IA.",
         chipRowsWho: "Quién",
         chipRowsCloseness: "Confianza",
         chipRowsTone: "Tono",
@@ -370,6 +380,7 @@ extension KeyboardStrings {
         actionsReply: "Rispondi",
         actionsPolish: "Migliora",
         actionsMore: "↻ Altre",
+        actionsOpenApp: "Apri l’app",
         counterLeftTodayOne: "Ancora {{count}}",
         counterLeftTodayOther: "Ancora {{count}}",
         barNoFullAccess: "Attiva l’accesso completo in Impostazioni per le risposte IA. Puoi scrivere anche senza.",
@@ -381,6 +392,7 @@ extension KeyboardStrings {
         barFairUse: "Limite giornaliero raggiunto. Torna domani.",
         barProviderDown: "Le risposte IA hanno qualche problema. Riprova tra un minuto.",
         barLastTrialDayTemplate: "La prova gratuita finisce domani, poi {{price}}/anno. Gestiscila nell’app Replywise.",
+        barSignedOut: "Accedi per usare le risposte IA.",
         chipRowsWho: "Chi",
         chipRowsCloseness: "Vicinanza",
         chipRowsTone: "Tono",

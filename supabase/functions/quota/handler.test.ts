@@ -37,5 +37,5 @@ Deno.test('quota: GET with JWT or device key; 401 without; 405 for POST', async 
 
   store.entitlements.push({ userId, product: 'annual', active: true, expiresAt: null });
   const paid = QuotaResponse.parse(await (await handler(get(bearer(token)))).json());
-  assertEquals([paid.plan, paid.leftToday, paid.fairUseLeft], ['annual', null, 300]);
+  assertEquals([paid.plan, paid.leftToday, paid.fairUseLeft], ['annual', null, 100]);
 });

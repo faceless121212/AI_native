@@ -24,13 +24,9 @@
   },
   "signIn": {
     "actions": {
-      "google": "Weiter mit Google",
-      "email": "Weiter mit E-Mail",
-      "forgotPassword": "Passwort vergessen?"
+      "google": "Weiter mit Google"
     },
-    "emailLabel": "E-Mail",
-    "passwordLabel": "Passwort",
-    "notice": "Wir nutzen deine E-Mail-Adresse nur für die Anmeldung und für E-Mails zu deinem Konto.",
+    "notice": "Wir nutzen deine Anmeldung mit Apple oder Google nur, damit dein Abo auf all deinen Geräten gilt.",
     "privacyLink": "Datenschutz"
   }
 }

@@ -27,5 +27,9 @@
   "deleteData": {
     "subscriptionWarningIos": "Supprimer tes données n’annule pas ton abonnement. Annule-le d’abord dans tes abonnements App Store.",
     "subscriptionWarningAndroid": "Supprimer tes données n’annule pas ton abonnement. Annule-le d’abord dans tes abonnements Google Play."
+  },
+  "signedOutCard": {
+    "title": "Connecte-toi pour les réponses IA",
+    "body": "Ta session est fermée, les réponses IA sont donc désactivées. La saisie fonctionne toujours. Connecte-toi avec Apple ou Google pour retrouver ton abonnement."
   }
 }

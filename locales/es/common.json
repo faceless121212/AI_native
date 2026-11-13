@@ -27,5 +27,9 @@
   "deleteData": {
     "subscriptionWarningIos": "Borrar tus datos no cancela tu suscripción. Cancélala antes en tus suscripciones del App Store.",
     "subscriptionWarningAndroid": "Borrar tus datos no cancela tu suscripción. Cancélala antes en tus suscripciones de Google Play."
+  },
+  "signedOutCard": {
+    "title": "Inicia sesión para usar la IA",
+    "body": "Has cerrado sesión, así que las respuestas con IA están desactivadas. Puedes seguir escribiendo. Inicia sesión con Apple o Google para recuperar tu plan."
   }
 }

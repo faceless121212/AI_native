@@ -219,9 +219,8 @@ web3 = 30
 
 [auth.email]
 # Allow/disallow new user signups via email to your project.
-# Off until sign-in is built (BUILD.md Prompt 8b, decided 2026-11-13): email + password sign-in that
-# links the anonymous user. That prompt turns this on, together with enable_manual_linking and the
-# apple / google providers (architecture §4).
+# Stays off: sign-in is Apple / Google only and Replywise sends no email (decided 2026-11-13,
+# docs/decisions.md). Prompt 8b turns on enable_manual_linking and the apple / google providers.
 enable_signup = false
 # If enabled, a user will be required to confirm any email change on both the old, and new email
 # addresses. If disabled, only the new email is required to confirm.

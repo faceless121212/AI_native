@@ -10,7 +10,7 @@ This folder keeps what the app build needs from it.
 3. Turn on the keyboard — Add New Keyboard → Replywise → Allow Full Access (skippable)
 4. Try it — tone picker, 3 cards labelled "AI suggestion"
 5. Paywall — annual only, 3-day free trial, ✕ top-left from the first frame, "Remind me before the trial ends" switch (RevenueCat Paywalls template)
-6. Sign in — Apple / Google / email + password, "Not now" skips
+6. Sign in — Apple / Google, "Not now" skips
 7. Home — setup card, replies-left ring, try-it field, see it in a chat, invite
 8. Keyboard in a chat — Reply / Polish bar, 3 suggestion cards, keys
 

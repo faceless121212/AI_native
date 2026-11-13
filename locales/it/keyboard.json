@@ -5,7 +5,8 @@
   "actions": {
     "reply": "Rispondi",
     "polish": "Migliora",
-    "more": "↻ Altre"
+    "more": "↻ Altre",
+    "openApp": "Apri l’app"
   },
   "counter": {
     "leftToday_one": "Ancora {{count}}",
@@ -20,7 +21,8 @@
     "quotaEmpty": "Risposte gratis finite. Altre domani, o passa all’illimitato nell’app Replywise.",
     "fairUse": "Limite giornaliero raggiunto. Torna domani.",
     "providerDown": "Le risposte IA hanno qualche problema. Riprova tra un minuto.",
-    "lastTrialDay": "La prova gratuita finisce domani, poi {{price}}/anno. Gestiscila nell’app Replywise."
+    "lastTrialDay": "La prova gratuita finisce domani, poi {{price}}/anno. Gestiscila nell’app Replywise.",
+    "signedOut": "Accedi per usare le risposte IA."
   },
   "chipRows": {
     "who": "Chi",
